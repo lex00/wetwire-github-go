@@ -9,12 +9,16 @@ Build `wetwire-github-go` following the same patterns as `wetwire-aws-go` — a 
 Resources are declared as Go variables using struct literals — no function calls or registration needed:
 
 ```go
-// Workflow declaration
+// Flat variables for optional nested structs (pointer types declared once with &)
+var CIPush = &workflow.PushTrigger{Branches: []string{"main"}}
+var CIPullRequest = &workflow.PullRequestTrigger{Branches: []string{"main"}}
+
+// Workflow declaration - clean references, no & at usage site
 var CI = workflow.Workflow{
     Name: "CI",
     On: workflow.Triggers{
-        Push:        &workflow.PushTrigger{Branches: []string{"main"}},
-        PullRequest: &workflow.PullRequestTrigger{Branches: []string{"main"}},
+        Push:        CIPush,
+        PullRequest: CIPullRequest,
     },
 }
 
@@ -47,6 +51,7 @@ var Deploy = workflow.Job{
 
 **Key principles:**
 - Variables declared with struct literals (no function calls)
+- Pointer types declared once with `&`, referenced cleanly without `&`
 - Cross-resource references via direct field access
 - AST-based discovery — no registration needed
 - Type-safe action wrappers with `.ToStep()` conversion
@@ -114,7 +119,110 @@ wetwire-github-go generates typed Go declarations for three GitHub YAML configur
 
 ---
 
-## Directory Structure
+## Generated Package Structure (User Projects)
+
+When users run `wetwire-github import` or `wetwire-github init`, the importer scaffolds a project package:
+
+```
+my-ci/                           # User's workflow package
+├── go.mod                       # Module: my-ci
+├── go.sum
+├── README.md                    # Generated docs
+├── CLAUDE.md                    # AI assistant context
+├── .gitignore
+│
+├── cmd/
+│   └── main.go                  # Usage instructions
+│
+├── workflows.go                 # Workflow declarations
+├── jobs.go                      # Job declarations
+├── steps.go                     # Reusable step declarations
+├── triggers.go                  # Trigger configurations
+└── matrix.go                    # Matrix configurations
+```
+
+**Example generated files:**
+
+**go.mod:**
+```go
+module my-ci
+
+go 1.23
+
+require github.com/lex00/wetwire-github-go v0.1.0
+```
+
+**workflows.go:**
+```go
+package my_ci
+
+import (
+    "github.com/lex00/wetwire-github-go/workflow"
+)
+
+var CIPush = &workflow.PushTrigger{Branches: []string{"main"}}
+var CIPullRequest = &workflow.PullRequestTrigger{Branches: []string{"main"}}
+
+var CI = workflow.Workflow{
+    Name: "CI",
+    On: workflow.Triggers{
+        Push:        CIPush,
+        PullRequest: CIPullRequest,
+    },
+}
+```
+
+**jobs.go:**
+```go
+package my_ci
+
+import (
+    "github.com/lex00/wetwire-github-go/workflow"
+    "github.com/lex00/wetwire-github-go/actions/checkout"
+    "github.com/lex00/wetwire-github-go/actions/setup_go"
+)
+
+var BuildSteps = []workflow.Step{
+    checkout.Checkout{}.ToStep(),
+    setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+    {Run: "go build ./..."},
+    {Run: "go test ./..."},
+}
+
+var Build = workflow.Job{
+    Name:   "build",
+    RunsOn: "ubuntu-latest",
+    Steps:  BuildSteps,
+}
+```
+
+**cmd/main.go:**
+```go
+package main
+
+import "fmt"
+
+func main() {
+    // Build workflows using the wetwire-github CLI:
+    //   wetwire-github build .
+    //
+    // This generates .github/workflows/*.yml from Go definitions.
+    fmt.Println("Usage: wetwire-github build .")
+}
+```
+
+**Key patterns (same as wetwire-aws-go):**
+- Single package per project
+- Flat variables for all nested structs
+- Importer generates correct `&` based on field types
+- Cross-file references work via Go's package scope
+- Variables reference each other directly (e.g., `Steps: BuildSteps`)
+
+---
+
+## Library Directory Structure (This Repository)
+
+The wetwire-github-go library itself:
 
 ```
 wetwire-github-go/
@@ -320,6 +428,60 @@ type ListWorkflow struct {
 }
 ```
 
+## Flat Variable Pattern (Importer-Generated)
+
+The **importer automatically generates correct syntax** based on field types in the schema:
+
+```go
+// Type definitions determine pointer vs value
+type Triggers struct {
+    Push        *PushTrigger        `yaml:"push,omitempty"`  // pointer → importer adds &
+    PullRequest *PullRequestTrigger `yaml:"pull_request,omitempty"`
+}
+
+type Job struct {
+    Steps []Step `yaml:"steps"`  // value type → importer omits &
+}
+```
+
+**Generated code from importer** (users don't decide `&` — tooling handles it):
+
+```go
+// Pointer field (*PushTrigger) → importer generates &
+var CIPush = &workflow.PushTrigger{
+    Branches: []string{"main"},
+}
+
+// Value field ([]Step) → importer generates without &
+var BuildSteps = []workflow.Step{
+    checkout.Checkout{}.ToStep(),
+}
+
+// Clean references at usage site
+var CI = workflow.Workflow{
+    On: workflow.Triggers{
+        Push: CIPush,  // Just reference the variable
+    },
+}
+
+var Build = workflow.Job{
+    Steps: BuildSteps,
+}
+```
+
+**Key insight:** Users never manually add `&`. The importer inspects field types and generates:
+- `var X = &pkg.Type{...}` for pointer fields (`*Type`)
+- `var X = pkg.Type{...}` for value fields (`Type`)
+
+**For `*bool` fields** — importer uses the `Ptr` helper:
+```go
+var BuildStrategy = &workflow.Strategy{
+    FailFast: Ptr(false),  // *bool field
+}
+```
+
+---
+
 ## Core Types (workflow/ package)
 
 Types designed for the "no parens" pattern — struct literal initialization:
@@ -447,6 +609,15 @@ func Any(items ...any) []any { return items }
 //
 //	Branches: Strings("main", "develop"),
 func Strings(items ...string) []string { return items }
+
+// Ptr returns a pointer to the value.
+// Use for *bool and other pointer fields in struct literals.
+//
+// Example:
+//
+//	Strategy: &Strategy{FailFast: Ptr(false)},
+//	PersistCredentials: Ptr(true),
+func Ptr[T any](v T) *T { return &v }
 ```
 
 ---

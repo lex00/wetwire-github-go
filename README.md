@@ -15,12 +15,16 @@ import (
     "github.com/lex00/wetwire-github-go/actions/setup_go"
 )
 
-// Workflow declaration - no function calls, just struct initialization
+// Flat variables for nested structs (importer generates correct syntax)
+var CIPush = &workflow.PushTrigger{Branches: []string{"main"}}
+var CIPullRequest = &workflow.PullRequestTrigger{Branches: []string{"main"}}
+
+// Workflow declaration - references flat variables
 var CI = workflow.Workflow{
     Name: "CI",
     On: workflow.Triggers{
-        Push:        &workflow.PushTrigger{Branches: []string{"main"}},
-        PullRequest: &workflow.PullRequestTrigger{Branches: []string{"main"}},
+        Push:        CIPush,
+        PullRequest: CIPullRequest,
     },
 }
 
@@ -73,9 +77,49 @@ var ConditionalStep = workflow.Step{
         "TOKEN": workflow.Secrets.Get("DEPLOY_TOKEN"),
     },
 }
+
+// Importer generates flat variables with correct syntax
+// (users don't decide & — tooling handles it based on field types)
+var BuildMatrix = &workflow.Matrix{
+    Values: map[string][]any{"go": {"1.22", "1.23"}},
+}
+
+var BuildStrategy = &workflow.Strategy{
+    FailFast: Ptr(false),
+    Matrix:   BuildMatrix,
+}
+
+var MatrixJob = workflow.Job{
+    RunsOn:   "ubuntu-latest",
+    Strategy: BuildStrategy,
+}
 ```
 
 The CLI discovers declarations via **AST parsing** — no registration required.
+
+## Generated Package Structure
+
+Import existing workflows or init a new project:
+
+```bash
+wetwire-github import .github/workflows/ci.yml -o my-ci/
+# OR
+wetwire-github init my-ci/
+```
+
+Generated structure:
+```
+my-ci/
+├── go.mod              # Module with wetwire-github-go dependency
+├── README.md           # Generated docs
+├── CLAUDE.md           # AI assistant context
+├── cmd/main.go         # Usage instructions
+├── workflows.go        # Workflow declarations
+├── jobs.go             # Job declarations
+└── triggers.go         # Trigger configurations
+```
+
+All nested structs become flat variables. The importer generates correct `&` syntax based on field types — users never decide manually.
 
 ## Scope
 

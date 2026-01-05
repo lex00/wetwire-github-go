@@ -5,11 +5,12 @@
 All declarations use struct literals — no function calls or registration:
 
 ```go
-// Workflows, jobs, steps as variables
-var CI = workflow.Workflow{Name: "CI", On: workflow.Triggers{...}}
-var Build = workflow.Job{Name: "build", RunsOn: "ubuntu-latest", Steps: [...]}
+// Importer generates flat variables with correct & based on field types
+var CIPush = &workflow.PushTrigger{Branches: []string{"main"}}
 
-// Cross-references via field access
+// Clean references at usage site
+var CI = workflow.Workflow{Name: "CI", On: workflow.Triggers{Push: CIPush}}
+var Build = workflow.Job{Name: "build", RunsOn: "ubuntu-latest", Steps: BuildSteps}
 var Deploy = workflow.Job{Needs: []any{Build, Test}}
 
 // Type-safe action wrappers
@@ -20,6 +21,8 @@ workflow.Secrets.Get("TOKEN")
 workflow.Matrix.Get("os")
 workflow.GitHub.Ref
 ```
+
+**Generated package structure:** Single package per project, flat variables, cross-file references via package scope. Importer handles `&` syntax automatically.
 
 AST-based discovery — no registration needed.
 
@@ -76,7 +79,7 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ Triggers (all 30+ types) | 1A | [ ] | — |
 | ├─ Conditions interface | 1A | [ ] | — |
 | ├─ Expression contexts | 1A | [ ] | — |
-| ├─ Helper types (Env, With, List, Any, Strings) | 1A | [ ] | — |
+| ├─ Helper types (Env, With, List, Any, Strings, Ptr) | 1A | [ ] | — |
 | ├─ contracts.go (interfaces) | 1A | [ ] | — |
 | ├─ Result types (Build/Lint/Validate/List) | 1A | [ ] | — |
 | └─ DiscoveredWorkflow/Job structs | 1A | [ ] | — |
