@@ -6,7 +6,7 @@ All declarations use struct literals — no function calls or registration:
 
 ```go
 // Importer generates flat variables with correct & based on field types
-var CIPush = &workflow.PushTrigger{Branches: []string{"main"}}
+var CIPush = workflow.PushTrigger{Branches: List("main")}
 
 // Clean references at usage site
 var CI = workflow.Workflow{Name: "CI", On: workflow.Triggers{Push: CIPush}}
@@ -79,7 +79,7 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ Triggers (all 30+ types) | 1A | [ ] | — |
 | ├─ Conditions interface | 1A | [ ] | — |
 | ├─ Expression contexts | 1A | [ ] | — |
-| ├─ Helper types (Env, With, List, Any, Strings, Ptr) | 1A | [ ] | — |
+| ├─ Helper types (Env, With, List, Strings, Ptr) | 1A | [ ] | — |
 | ├─ contracts.go (interfaces) | 1A | [ ] | — |
 | ├─ Result types (Build/Lint/Validate/List) | 1A | [ ] | — |
 | └─ DiscoveredWorkflow/Job structs | 1A | [ ] | — |
@@ -299,7 +299,7 @@ All Phase 1 work streams can be developed **in parallel** with no dependencies o
 - [ ] `triggers.go` — All trigger types (Push, PullRequest, Schedule, etc.)
 - [ ] `conditions.go` — Condition interface + builders
 - [ ] `expressions.go` — Context accessors (GitHub, Runner, Env, Secrets, Matrix)
-- [ ] `helpers.go` — Type aliases (Env, With) + helpers (List, Any, Strings)
+- [ ] `helpers.go` — Type aliases (Env, With) + helpers (List, Strings, Ptr)
 - [ ] `contracts.go` — Root-level interfaces (WorkflowResource, OutputRef, etc.)
 
 **Output:** Compilable types, no runtime behavior yet

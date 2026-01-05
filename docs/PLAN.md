@@ -10,8 +10,8 @@ Resources are declared as Go variables using struct literals — no function cal
 
 ```go
 // Flat variables for optional nested structs (pointer types declared once with &)
-var CIPush = &workflow.PushTrigger{Branches: []string{"main"}}
-var CIPullRequest = &workflow.PullRequestTrigger{Branches: []string{"main"}}
+var CIPush = workflow.PushTrigger{Branches: List("main")}
+var CIPullRequest = workflow.PullRequestTrigger{Branches: List("main")}
 
 // Workflow declaration - clean references, no & at usage site
 var CI = workflow.Workflow{
@@ -160,8 +160,8 @@ import (
     "github.com/lex00/wetwire-github-go/workflow"
 )
 
-var CIPush = &workflow.PushTrigger{Branches: []string{"main"}}
-var CIPullRequest = &workflow.PullRequestTrigger{Branches: []string{"main"}}
+var CIPush = workflow.PushTrigger{Branches: List("main")}
+var CIPullRequest = workflow.PullRequestTrigger{Branches: List("main")}
 
 var CI = workflow.Workflow{
     Name: "CI",
@@ -448,8 +448,8 @@ type Job struct {
 
 ```go
 // Pointer field (*PushTrigger) → importer generates &
-var CIPush = &workflow.PushTrigger{
-    Branches: []string{"main"},
+var CIPush = workflow.PushTrigger{
+    Branches: List("main"),
 }
 
 // Value field ([]Step) → importer generates without &
@@ -475,7 +475,7 @@ var Build = workflow.Job{
 
 **For `*bool` fields** — importer uses the `Ptr` helper:
 ```go
-var BuildStrategy = &workflow.Strategy{
+var BuildStrategy = workflow.Strategy{
     FailFast: Ptr(false),  // *bool field
 }
 ```
@@ -594,14 +594,6 @@ type With = map[string]any
 //	// Write:
 //	Steps: List(Step1, Step2, Step3),
 func List[T any](items ...T) []T { return items }
-
-// Any creates a []any slice from items.
-// Use for fields typed as []any.
-//
-// Example:
-//
-//	Needs: Any(BuildJob, TestJob),
-func Any(items ...any) []any { return items }
 
 // Strings creates a []string slice.
 //

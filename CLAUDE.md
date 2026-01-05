@@ -98,17 +98,13 @@ cache.Cache{Path: "~/.cache/go-build", Key: "go-cache"}.ToStep()
 Use `List()` instead of slice literals:
 
 ```go
-// Instead of:
-Branches: []string{"main", "develop"}
-
-// Write:
 Branches: List("main", "develop")
 ```
 
-Use `Any()` for mixed-type slices:
+For mixed-type slices, use `[]any{}`:
 
 ```go
-Needs: Any(BuildJob, TestJob)
+Needs: []any{BuildJob, TestJob}
 ```
 
 ## Key Principles
