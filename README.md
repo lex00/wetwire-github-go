@@ -15,29 +15,33 @@ import (
     "github.com/lex00/wetwire-github-go/actions/setup_go"
 )
 
-// Flat variables for nested structs (importer generates correct syntax)
-var CIPush = &workflow.PushTrigger{Branches: []string{"main"}}
-var CIPullRequest = &workflow.PullRequestTrigger{Branches: []string{"main"}}
-
-// Workflow declaration - references flat variables
+// Workflow declaration
 var CI = workflow.Workflow{
     Name: "CI",
-    On: workflow.Triggers{
-        Push:        CIPush,
-        PullRequest: CIPullRequest,
-    },
+    On:   CITriggers,
 }
 
-// Job declaration - references workflow automatically via AST discovery
+// Triggers as flat variable
+var CITriggers = workflow.Triggers{
+    Push:        CIPush,
+    PullRequest: CIPullRequest,
+}
+
+var CIPush = workflow.PushTrigger{Branches: []string{"main"}}
+var CIPullRequest = workflow.PullRequestTrigger{Branches: []string{"main"}}
+
+// Job declaration
 var Build = workflow.Job{
     Name:   "build",
     RunsOn: "ubuntu-latest",
-    Steps: []workflow.Step{
-        checkout.Checkout{}.ToStep(),
-        setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
-        {Run: "go build ./..."},
-        {Run: "go test ./..."},
-    },
+    Steps:  BuildSteps,
+}
+
+var BuildSteps = []workflow.Step{
+    checkout.Checkout{}.ToStep(),
+    setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+    {Run: "go build ./..."},
+    {Run: "go test ./..."},
 }
 ```
 
@@ -53,7 +57,7 @@ wetwire-github build ./ci
 Resources are declared as Go variables using struct literals — no function calls needed:
 
 ```go
-// Simple: just declare variables
+// Declare variables
 var MyWorkflow = workflow.Workflow{...}
 var BuildJob = workflow.Job{...}
 var TestJob = workflow.Job{...}
@@ -69,7 +73,7 @@ var CheckoutStep = checkout.Checkout{
     Submodules: "recursive",
 }.ToStep()
 
-// Expression contexts with helper types
+// Expression contexts
 var ConditionalStep = workflow.Step{
     If:  workflow.Branch("main").And(workflow.Push()),
     Run: "deploy.sh",
@@ -78,15 +82,13 @@ var ConditionalStep = workflow.Step{
     },
 }
 
-// Importer generates flat variables with correct syntax
-// (users don't decide & — tooling handles it based on field types)
-var BuildMatrix = &workflow.Matrix{
+// Matrix configuration
+var BuildMatrix = workflow.Matrix{
     Values: map[string][]any{"go": {"1.22", "1.23"}},
 }
 
-var BuildStrategy = &workflow.Strategy{
-    FailFast: Ptr(false),
-    Matrix:   BuildMatrix,
+var BuildStrategy = workflow.Strategy{
+    Matrix: BuildMatrix,
 }
 
 var MatrixJob = workflow.Job{
@@ -119,7 +121,7 @@ my-ci/
 └── triggers.go         # Trigger configurations
 ```
 
-All nested structs become flat variables. The importer generates correct `&` syntax based on field types — users never decide manually.
+All nested structs become flat variables.
 
 ## Scope
 
