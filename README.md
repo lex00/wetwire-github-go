@@ -65,11 +65,11 @@ var CheckoutStep = checkout.Checkout{
     Submodules: "recursive",
 }.ToStep()
 
-// Expression contexts
+// Expression contexts with helper types
 var ConditionalStep = workflow.Step{
     If:  workflow.Branch("main").And(workflow.Push()),
     Run: "deploy.sh",
-    Env: map[string]any{
+    Env: workflow.Env{
         "TOKEN": workflow.Secrets.Get("DEPLOY_TOKEN"),
     },
 }

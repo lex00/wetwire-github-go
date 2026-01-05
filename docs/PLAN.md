@@ -402,6 +402,55 @@ type Matrix struct {
 }
 ```
 
+## Helper Types (workflow/helpers.go)
+
+Convenience types for cleaner struct literals (from wetwire-aws-go pattern):
+
+```go
+// Env is a shorthand for map[string]any.
+// Used for environment variable blocks.
+//
+// Example:
+//
+//	Env: Env{
+//	    "NODE_ENV": "production",
+//	    "TOKEN":    Secrets.Get("DEPLOY_TOKEN"),
+//	}
+type Env = map[string]any
+
+// With is a shorthand for map[string]any.
+// Used for action input blocks.
+type With = map[string]any
+
+// List creates a typed slice from items.
+// Avoids verbose slice type annotations.
+//
+// Example:
+//
+//	// Instead of:
+//	Steps: []workflow.Step{Step1, Step2, Step3},
+//	// Write:
+//	Steps: List(Step1, Step2, Step3),
+func List[T any](items ...T) []T { return items }
+
+// Any creates a []any slice from items.
+// Use for fields typed as []any.
+//
+// Example:
+//
+//	Needs: Any(BuildJob, TestJob),
+func Any(items ...any) []any { return items }
+
+// Strings creates a []string slice.
+//
+// Example:
+//
+//	Branches: Strings("main", "develop"),
+func Strings(items ...string) []string { return items }
+```
+
+---
+
 ## Expression Contexts (workflow/expressions.go)
 
 Context accessors for GitHub Actions expressions (like intrinsics in wetwire-aws-go):
