@@ -4,6 +4,54 @@
 
 Build `wetwire-github-go` following the same patterns as `wetwire-aws-go` — a synthesis library that generates GitHub YAML configurations from typed Go declarations.
 
+## The "No Parens" Pattern
+
+Resources are declared as Go variables using struct literals — no function calls or registration needed:
+
+```go
+// Workflow declaration
+var CI = workflow.Workflow{
+    Name: "CI",
+    On: workflow.Triggers{
+        Push:        &workflow.PushTrigger{Branches: []string{"main"}},
+        PullRequest: &workflow.PullRequestTrigger{Branches: []string{"main"}},
+    },
+}
+
+// Job declaration - automatically associated via AST discovery
+var Build = workflow.Job{
+    Name:   "build",
+    RunsOn: "ubuntu-latest",
+    Steps: []workflow.Step{
+        checkout.Checkout{}.ToStep(),
+        setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+        {Run: "go build ./..."},
+        {Run: "go test ./..."},
+    },
+}
+
+// Cross-references via direct field access
+var Deploy = workflow.Job{
+    Needs: []any{Build, Test},  // Automatic dependency resolution
+    Steps: []workflow.Step{
+        {
+            If:  workflow.Branch("main"),
+            Run: "deploy.sh",
+            Env: map[string]any{
+                "TOKEN": workflow.Secrets.Get("DEPLOY_TOKEN"),
+            },
+        },
+    },
+}
+```
+
+**Key principles:**
+- Variables declared with struct literals (no function calls)
+- Cross-resource references via direct field access
+- AST-based discovery — no registration needed
+- Type-safe action wrappers with `.ToStep()` conversion
+- Expression contexts as typed accessors (`workflow.Secrets.Get(...)`)
+
 ## Scope
 
 wetwire-github-go generates typed Go declarations for three GitHub YAML configuration types:
@@ -195,6 +243,8 @@ wetwire-github-go/
 
 ## Core Types (workflow/ package)
 
+Types designed for the "no parens" pattern — struct literal initialization:
+
 ```go
 // workflow.go
 type Workflow struct {
@@ -204,7 +254,7 @@ type Workflow struct {
     Defaults    *Defaults
     Concurrency *Concurrency
     Permissions *Permissions
-    Jobs        []Job // discovered via registry
+    Jobs        []Job // discovered via AST, not registry
 }
 
 // job.go

@@ -1,5 +1,30 @@
 # wetwire-github-go Implementation Roadmap
 
+## The "No Parens" Pattern
+
+All declarations use struct literals — no function calls or registration:
+
+```go
+// Workflows, jobs, steps as variables
+var CI = workflow.Workflow{Name: "CI", On: workflow.Triggers{...}}
+var Build = workflow.Job{Name: "build", RunsOn: "ubuntu-latest", Steps: [...]}
+
+// Cross-references via field access
+var Deploy = workflow.Job{Needs: []any{Build, Test}}
+
+// Type-safe action wrappers
+checkout.Checkout{FetchDepth: 0}.ToStep()
+
+// Expression contexts
+workflow.Secrets.Get("TOKEN")
+workflow.Matrix.Get("os")
+workflow.GitHub.Ref
+```
+
+AST-based discovery — no registration needed.
+
+---
+
 ## Scope
 
 wetwire-github-go generates typed Go declarations for three GitHub YAML configuration types:
