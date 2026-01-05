@@ -1,5 +1,8 @@
 # wetwire-github-go
 
+[![CI](https://github.com/lex00/wetwire-github-go/actions/workflows/ci.yml/badge.svg)](https://github.com/lex00/wetwire-github-go/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Declarative GitHub YAML configurations using native Go constructs.
 
 ## Overview
