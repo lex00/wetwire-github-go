@@ -99,6 +99,19 @@ var MatrixJob = workflow.Job{
 
 The CLI discovers declarations via **AST parsing** — no registration required.
 
+## Helpers
+
+```go
+// List() for typed slices
+Branches: List("main", "develop")
+
+// []any{} for mixed-type slices
+Needs: []any{BuildJob, TestJob}
+
+// Env type alias
+Env: workflow.Env{"TOKEN": workflow.Secrets.Get("TOKEN")}
+```
+
 ## Generated Package Structure
 
 Import existing workflows or init a new project:
