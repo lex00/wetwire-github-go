@@ -37,12 +37,12 @@ var Build = workflow.Job{
     Steps:  BuildSteps,
 }
 
-var BuildSteps = []workflow.Step{
+var BuildSteps = List(
     checkout.Checkout{}.ToStep(),
     setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
-    {Run: "go build ./..."},
-    {Run: "go test ./..."},
-}
+    workflow.Step{Run: "go build ./..."},
+    workflow.Step{Run: "go test ./..."},
+)
 ```
 
 Build to YAML:

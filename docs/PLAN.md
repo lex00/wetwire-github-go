@@ -26,26 +26,26 @@ var CI = workflow.Workflow{
 var Build = workflow.Job{
     Name:   "build",
     RunsOn: "ubuntu-latest",
-    Steps: []workflow.Step{
+    Steps: List(
         checkout.Checkout{}.ToStep(),
         setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
-        {Run: "go build ./..."},
-        {Run: "go test ./..."},
-    },
+        workflow.Step{Run: "go build ./..."},
+        workflow.Step{Run: "go test ./..."},
+    ),
 }
 
 // Cross-references via direct field access
 var Deploy = workflow.Job{
     Needs: []any{Build, Test},  // Automatic dependency resolution
-    Steps: []workflow.Step{
-        {
+    Steps: List(
+        workflow.Step{
             If:  workflow.Branch("main"),
             Run: "deploy.sh",
-            Env: map[string]any{
+            Env: workflow.Env{
                 "TOKEN": workflow.Secrets.Get("DEPLOY_TOKEN"),
             },
         },
-    },
+    ),
 }
 ```
 
@@ -182,12 +182,12 @@ import (
     "github.com/lex00/wetwire-github-go/actions/setup_go"
 )
 
-var BuildSteps = []workflow.Step{
+var BuildSteps = List(
     checkout.Checkout{}.ToStep(),
     setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
-    {Run: "go build ./..."},
-    {Run: "go test ./..."},
-}
+    workflow.Step{Run: "go build ./..."},
+    workflow.Step{Run: "go test ./..."},
+)
 
 var Build = workflow.Job{
     Name:   "build",
@@ -453,9 +453,9 @@ var CIPush = workflow.PushTrigger{
 }
 
 // Value field ([]Step) → importer generates without &
-var BuildSteps = []workflow.Step{
+var BuildSteps = List(
     checkout.Checkout{}.ToStep(),
-}
+)
 
 // Clean references at usage site
 var CI = workflow.Workflow{
