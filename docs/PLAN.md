@@ -241,6 +241,85 @@ wetwire-github-go/
 
 ---
 
+## Contracts (contracts.go)
+
+Core interfaces and types (mirroring wetwire-aws-go pattern):
+
+```go
+// WorkflowResource represents a GitHub workflow resource.
+// All resource types (Workflow, Job) implement this interface.
+type WorkflowResource interface {
+    ResourceType() string  // e.g., "workflow", "job"
+}
+
+// OutputRef represents a reference to a step output.
+// When serialized to YAML, becomes: ${{ steps.step_id.outputs.name }}
+type OutputRef struct {
+    StepID string
+    Output string
+}
+
+func (o OutputRef) String() string {
+    return fmt.Sprintf("${{ steps.%s.outputs.%s }}", o.StepID, o.Output)
+}
+
+// DiscoveredWorkflow represents a workflow found by AST parsing.
+type DiscoveredWorkflow struct {
+    Name         string   // Variable name
+    File         string   // Source file path
+    Line         int      // Line number
+    Jobs         []string // Job variable names in this workflow
+}
+
+// DiscoveredJob represents a job found by AST parsing.
+type DiscoveredJob struct {
+    Name         string   // Variable name
+    File         string   // Source file path
+    Line         int      // Line number
+    Dependencies []string // Referenced job names (Needs field)
+}
+
+// Result types for CLI JSON output
+type BuildResult struct {
+    Success   bool     `json:"success"`
+    Workflows []string `json:"workflows,omitempty"`
+    Files     []string `json:"files,omitempty"`
+    Errors    []string `json:"errors,omitempty"`
+}
+
+type LintResult struct {
+    Success bool        `json:"success"`
+    Issues  []LintIssue `json:"issues,omitempty"`
+}
+
+type LintIssue struct {
+    File     string `json:"file"`
+    Line     int    `json:"line"`
+    Column   int    `json:"column"`
+    Severity string `json:"severity"`
+    Message  string `json:"message"`
+    Rule     string `json:"rule"`
+    Fixable  bool   `json:"fixable"`
+}
+
+type ValidateResult struct {
+    Success  bool     `json:"success"`
+    Errors   []string `json:"errors,omitempty"`
+    Warnings []string `json:"warnings,omitempty"`
+}
+
+type ListResult struct {
+    Workflows []ListWorkflow `json:"workflows"`
+}
+
+type ListWorkflow struct {
+    Name string `json:"name"`
+    File string `json:"file"`
+    Line int    `json:"line"`
+    Jobs int    `json:"jobs"`
+}
+```
+
 ## Core Types (workflow/ package)
 
 Types designed for the "no parens" pattern — struct literal initialization:
@@ -248,121 +327,220 @@ Types designed for the "no parens" pattern — struct literal initialization:
 ```go
 // workflow.go
 type Workflow struct {
-    Name        string
-    On          Triggers
-    Env         map[string]any
-    Defaults    *Defaults
-    Concurrency *Concurrency
-    Permissions *Permissions
-    Jobs        []Job // discovered via AST, not registry
+    Name        string                 `yaml:"name,omitempty"`
+    On          Triggers               `yaml:"on"`
+    Env         map[string]any         `yaml:"env,omitempty"`
+    Defaults    *Defaults              `yaml:"defaults,omitempty"`
+    Concurrency *Concurrency           `yaml:"concurrency,omitempty"`
+    Permissions *Permissions           `yaml:"permissions,omitempty"`
+    Jobs        map[string]Job         `yaml:"jobs"` // populated by discovery
 }
+
+func (w Workflow) ResourceType() string { return "workflow" }
 
 // job.go
 type Job struct {
-    Name           string
-    RunsOn         any  // string or matrix ref
-    Needs          []any // Job references (type-safe)
-    If             Condition
-    Environment    *Environment
-    Concurrency    *Concurrency
-    Outputs        map[string]Expression
-    Strategy       *Strategy
-    Container      *Container
-    Services       map[string]Service
-    Steps          []Step
-    TimeoutMinutes int
+    // Outputs for cross-job references (like AttrRef in wetwire-aws-go)
+    Outputs map[string]OutputRef `yaml:"-"` // excluded from YAML, used for refs
+
+    Name           string              `yaml:"name,omitempty"`
+    RunsOn         any                 `yaml:"runs-on"`
+    Needs          []any               `yaml:"needs,omitempty"` // Job references
+    If             any                 `yaml:"if,omitempty"`
+    Environment    *Environment        `yaml:"environment,omitempty"`
+    Concurrency    *Concurrency        `yaml:"concurrency,omitempty"`
+    Strategy       *Strategy           `yaml:"strategy,omitempty"`
+    Container      *Container          `yaml:"container,omitempty"`
+    Services       map[string]Service  `yaml:"services,omitempty"`
+    Steps          []Step              `yaml:"steps"`
+    TimeoutMinutes int                 `yaml:"timeout-minutes,omitempty"`
 }
+
+func (j Job) ResourceType() string { return "job" }
 
 // step.go
 type Step struct {
-    Name    string
-    ID      string
-    If      Condition
-    Uses    string      // or Action interface
-    With    map[string]any
-    Run     string
-    Shell   string
-    Env     map[string]any
-    WorkingDirectory string
+    // Outputs for cross-step references
+    ID      string         `yaml:"id,omitempty"`
+    Name    string         `yaml:"name,omitempty"`
+    If      any            `yaml:"if,omitempty"`
+    Uses    string         `yaml:"uses,omitempty"`
+    With    map[string]any `yaml:"with,omitempty"`
+    Run     string         `yaml:"run,omitempty"`
+    Shell   string         `yaml:"shell,omitempty"`
+    Env     map[string]any `yaml:"env,omitempty"`
+    WorkingDirectory string `yaml:"working-directory,omitempty"`
 }
 
-// matrix.go
-type Matrix struct {
-    Values   map[string][]any
-    Include  []map[string]any
-    Exclude  []map[string]any
-    FailFast bool
-    MaxParallel int
+// Output returns an OutputRef for referencing this step's outputs
+func (s Step) Output(name string) OutputRef {
+    return OutputRef{StepID: s.ID, Output: name}
 }
 
 // triggers.go
 type Triggers struct {
-    Push              *PushTrigger
-    PullRequest       *PullRequestTrigger
-    PullRequestTarget *PullRequestTargetTrigger
-    Schedule          []ScheduleTrigger
-    WorkflowDispatch  *WorkflowDispatchTrigger
-    WorkflowCall      *WorkflowCallTrigger
+    Push              *PushTrigger              `yaml:"push,omitempty"`
+    PullRequest       *PullRequestTrigger       `yaml:"pull_request,omitempty"`
+    PullRequestTarget *PullRequestTargetTrigger `yaml:"pull_request_target,omitempty"`
+    Schedule          []ScheduleTrigger         `yaml:"schedule,omitempty"`
+    WorkflowDispatch  *WorkflowDispatchTrigger  `yaml:"workflow_dispatch,omitempty"`
+    WorkflowCall      *WorkflowCallTrigger      `yaml:"workflow_call,omitempty"`
     // ... 30+ event types
 }
 
-// conditions.go
-type Condition interface {
-    String() string  // generates ${{ }} expression
+// matrix.go
+type Strategy struct {
+    Matrix      *Matrix `yaml:"matrix,omitempty"`
+    FailFast    *bool   `yaml:"fail-fast,omitempty"`
+    MaxParallel int     `yaml:"max-parallel,omitempty"`
 }
 
-func Push() Condition                    // github.event_name == 'push'
-func PullRequest() Condition             // github.event_name == 'pull_request'
-func Branch(name string) Condition       // github.ref == 'refs/heads/{name}'
-func TagRef(pattern string) Condition    // startsWith(github.ref, 'refs/tags/{pattern}')
-func Always() Condition                  // always()
-func Failure() Condition                 // failure()
-func Success() Condition                 // success()
+type Matrix struct {
+    Values  map[string][]any   `yaml:",inline"`
+    Include []map[string]any   `yaml:"include,omitempty"`
+    Exclude []map[string]any   `yaml:"exclude,omitempty"`
+}
+```
 
-// Operators
-func (c Condition) And(other Condition) Condition  // &&
-func (c Condition) Or(other Condition) Condition   // ||
-func (c Condition) Not() Condition                 // !
+## Expression Contexts (workflow/expressions.go)
 
-// expressions.go - Context accessors
-var GitHub = githubContext{}   // github.event_name, github.ref, etc.
-var Runner = runnerContext{}   // runner.os, runner.arch
-var Env = envContext{}         // env.MY_VAR
-var Secrets = secretsContext{} // secrets.MY_SECRET
-var Matrix = matrixContext{}   // matrix.python_version
+Context accessors for GitHub Actions expressions (like intrinsics in wetwire-aws-go):
+
+```go
+// Expression wraps a GitHub Actions expression string
+type Expression string
+
+func (e Expression) String() string {
+    return fmt.Sprintf("${{ %s }}", string(e))
+}
+
+// Context accessors - used like: workflow.Secrets.Get("TOKEN")
+var GitHub = githubContext{}
+var Runner = runnerContext{}
+var Env = envContext{}
+var Secrets = secretsContext{}
+var Matrix = matrixContext{}
+var Steps = stepsContext{}
+var Needs = needsContext{}
+
+type secretsContext struct{}
+func (secretsContext) Get(name string) Expression {
+    return Expression(fmt.Sprintf("secrets.%s", name))
+}
+
+type matrixContext struct{}
+func (matrixContext) Get(name string) Expression {
+    return Expression(fmt.Sprintf("matrix.%s", name))
+}
+
+type githubContext struct{}
+func (githubContext) Ref() Expression     { return Expression("github.ref") }
+func (githubContext) SHA() Expression     { return Expression("github.sha") }
+func (githubContext) Actor() Expression   { return Expression("github.actor") }
+func (githubContext) EventName() Expression { return Expression("github.event_name") }
+
+// Condition builders
+func Always() Expression  { return Expression("always()") }
+func Failure() Expression { return Expression("failure()") }
+func Success() Expression { return Expression("success()") }
+func Cancelled() Expression { return Expression("cancelled()") }
+
+func Branch(name string) Expression {
+    return Expression(fmt.Sprintf("github.ref == 'refs/heads/%s'", name))
+}
+
+// Composable conditions
+func (e Expression) And(other Expression) Expression {
+    return Expression(fmt.Sprintf("(%s) && (%s)", e, other))
+}
+
+func (e Expression) Or(other Expression) Expression {
+    return Expression(fmt.Sprintf("(%s) || (%s)", e, other))
+}
 ```
 
 ---
 
 ## Generated Action Wrappers (actions/ package)
 
+Action wrappers follow the same pattern as wetwire-aws-go resources:
+- Struct fields for inputs (like resource properties)
+- Output fields with `yaml:"-"` for cross-step references (like AttrRef)
+- `ToStep()` method to convert to workflow.Step
+
 ```go
 // actions/checkout/checkout.go
-// Generated from actions/checkout/action.yml
+// Code generated by wetwire-github codegen. DO NOT EDIT.
+// Source: actions/checkout/action.yml
+// Generated: 2026-01-04T10:00:00Z
 
 package checkout
 
+import (
+    wetwire "github.com/lex00/wetwire-github-go"
+    "github.com/lex00/wetwire-github-go/workflow"
+)
+
+// Checkout represents actions/checkout@v4
 type Checkout struct {
-    Repository         string
-    Ref                string
-    Token              string
-    SSHKey             string
-    PersistCredentials bool
-    Path               string
-    Clean              bool
-    FetchDepth         int
-    FetchTags          bool
-    Submodules         string
-    LFS                bool
-    // ... all inputs from action.yml
+    // Outputs for cross-step references (like AttrRef in wetwire-aws-go)
+    RefOutput    wetwire.OutputRef `yaml:"-"`
+    CommitOutput wetwire.OutputRef `yaml:"-"`
+
+    // Inputs (from action.yml)
+    Repository         string `yaml:"repository,omitempty"`
+    Ref                string `yaml:"ref,omitempty"`
+    Token              string `yaml:"token,omitempty"`
+    SSHKey             string `yaml:"ssh-key,omitempty"`
+    PersistCredentials *bool  `yaml:"persist-credentials,omitempty"`
+    Path               string `yaml:"path,omitempty"`
+    Clean              *bool  `yaml:"clean,omitempty"`
+    FetchDepth         int    `yaml:"fetch-depth,omitempty"`
+    FetchTags          *bool  `yaml:"fetch-tags,omitempty"`
+    Submodules         string `yaml:"submodules,omitempty"`
+    LFS                *bool  `yaml:"lfs,omitempty"`
 }
 
+// Action returns the action reference string
 func (a Checkout) Action() string { return "actions/checkout@v4" }
-func (a Checkout) ToStep() workflow.Step { ... }
 
-// Output references
-func (a Checkout) OutputRef() OutputRef       { return OutputRef{a, "ref"} }
-func (a Checkout) OutputCommit() OutputRef   { return OutputRef{a, "commit"} }
+// ToStep converts to a workflow.Step for use in Steps slice
+func (a Checkout) ToStep() workflow.Step {
+    return workflow.Step{
+        Uses: a.Action(),
+        With: a.toWith(),
+    }
+}
+
+// ToStepWithID converts to a workflow.Step with an ID for output references
+func (a Checkout) ToStepWithID(id string) workflow.Step {
+    return workflow.Step{
+        ID:   id,
+        Uses: a.Action(),
+        With: a.toWith(),
+    }
+}
+```
+
+**Usage pattern (no parens):**
+
+```go
+// Simple - just struct initialization
+var CheckoutStep = checkout.Checkout{
+    FetchDepth: 0,
+    Submodules: "recursive",
+}.ToStep()
+
+// With outputs - use ToStepWithID for references
+var CheckoutWithRef = checkout.Checkout{
+    Ref: "main",
+}.ToStepWithID("checkout")
+
+// Reference the output in another step
+var NextStep = workflow.Step{
+    Run: fmt.Sprintf("echo Checked out %s",
+        workflow.Steps.Output("checkout", "ref")),
+}
 ```
 
 ---
