@@ -682,7 +682,7 @@ wetwire-github validate rebuilt/*.yml
 
 ## Implementation Phases
 
-See [ROADMAP.md](ROADMAP.md) for detailed feature matrix with 186 features across 29 parallel streams.
+See [ROADMAP.md](ROADMAP.md) for detailed feature matrix with 187 features across 29 parallel streams.
 
 ### Phase 0: Development Infrastructure
 - **Repository Setup** — go.mod, .gitignore, specs/.gitkeep

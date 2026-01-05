@@ -76,6 +76,7 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ Triggers (all 30+ types) | 1A | [ ] | — |
 | ├─ Conditions interface | 1A | [ ] | — |
 | ├─ Expression contexts | 1A | [ ] | — |
+| ├─ Helper types (Env, With, List, Any, Strings) | 1A | [ ] | — |
 | ├─ contracts.go (interfaces) | 1A | [ ] | — |
 | ├─ Result types (Build/Lint/Validate/List) | 1A | [ ] | — |
 | └─ DiscoveredWorkflow/Job structs | 1A | [ ] | — |
@@ -288,14 +289,15 @@ All Phase 1 work streams can be developed **in parallel** with no dependencies o
 ```
 
 #### 1A: Core Types (`workflow/`)
-- [ ] `workflow.go` — Workflow struct
-- [ ] `job.go` — Job struct
-- [ ] `step.go` — Step struct
-- [ ] `matrix.go` — Matrix struct
+- [ ] `workflow.go` — Workflow struct with ResourceType()
+- [ ] `job.go` — Job struct with OutputRef fields
+- [ ] `step.go` — Step struct with Output() method
+- [ ] `matrix.go` — Matrix, Strategy structs
 - [ ] `triggers.go` — All trigger types (Push, PullRequest, Schedule, etc.)
 - [ ] `conditions.go` — Condition interface + builders
 - [ ] `expressions.go` — Context accessors (GitHub, Runner, Env, Secrets, Matrix)
-- [ ] `contracts.go` — Root-level interfaces
+- [ ] `helpers.go` — Type aliases (Env, With) + helpers (List, Any, Strings)
+- [ ] `contracts.go` — Root-level interfaces (WorkflowResource, OutputRef, etc.)
 
 **Output:** Compilable types, no runtime behavior yet
 
@@ -687,7 +689,7 @@ This matrix shows which work can happen simultaneously:
 - [ ] Build Artifacts (0/1)
 
 ### Phase 1 Progress
-- [ ] 1A: Core Types (0/10)
+- [ ] 1A: Core Types (0/11)
 - [ ] 1B: Serialization (0/9)
 - [ ] 1C: CLI Framework (0/11)
 - [ ] 1D: Schema Fetching (0/10)
@@ -778,9 +780,9 @@ The minimum sequence to reach Issue Template support:
 | Phase | Streams | Features |
 |-------|---------|----------|
 | Phase 0 | 5 | 13 |
-| Phase 1 | 4 | 40 |
+| Phase 1 | 4 | 41 |
 | Phase 2 | 8 | 47 |
 | Phase 3 | 7 | 44 |
 | Phase 4 | 2 | 10 |
 | Phase 5 | 3 | 32 |
-| **Total** | **29** | **186** |
+| **Total** | **29** | **187** |
