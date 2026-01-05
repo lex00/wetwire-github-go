@@ -19,8 +19,8 @@ var CITriggers = workflow.Triggers{
     PullRequest: CIPullRequest,
 }
 
-var CIPush = workflow.PushTrigger{Branches: []string{"main"}}
-var CIPullRequest = workflow.PullRequestTrigger{Branches: []string{"main"}}
+var CIPush = workflow.PushTrigger{Branches: List("main")}
+var CIPullRequest = workflow.PullRequestTrigger{Branches: List("main")}
 ```
 
 ### Jobs
@@ -93,12 +93,30 @@ setup_go.SetupGo{GoVersion: "1.23"}.ToStep()
 cache.Cache{Path: "~/.cache/go-build", Key: "go-cache"}.ToStep()
 ```
 
+## Helpers
+
+Use `List()` instead of slice literals:
+
+```go
+// Instead of:
+Branches: []string{"main", "develop"}
+
+// Write:
+Branches: List("main", "develop")
+```
+
+Use `Any()` for mixed-type slices:
+
+```go
+Needs: Any(BuildJob, TestJob)
+```
+
 ## Key Principles
 
 1. **Flat variables** — Extract all nested structs into named variables
 2. **No pointers** — Never use `&` or `*` in declarations
 3. **Direct references** — Variables reference each other by name
-4. **Struct literals only** — No function calls except `.ToStep()` for actions
+4. **Struct literals only** — No function calls except `.ToStep()` and helpers
 
 ## Build
 

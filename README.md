@@ -27,8 +27,8 @@ var CITriggers = workflow.Triggers{
     PullRequest: CIPullRequest,
 }
 
-var CIPush = workflow.PushTrigger{Branches: []string{"main"}}
-var CIPullRequest = workflow.PullRequestTrigger{Branches: []string{"main"}}
+var CIPush = workflow.PushTrigger{Branches: List("main")}
+var CIPullRequest = workflow.PullRequestTrigger{Branches: List("main")}
 
 // Job declaration
 var Build = workflow.Job{
