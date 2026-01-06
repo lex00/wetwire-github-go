@@ -477,29 +477,54 @@ func (g *CodeGenerator) generateSteps(varName string, steps []IRStep) string {
 
 // toVarName converts a string to a valid Go variable name.
 func toVarName(s string) string {
+	// Replace special characters with meaningful substitutes
+	s = strings.ReplaceAll(s, "++", "pp")  // C++ -> Cpp
+	s = strings.ReplaceAll(s, "+", "Plus") // single + -> Plus
+	s = strings.ReplaceAll(s, "#", "Sharp") // C# -> CSharp
+	s = strings.ReplaceAll(s, "&", "And")
+
 	// Remove or replace non-alphanumeric characters
 	s = strings.ReplaceAll(s, "(", "")
 	s = strings.ReplaceAll(s, ")", "")
 	s = strings.ReplaceAll(s, "/", "_")
 	s = strings.ReplaceAll(s, ".", "_")
+	s = strings.ReplaceAll(s, "@", "_")
+	s = strings.ReplaceAll(s, "!", "")
+	s = strings.ReplaceAll(s, "?", "")
+	s = strings.ReplaceAll(s, "'", "")
+	s = strings.ReplaceAll(s, "\"", "")
+	s = strings.ReplaceAll(s, ":", "_")
+	s = strings.ReplaceAll(s, ";", "_")
+	s = strings.ReplaceAll(s, ",", "_")
 
 	// Convert spaces, kebab-case and snake_case to PascalCase
 	s = strings.ReplaceAll(s, " ", "_")
 	s = strings.ReplaceAll(s, "-", "_")
 	parts := strings.Split(s, "_")
-	for i, part := range parts {
+	var result []string
+	for _, part := range parts {
 		if len(part) > 0 {
-			parts[i] = strings.ToUpper(part[:1]) + part[1:]
+			result = append(result, strings.ToUpper(part[:1])+part[1:])
 		}
 	}
-	name := strings.Join(parts, "")
+	name := strings.Join(result, "")
 
 	// Handle reserved words
 	if isReserved(name) {
 		name = name + "Job"
 	}
 
+	// Ensure the name starts with a letter (required for Go identifiers)
+	if len(name) > 0 && !isLetter(rune(name[0])) {
+		name = "X" + name
+	}
+
 	return name
+}
+
+// isLetter checks if a rune is a letter.
+func isLetter(r rune) bool {
+	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z')
 }
 
 // isReserved checks if a name is a Go reserved word.
