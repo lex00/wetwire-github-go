@@ -272,6 +272,11 @@ wetwire-github-go/
 - Persona-based testing via wetwire-core-go
 - Automated evaluation of code generation quality
 
+### 9. `wetwire-github graph`
+- Generate DAG visualization of workflow jobs
+- Uses `github.com/emicklei/dot` library
+- Formats: `--format dot` (Graphviz), `--format mermaid` (GitHub markdown)
+
 ---
 
 ## CLI Exit Codes
@@ -712,6 +717,7 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ `import` command (stub) | 1C | [ ] | — |
 | ├─ `design` command (stub) | 1C | [ ] | — |
 | ├─ `test` command (stub) | 1C | [ ] | — |
+| ├─ `graph` command (stub) | 1C | [ ] | — |
 | ├─ `version` command | 1C | [ ] | — |
 | └─ Exit code semantics (0/1/2) | 1C | [ ] | — |
 | **Schema Fetching** | | | |
@@ -806,6 +812,12 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ Table output format | 3E | [ ] | AST Discovery |
 | ├─ --format json | 3E | [ ] | — |
 | └─ `list` command (full) | 3E | [ ] | AST Discovery |
+| **Graph Command (DAG Visualization)** | | | |
+| ├─ github.com/emicklei/dot integration | 3H | [ ] | AST Discovery |
+| ├─ DOT format output | 3H | [ ] | — |
+| ├─ Mermaid format output | 3H | [ ] | — |
+| ├─ Job dependency edge extraction | 3H | [ ] | AST Discovery |
+| └─ `graph` command (full) | 3H | [ ] | AST Discovery |
 | **Design Command (AI-assisted)** | | | |
 | ├─ wetwire-core-go orchestrator | 3F | [ ] | All CLI commands |
 | ├─ Interactive session | 3F | [ ] | — |
@@ -1048,7 +1060,7 @@ Phase 5 adds support for additional GitHub YAML configuration types. All streams
 ### Phase 1 Progress
 - [ ] 1A: Core Types (0/13)
 - [ ] 1B: Serialization (0/10)
-- [ ] 1C: CLI Framework (0/11)
+- [ ] 1C: CLI Framework (0/12)
 - [ ] 1D: Schema Fetching (0/10)
 
 ### Phase 2 Progress
@@ -1069,6 +1081,7 @@ Phase 5 adds support for additional GitHub YAML configuration types. All streams
 - [ ] 3E: List Command (0/3)
 - [ ] 3F: Design Command (0/6)
 - [ ] 3G: Test Command (0/7)
+- [ ] 3H: Graph Command (0/5)
 
 ### Phase 4 Progress
 - [ ] 4A: Reference Example Testing (0/7)
@@ -1121,12 +1134,12 @@ The minimum sequence to reach a working `lint` command:
 | Phase | Streams | Features |
 |-------|---------|----------|
 | Phase 0 | 5 | 13 |
-| Phase 1 | 4 | 44 |
+| Phase 1 | 4 | 45 |
 | Phase 2 | 8 | 48 |
-| Phase 3 | 7 | 45 |
+| Phase 3 | 8 | 50 |
 | Phase 4 | 2 | 13 |
 | Phase 5 | 3 | 32 |
-| **Total** | **29** | **195** |
+| **Total** | **30** | **201** |
 
 ---
 
@@ -1211,3 +1224,23 @@ var BuildStep = local_build.Build{
 ```
 
 This is an optional convenience feature - raw paths always work without wrapper generation.
+
+### DAG Visualization ✅
+
+**Decision:** Yes, generate workflow graphs using `github.com/emicklei/dot` (same library as cfn-lint-go).
+
+Supports both DOT (Graphviz) and Mermaid output formats:
+
+```bash
+wetwire-github graph ./my-workflow --format mermaid
+wetwire-github graph ./my-workflow --format dot
+```
+
+Output (Mermaid):
+```mermaid
+graph LR
+    build --> test
+    build --> lint
+    test --> deploy
+    lint --> deploy
+```
