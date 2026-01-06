@@ -136,9 +136,11 @@ func (b *Builder) buildWorkflow(dw discover.DiscoveredWorkflow, data map[string]
 		wf.Name = name
 	}
 
-	// Set triggers
+	// Set triggers - handle both direct type and map reconstruction
 	if on, ok := data["On"].(workflow.Triggers); ok {
 		wf.On = on
+	} else if onMap, ok := data["On"].(map[string]any); ok {
+		wf.On = b.reconstructTriggers(onMap)
 	}
 
 	// Set env
@@ -258,9 +260,11 @@ func (b *Builder) buildJob(ej *runner.ExtractedJob) (*workflow.Job, error) {
 		job.Services = services
 	}
 
-	// Handle steps
+	// Handle steps - handle both direct type and slice reconstruction
 	if steps, ok := data["Steps"].([]workflow.Step); ok {
 		job.Steps = steps
+	} else if stepsSlice, ok := data["Steps"].([]any); ok {
+		job.Steps = b.reconstructSteps(stepsSlice)
 	}
 
 	// Handle environment
@@ -341,4 +345,118 @@ func ValidateJobDependencies(jobs []discover.DiscoveredJob) []string {
 
 	sort.Strings(errors)
 	return errors
+}
+
+// reconstructTriggers builds a Triggers struct from a generic map.
+func (b *Builder) reconstructTriggers(data map[string]any) workflow.Triggers {
+	triggers := workflow.Triggers{}
+
+	if pushData, ok := data["Push"]; ok {
+		if pushMap, ok := pushData.(map[string]any); ok {
+			push := &workflow.PushTrigger{}
+			if branches, ok := pushMap["Branches"].([]any); ok {
+				push.Branches = anySliceToStrings(branches)
+			}
+			if tags, ok := pushMap["Tags"].([]any); ok {
+				push.Tags = anySliceToStrings(tags)
+			}
+			if paths, ok := pushMap["Paths"].([]any); ok {
+				push.Paths = anySliceToStrings(paths)
+			}
+			triggers.Push = push
+		}
+	}
+
+	if prData, ok := data["PullRequest"]; ok {
+		if prMap, ok := prData.(map[string]any); ok {
+			pr := &workflow.PullRequestTrigger{}
+			if branches, ok := prMap["Branches"].([]any); ok {
+				pr.Branches = anySliceToStrings(branches)
+			}
+			if types, ok := prMap["Types"].([]any); ok {
+				pr.Types = anySliceToStrings(types)
+			}
+			triggers.PullRequest = pr
+		}
+	}
+
+	if wdData, ok := data["WorkflowDispatch"]; ok && wdData != nil {
+		triggers.WorkflowDispatch = &workflow.WorkflowDispatchTrigger{}
+	}
+
+	if wcData, ok := data["WorkflowCall"]; ok && wcData != nil {
+		triggers.WorkflowCall = &workflow.WorkflowCallTrigger{}
+	}
+
+	if schedData, ok := data["Schedule"].([]any); ok {
+		for _, s := range schedData {
+			if sched, ok := s.(map[string]any); ok {
+				if cron, ok := sched["Cron"].(string); ok {
+					triggers.Schedule = append(triggers.Schedule, workflow.ScheduleTrigger{Cron: cron})
+				}
+			}
+		}
+	}
+
+	return triggers
+}
+
+// reconstructSteps builds a slice of Steps from a generic slice.
+func (b *Builder) reconstructSteps(data []any) []workflow.Step {
+	var steps []workflow.Step
+
+	for _, item := range data {
+		stepMap, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		step := workflow.Step{}
+
+		if id, ok := stepMap["ID"].(string); ok {
+			step.ID = id
+		}
+		if name, ok := stepMap["Name"].(string); ok {
+			step.Name = name
+		}
+		if uses, ok := stepMap["Uses"].(string); ok {
+			step.Uses = uses
+		}
+		if run, ok := stepMap["Run"].(string); ok {
+			step.Run = run
+		}
+		if shell, ok := stepMap["Shell"].(string); ok {
+			step.Shell = shell
+		}
+		if ifCond, ok := stepMap["If"].(string); ok {
+			step.If = ifCond
+		}
+		if wd, ok := stepMap["WorkingDirectory"].(string); ok {
+			step.WorkingDirectory = wd
+		}
+		if env, ok := stepMap["Env"].(map[string]any); ok {
+			step.Env = env
+		}
+		if with, ok := stepMap["With"].(map[string]any); ok {
+			step.With = with
+		}
+		if timeout, ok := stepMap["TimeoutMinutes"].(float64); ok {
+			step.TimeoutMinutes = int(timeout)
+		}
+
+		steps = append(steps, step)
+	}
+
+	return steps
+}
+
+// anySliceToStrings converts []any to []string.
+func anySliceToStrings(slice []any) []string {
+	var result []string
+	for _, v := range slice {
+		if s, ok := v.(string); ok {
+			result = append(result, s)
+		}
+	}
+	return result
 }

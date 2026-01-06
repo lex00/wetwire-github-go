@@ -75,7 +75,7 @@ func runImport(path string) error {
 	// Create code generator
 	gen := importer.NewCodeGenerator()
 	gen.SingleFile = importSingleFile
-	gen.PackageName = "main"
+	// Keep default "workflows" package name for library-style imports
 
 	// Generate code
 	code, err := gen.Generate(workflow, workflowName)
@@ -94,22 +94,23 @@ func runImport(path string) error {
 	}
 	result.OutputDir = absOutput
 
-	// Create output directory
-	if err := os.MkdirAll(absOutput, 0755); err != nil {
+	// Create output directory and workflows subdirectory
+	workflowsDir := filepath.Join(absOutput, "workflows")
+	if err := os.MkdirAll(workflowsDir, 0755); err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("creating output directory: %v", err))
 		outputImportResult(result)
 		return nil
 	}
 
-	// Write generated code
-	if err := importer.WriteGeneratedCode(absOutput, code); err != nil {
+	// Write generated code to workflows/ subdirectory
+	if err := importer.WriteGeneratedCode(workflowsDir, code); err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("writing code: %v", err))
 		outputImportResult(result)
 		return nil
 	}
 
 	for filename := range code.Files {
-		result.Files = append(result.Files, filepath.Join(absOutput, filename))
+		result.Files = append(result.Files, filepath.Join(workflowsDir, filename))
 	}
 
 	// Generate scaffold files if not disabled

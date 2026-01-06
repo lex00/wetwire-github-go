@@ -60,6 +60,9 @@ func (s *Scaffold) generateMain() string {
 
 import (
 	"fmt"
+
+	// Import workflows to ensure they compile
+	_ "%s/workflows"
 )
 
 func main() {
@@ -71,7 +74,7 @@ func main() {
 	fmt.Println("Validate generated YAML:")
 	fmt.Println("  wetwire-github validate .github/workflows/*.yml")
 }
-`, s.ProjectName)
+`, s.ModulePath, s.ProjectName)
 }
 
 // generateReadme generates README.md content.

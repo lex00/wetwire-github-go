@@ -65,8 +65,8 @@ git sparse-checkout set ci automation code-scanning deployments pages 2>/dev/nul
 cd "$PACKAGE_ROOT"
 echo ""
 
-# Find all workflow files
-WORKFLOWS=$(find "$SAMPLES_DIR" -name "*.yml" -o -name "*.yaml" | sort)
+# Find all workflow files (exclude non-workflow YAML like .pre-commit-config.yaml)
+WORKFLOWS=$(find "$SAMPLES_DIR" -name "*.yml" -o -name "*.yaml" | grep -v ".pre-commit" | grep -v "CODEOWNERS" | sort)
 
 if [ -n "$SPECIFIC" ]; then
     WORKFLOWS=$(echo "$WORKFLOWS" | grep -i "$SPECIFIC" || true)
@@ -91,6 +91,9 @@ for workflow in $WORKFLOWS; do
     mkdir -p "$go_dir"
 
     if $CLI import "$workflow" -o "$go_dir" 2>/dev/null; then
+        # Add replace directive for local development
+        echo "replace github.com/lex00/wetwire-github-go => $PACKAGE_ROOT" >> "$go_dir/go.mod"
+
         # Build back to YAML
         if $CLI build "$go_dir" -o "$go_dir/.github/workflows" 2>/dev/null; then
             # Validate with actionlint (if available)
