@@ -59,14 +59,20 @@ func (r *Runner) ExtractValues(dir string, discovered *discover.DiscoveryResult)
 		}, nil
 	}
 
+	// Get absolute path for consistent path handling
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("resolving path: %w", err)
+	}
+
 	// Parse go.mod to get module path
-	modulePath, err := r.parseGoMod(dir)
+	modulePath, err := r.parseGoMod(absDir)
 	if err != nil {
 		return nil, fmt.Errorf("parsing go.mod: %w", err)
 	}
 
 	// Generate the temporary extraction program
-	program, err := r.generateProgram(modulePath, discovered)
+	program, err := r.generateProgram(modulePath, absDir, discovered)
 	if err != nil {
 		return nil, fmt.Errorf("generating program: %w", err)
 	}
@@ -136,18 +142,45 @@ func (r *Runner) parseGoMod(dir string) (string, error) {
 // generateGoMod creates a go.mod with a replace directive.
 func (r *Runner) generateGoMod(modulePath, dir string) string {
 	absDir, _ := filepath.Abs(dir)
-	return fmt.Sprintf(`module wetwire-extract
 
-go 1.23
+	// Start with base go.mod
+	var sb strings.Builder
+	sb.WriteString("module wetwire-extract\n\n")
+	sb.WriteString("go 1.23\n\n")
+	sb.WriteString(fmt.Sprintf("require %s v0.0.0\n\n", modulePath))
+	sb.WriteString(fmt.Sprintf("replace %s => %s\n", modulePath, absDir))
 
-require %s v0.0.0
+	// Copy replace directives from user's go.mod
+	replaces := r.parseReplaceDirectives(dir)
+	for _, replace := range replaces {
+		sb.WriteString(replace + "\n")
+	}
 
-replace %s => %s
-`, modulePath, modulePath, absDir)
+	return sb.String()
+}
+
+// parseReplaceDirectives extracts replace directives from go.mod.
+func (r *Runner) parseReplaceDirectives(dir string) []string {
+	var replaces []string
+
+	goModPath := filepath.Join(dir, "go.mod")
+	content, err := os.ReadFile(goModPath)
+	if err != nil {
+		return replaces
+	}
+
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "replace ") {
+			replaces = append(replaces, line)
+		}
+	}
+
+	return replaces
 }
 
 // generateProgram creates the extraction program source code.
-func (r *Runner) generateProgram(modulePath string, discovered *discover.DiscoveryResult) (string, error) {
+func (r *Runner) generateProgram(modulePath, baseDir string, discovered *discover.DiscoveryResult) (string, error) {
 	var sb strings.Builder
 
 	sb.WriteString(`package main
@@ -164,11 +197,11 @@ import (
 	// We need to determine the package path from the discovered files
 	packages := make(map[string]bool)
 	for _, w := range discovered.Workflows {
-		pkgPath := r.getPackagePath(modulePath, w.File)
+		pkgPath := r.getPackagePath(modulePath, baseDir, w.File)
 		packages[pkgPath] = true
 	}
 	for _, j := range discovered.Jobs {
-		pkgPath := r.getPackagePath(modulePath, j.File)
+		pkgPath := r.getPackagePath(modulePath, baseDir, j.File)
 		packages[pkgPath] = true
 	}
 
@@ -224,14 +257,14 @@ func main() {
 
 	// Add workflow extractions
 	for _, w := range discovered.Workflows {
-		alias := r.pkgAlias(r.getPackagePath(modulePath, w.File))
+		alias := r.pkgAlias(r.getPackagePath(modulePath, baseDir, w.File))
 		sb.WriteString(fmt.Sprintf("\tresult.Workflows = append(result.Workflows, ExtractedWorkflow{Name: %q, Data: toMap(%s.%s)})\n",
 			w.Name, alias, w.Name))
 	}
 
 	// Add job extractions
 	for _, j := range discovered.Jobs {
-		alias := r.pkgAlias(r.getPackagePath(modulePath, j.File))
+		alias := r.pkgAlias(r.getPackagePath(modulePath, baseDir, j.File))
 		sb.WriteString(fmt.Sprintf("\tresult.Jobs = append(result.Jobs, ExtractedJob{Name: %q, Data: toMap(%s.%s)})\n",
 			j.Name, alias, j.Name))
 	}
@@ -250,9 +283,16 @@ func main() {
 }
 
 // getPackagePath determines the import path for a source file.
-func (r *Runner) getPackagePath(modulePath, file string) string {
+func (r *Runner) getPackagePath(modulePath, baseDir, file string) string {
+	// Make file path relative to baseDir
+	relFile, err := filepath.Rel(baseDir, file)
+	if err != nil {
+		// Fall back to just the module path if we can't compute relative path
+		return modulePath
+	}
+
 	// Get directory containing the file
-	dir := filepath.Dir(file)
+	dir := filepath.Dir(relFile)
 
 	// If the file is in the root, return the module path
 	if dir == "." || dir == "" {

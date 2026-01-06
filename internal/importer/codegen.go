@@ -18,7 +18,7 @@ type CodeGenerator struct {
 // NewCodeGenerator creates a new CodeGenerator.
 func NewCodeGenerator() *CodeGenerator {
 	return &CodeGenerator{
-		PackageName: "main",
+		PackageName: "workflows",
 	}
 }
 
@@ -205,13 +205,24 @@ func (g *CodeGenerator) generateWorkflow(workflow *IRWorkflow, varName string) s
 func (g *CodeGenerator) generateTriggers(workflow *IRWorkflow, varName string) string {
 	var sb strings.Builder
 
+	// Generate individual trigger variables first
+	if workflow.On.Push != nil {
+		sb.WriteString(g.generatePushTriggerVar(workflow.On.Push, varName))
+		sb.WriteString("\n")
+	}
+	if workflow.On.PullRequest != nil {
+		sb.WriteString(g.generatePullRequestTriggerVar(workflow.On.PullRequest, varName))
+		sb.WriteString("\n")
+	}
+
+	// Generate main triggers struct
 	sb.WriteString(fmt.Sprintf("var %sTriggers = workflow.Triggers{\n", varName))
 
 	if workflow.On.Push != nil {
-		sb.WriteString(g.generatePushTrigger(workflow.On.Push, varName))
+		sb.WriteString(fmt.Sprintf("\tPush: &%sPush,\n", varName))
 	}
 	if workflow.On.PullRequest != nil {
-		sb.WriteString(g.generatePullRequestTrigger(workflow.On.PullRequest, varName))
+		sb.WriteString(fmt.Sprintf("\tPullRequest: &%sPullRequest,\n", varName))
 	}
 	if workflow.On.WorkflowDispatch != nil {
 		sb.WriteString("\tWorkflowDispatch: &workflow.WorkflowDispatchTrigger{},\n")
@@ -231,17 +242,109 @@ func (g *CodeGenerator) generateTriggers(workflow *IRWorkflow, varName string) s
 	return sb.String()
 }
 
-// generatePushTrigger generates push trigger code.
-func (g *CodeGenerator) generatePushTrigger(push *IRPushTrigger, varName string) string {
+// generatePushTriggerVar generates the push trigger variable definition.
+func (g *CodeGenerator) generatePushTriggerVar(push *IRPushTrigger, varName string) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\tPush: &%sPush,\n", varName))
+	sb.WriteString(fmt.Sprintf("var %sPush = workflow.PushTrigger{\n", varName))
+
+	if len(push.Branches) > 0 {
+		sb.WriteString("\tBranches: []string{")
+		for i, b := range push.Branches {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", b))
+		}
+		sb.WriteString("},\n")
+	}
+
+	if len(push.BranchesIgnore) > 0 {
+		sb.WriteString("\tBranchesIgnore: []string{")
+		for i, b := range push.BranchesIgnore {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", b))
+		}
+		sb.WriteString("},\n")
+	}
+
+	if len(push.Tags) > 0 {
+		sb.WriteString("\tTags: []string{")
+		for i, t := range push.Tags {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", t))
+		}
+		sb.WriteString("},\n")
+	}
+
+	if len(push.Paths) > 0 {
+		sb.WriteString("\tPaths: []string{")
+		for i, p := range push.Paths {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", p))
+		}
+		sb.WriteString("},\n")
+	}
+
+	sb.WriteString("}\n")
 	return sb.String()
 }
 
-// generatePullRequestTrigger generates pull request trigger code.
-func (g *CodeGenerator) generatePullRequestTrigger(pr *IRPullRequestTrigger, varName string) string {
+// generatePullRequestTriggerVar generates the pull request trigger variable definition.
+func (g *CodeGenerator) generatePullRequestTriggerVar(pr *IRPullRequestTrigger, varName string) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\tPullRequest: &%sPullRequest,\n", varName))
+	sb.WriteString(fmt.Sprintf("var %sPullRequest = workflow.PullRequestTrigger{\n", varName))
+
+	if len(pr.Branches) > 0 {
+		sb.WriteString("\tBranches: []string{")
+		for i, b := range pr.Branches {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", b))
+		}
+		sb.WriteString("},\n")
+	}
+
+	if len(pr.BranchesIgnore) > 0 {
+		sb.WriteString("\tBranchesIgnore: []string{")
+		for i, b := range pr.BranchesIgnore {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", b))
+		}
+		sb.WriteString("},\n")
+	}
+
+	if len(pr.Types) > 0 {
+		sb.WriteString("\tTypes: []string{")
+		for i, t := range pr.Types {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", t))
+		}
+		sb.WriteString("},\n")
+	}
+
+	if len(pr.Paths) > 0 {
+		sb.WriteString("\tPaths: []string{")
+		for i, p := range pr.Paths {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(fmt.Sprintf("%q", p))
+		}
+		sb.WriteString("},\n")
+	}
+
+	sb.WriteString("}\n")
 	return sb.String()
 }
 
@@ -374,7 +477,14 @@ func (g *CodeGenerator) generateSteps(varName string, steps []IRStep) string {
 
 // toVarName converts a string to a valid Go variable name.
 func toVarName(s string) string {
-	// Convert kebab-case and snake_case to PascalCase
+	// Remove or replace non-alphanumeric characters
+	s = strings.ReplaceAll(s, "(", "")
+	s = strings.ReplaceAll(s, ")", "")
+	s = strings.ReplaceAll(s, "/", "_")
+	s = strings.ReplaceAll(s, ".", "_")
+
+	// Convert spaces, kebab-case and snake_case to PascalCase
+	s = strings.ReplaceAll(s, " ", "_")
 	s = strings.ReplaceAll(s, "-", "_")
 	parts := strings.Split(s, "_")
 	for i, part := range parts {

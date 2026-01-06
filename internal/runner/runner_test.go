@@ -90,22 +90,23 @@ func TestRunner_generateGoMod(t *testing.T) {
 
 func TestRunner_getPackagePath(t *testing.T) {
 	r := NewRunner()
+	baseDir := "/project"
 
 	tests := []struct {
 		modulePath string
+		baseDir    string
 		file       string
 		want       string
 	}{
-		{"github.com/example/test", "workflows.go", "github.com/example/test"},
-		{"github.com/example/test", "./workflows.go", "github.com/example/test"},
-		{"github.com/example/test", "pkg/workflows.go", "github.com/example/test/pkg"},
-		{"github.com/example/test", "internal/ci/workflows.go", "github.com/example/test/internal/ci"},
+		{"github.com/example/test", baseDir, "/project/workflows.go", "github.com/example/test"},
+		{"github.com/example/test", baseDir, "/project/pkg/workflows.go", "github.com/example/test/pkg"},
+		{"github.com/example/test", baseDir, "/project/internal/ci/workflows.go", "github.com/example/test/internal/ci"},
 	}
 
 	for _, tt := range tests {
-		got := r.getPackagePath(tt.modulePath, tt.file)
+		got := r.getPackagePath(tt.modulePath, tt.baseDir, tt.file)
 		if got != tt.want {
-			t.Errorf("getPackagePath(%q, %q) = %q, want %q", tt.modulePath, tt.file, got, tt.want)
+			t.Errorf("getPackagePath(%q, %q, %q) = %q, want %q", tt.modulePath, tt.baseDir, tt.file, got, tt.want)
 		}
 	}
 }
@@ -132,17 +133,18 @@ func TestRunner_pkgAlias(t *testing.T) {
 
 func TestRunner_generateProgram(t *testing.T) {
 	r := NewRunner()
+	baseDir := "/project"
 
 	discovered := &discover.DiscoveryResult{
 		Workflows: []discover.DiscoveredWorkflow{
-			{Name: "CI", File: "workflows.go", Line: 10},
+			{Name: "CI", File: "/project/workflows.go", Line: 10},
 		},
 		Jobs: []discover.DiscoveredJob{
-			{Name: "Build", File: "jobs.go", Line: 5},
+			{Name: "Build", File: "/project/jobs.go", Line: 5},
 		},
 	}
 
-	program, err := r.generateProgram("github.com/example/test", discovered)
+	program, err := r.generateProgram("github.com/example/test", baseDir, discovered)
 	if err != nil {
 		t.Fatalf("generateProgram() error = %v", err)
 	}
