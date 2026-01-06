@@ -1,4 +1,12 @@
-# wetwire-github-go Implementation Roadmap
+# wetwire-github-go Implementation Plan & Roadmap
+
+## Overview
+
+Build `wetwire-github-go` following the same patterns as `wetwire-aws-go` — a synthesis library that generates GitHub YAML configurations from typed Go declarations.
+
+For the wetwire pattern, see the [Wetwire Specification](https://github.com/lex00/wetwire/blob/main/docs/WETWIRE_SPEC.md).
+
+---
 
 ## The "No Parens" Pattern
 
@@ -26,6 +34,14 @@ workflow.GitHub.Ref
 
 AST-based discovery — no registration needed.
 
+**Key principles:**
+- Variables declared with struct literals (no function calls)
+- Pointer types declared once with `&`, referenced cleanly without `&`
+- Cross-resource references via direct field access
+- AST-based discovery — no registration needed
+- Type-safe action wrappers with `.ToStep()` conversion
+- Expression contexts as typed accessors (`workflow.Secrets.Get(...)`)
+
 ---
 
 ## Scope
@@ -37,6 +53,596 @@ wetwire-github-go generates typed Go declarations for three GitHub YAML configur
 | **GitHub Actions** | `.github/workflows/*.yml` | `json.schemastore.org/github-workflow.json` |
 | **Dependabot** | `.github/dependabot.yml` | `json.schemastore.org/dependabot-2.0.json` |
 | **Issue/Discussion Templates** | `.github/ISSUE_TEMPLATE/*.yml` | `json.schemastore.org/github-issue-forms.json` |
+
+---
+
+## Key Decisions
+
+- **Action versions**: Hardcode major version in generated wrappers (e.g., `@v4`)
+- **Validation**: Use actionlint as Go library (`github.com/rhysd/actionlint`)
+- **Approach**: Full feature parity with wetwire-aws-go
+- **Config types**: Support Actions, Dependabot, and Issue/Discussion Templates via `--type` flag
+
+---
+
+## Feature Matrix: wetwire-aws-go → wetwire-github-go
+
+| Feature | wetwire-aws-go | wetwire-github-go |
+|---------|----------------|-------------------|
+| **Schema Source** | CloudFormation spec JSON | Workflow JSON schema + action.yml files |
+| **Schema URL** | AWS CF spec URL | `json.schemastore.org/github-workflow.json` |
+| **Secondary Source** | — | Popular action.yml files (checkout, setup-python, etc.) |
+| **Output Format** | CloudFormation JSON/YAML | GitHub Actions workflow YAML |
+| **Generated Types** | 262 AWS service packages | Workflow, Job, Step, Matrix, Triggers + Action wrappers |
+| **Intrinsics** | Ref, GetAtt, Sub, Join, etc. | Expression contexts (github, runner, env, secrets, matrix) |
+| **Validation** | cfn-lint integration | actionlint integration |
+
+---
+
+## Schema Sources
+
+### 1. Workflow Schema
+- **URL**: `https://json.schemastore.org/github-workflow.json`
+- **Raw**: `https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/github-workflow.json`
+- **Provides**: Triggers, jobs, steps, matrix, concurrency, permissions, environments
+
+### 2. Action Metadata (action.yml)
+- **Pattern**: `https://raw.githubusercontent.com/{owner}/{repo}/main/action.yml`
+- **Popular actions to generate wrappers for**:
+  - `actions/checkout`
+  - `actions/setup-python`, `setup-node`, `setup-go`, `setup-java`
+  - `actions/cache`
+  - `actions/upload-artifact`, `download-artifact`
+  - `docker/build-push-action`
+  - `codecov/codecov-action`
+  - `pypa/gh-action-pypi-publish`
+  - (extensible list in config)
+
+### 3. Dependabot Schema
+- **URL**: `https://json.schemastore.org/dependabot-2.0.json`
+- **Provides**: Package ecosystems, update schedules, registries, groups, ignore patterns
+
+### 4. Issue Forms Schema
+- **URL**: `https://json.schemastore.org/github-issue-forms.json`
+- **Provides**: Form body elements (input, textarea, dropdown, checkboxes, markdown)
+
+---
+
+## Generated Package Structure (User Projects)
+
+When users run `wetwire-github import` or `wetwire-github init`, the importer scaffolds a project package:
+
+```
+my-ci/                           # User's workflow package
+├── go.mod                       # Module: my-ci
+├── go.sum
+├── README.md                    # Generated docs
+├── CLAUDE.md                    # AI assistant context
+├── .gitignore
+│
+├── cmd/
+│   └── main.go                  # Usage instructions
+│
+├── workflows.go                 # Workflow declarations
+├── jobs.go                      # Job declarations
+├── steps.go                     # Reusable step declarations
+├── triggers.go                  # Trigger configurations
+└── matrix.go                    # Matrix configurations
+```
+
+**Key patterns (same as wetwire-aws-go):**
+- Single package per project
+- Flat variables for all nested structs
+- Importer generates correct `&` based on field types
+- Cross-file references work via Go's package scope
+- Variables reference each other directly (e.g., `Steps: BuildSteps`)
+
+---
+
+## Library Directory Structure
+
+```
+wetwire-github-go/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml              # Build/test on push/PR
+│       └── codebot.yml         # Claude Code integration
+│
+├── scripts/
+│   ├── ci.sh                   # Local CI runner
+│   └── import_samples.sh       # Round-trip testing
+│
+├── cmd/wetwire-github/         # CLI application
+│   ├── main.go
+│   ├── build.go                # Generate YAML (--type workflow|dependabot|issue-template)
+│   ├── validate.go             # Validate via actionlint
+│   ├── list.go                 # List discovered resources
+│   ├── lint.go                 # Code quality rules
+│   ├── import.go               # YAML → Go conversion
+│   ├── init.go                 # Project scaffolding
+│   └── version.go
+│
+├── internal/
+│   ├── discover/               # AST-based resource discovery
+│   ├── importer/               # YAML to Go code conversion
+│   ├── linter/                 # Go code lint rules (WAG001-WAG0XX)
+│   ├── template/               # YAML builder
+│   ├── serialize/              # YAML serialization
+│   └── validation/             # actionlint integration
+│
+├── workflow/                   # Core workflow types (hand-written)
+│   ├── workflow.go             # Workflow struct
+│   ├── job.go                  # Job struct
+│   ├── step.go                 # Step struct
+│   ├── matrix.go               # Matrix builder
+│   ├── triggers.go             # Push, PullRequest, Schedule, etc.
+│   ├── conditions.go           # Condition builders
+│   └── expressions.go          # github, runner, env, secrets contexts
+│
+├── dependabot/                 # Dependabot types (hand-written)
+│   ├── dependabot.go           # Dependabot struct
+│   ├── update.go               # Update struct
+│   ├── schedule.go             # Schedule struct
+│   ├── registries.go           # Registry types
+│   └── groups.go               # Grouping configuration
+│
+├── templates/                  # Issue/Discussion template types (hand-written)
+│   ├── issue.go                # IssueTemplate struct
+│   ├── discussion.go           # DiscussionTemplate struct
+│   ├── form.go                 # FormBody struct
+│   └── elements.go             # Input, Textarea, Dropdown, Checkboxes, Markdown
+│
+├── actions/                    # GENERATED action wrappers
+│   ├── checkout/
+│   │   └── checkout.go         # Typed wrapper for actions/checkout
+│   ├── setup_python/
+│   │   └── setup_python.go
+│   ├── cache/
+│   └── ... (top 20+ actions)
+│
+├── codegen/                    # Code generation tooling
+│   ├── fetch.go                # Download schemas + action.yml
+│   ├── parse.go                # Parse schemas
+│   └── generate.go             # Generate Go types
+│
+├── examples/                   # Example configs for import testing
+│   └── (fetched from real repos)
+│
+├── docs/
+│   ├── ROADMAP.md              # This file
+│   ├── FAQ.md
+│   ├── QUICK_START.md
+│   ├── CLI.md
+│   └── IMPORT_WORKFLOW.md
+│
+├── specs/                      # .gitignore'd (fetched schemas)
+│   ├── .gitkeep
+│   ├── manifest.json
+│   ├── workflow-schema.json
+│   ├── dependabot-schema.json
+│   ├── issue-forms-schema.json
+│   └── actions/
+│       ├── checkout.yml
+│       └── ...
+│
+├── contracts.go                # Interfaces and types
+├── go.mod
+└── README.md
+```
+
+---
+
+## CLI Commands
+
+### 1. `wetwire-github build`
+- Discover workflow declarations from Go packages
+- Serialize to GitHub Actions YAML
+- Output to `.github/workflows/` or custom path
+
+### 2. `wetwire-github validate`
+- Run actionlint on generated YAML (via Go library)
+- Report errors in structured format (text/JSON)
+
+### 3. `wetwire-github list`
+- List discovered workflows and jobs
+- Show file locations and dependencies
+
+### 4. `wetwire-github lint`
+- Go code quality rules (WAG001-WAG0XX)
+- Examples:
+  - WAG001: Use typed action wrappers instead of raw `uses:` strings
+  - WAG002: Use condition builders instead of raw expression strings
+  - WAG003: Use secrets context instead of hardcoded strings
+  - WAG004: Use matrix builder instead of inline maps
+
+### 5. `wetwire-github import`
+- Convert existing workflow YAML to Go code
+- Generate typed declarations
+- Scaffold project structure
+
+### 6. `wetwire-github init`
+- Create new project with example workflow
+- Generate go.mod, main.go, workflow definitions
+
+### 7. `wetwire-github design`
+- AI-assisted infrastructure design via wetwire-core-go
+- Interactive session with lint feedback loop
+
+### 8. `wetwire-github test`
+- Persona-based testing via wetwire-core-go
+- Automated evaluation of code generation quality
+
+---
+
+## CLI Exit Codes
+
+Per the wetwire specification, CLI commands use consistent exit codes:
+
+| Command | Exit 0 | Exit 1 | Exit 2 |
+|---------|--------|--------|--------|
+| `build` | Success | Error (parse, generation) | — |
+| `lint` | No issues | Issues found | Error (parse failure) |
+| `import` | Success | Error (parse, generation) | — |
+| `validate` | Valid | Invalid (actionlint errors) | Error (file not found) |
+| `list` | Success | Error | — |
+| `init` | Success | Error (dir exists, write fail) | — |
+
+---
+
+## Contracts (contracts.go)
+
+Core interfaces and types (mirroring wetwire-aws-go pattern):
+
+```go
+// WorkflowResource represents a GitHub workflow resource.
+// All resource types (Workflow, Job) implement this interface.
+type WorkflowResource interface {
+    ResourceType() string  // e.g., "workflow", "job"
+}
+
+// OutputRef represents a reference to a step output.
+// When serialized to YAML, becomes: ${{ steps.step_id.outputs.name }}
+type OutputRef struct {
+    StepID string
+    Output string
+}
+
+func (o OutputRef) String() string {
+    return fmt.Sprintf("${{ steps.%s.outputs.%s }}", o.StepID, o.Output)
+}
+
+// DiscoveredWorkflow represents a workflow found by AST parsing.
+type DiscoveredWorkflow struct {
+    Name         string   // Variable name
+    File         string   // Source file path
+    Line         int      // Line number
+    Jobs         []string // Job variable names in this workflow
+}
+
+// DiscoveredJob represents a job found by AST parsing.
+type DiscoveredJob struct {
+    Name         string   // Variable name
+    File         string   // Source file path
+    Line         int      // Line number
+    Dependencies []string // Referenced job names (Needs field)
+}
+
+// Result types for CLI JSON output
+type BuildResult struct {
+    Success   bool     `json:"success"`
+    Workflows []string `json:"workflows,omitempty"`
+    Files     []string `json:"files,omitempty"`
+    Errors    []string `json:"errors,omitempty"`
+}
+
+type LintResult struct {
+    Success bool        `json:"success"`
+    Issues  []LintIssue `json:"issues,omitempty"`
+}
+
+type LintIssue struct {
+    File     string `json:"file"`
+    Line     int    `json:"line"`
+    Column   int    `json:"column"`
+    Severity string `json:"severity"`
+    Message  string `json:"message"`
+    Rule     string `json:"rule"`
+    Fixable  bool   `json:"fixable"`
+}
+
+type ValidateResult struct {
+    Success  bool     `json:"success"`
+    Errors   []string `json:"errors,omitempty"`
+    Warnings []string `json:"warnings,omitempty"`
+}
+
+type ListResult struct {
+    Workflows []ListWorkflow `json:"workflows"`
+}
+
+type ListWorkflow struct {
+    Name string `json:"name"`
+    File string `json:"file"`
+    Line int    `json:"line"`
+    Jobs int    `json:"jobs"`
+}
+```
+
+---
+
+## Core Types (workflow/ package)
+
+Types designed for the "no parens" pattern — struct literal initialization:
+
+```go
+// workflow.go
+type Workflow struct {
+    Name        string                 `yaml:"name,omitempty"`
+    On          Triggers               `yaml:"on"`
+    Env         map[string]any         `yaml:"env,omitempty"`
+    Defaults    *Defaults              `yaml:"defaults,omitempty"`
+    Concurrency *Concurrency           `yaml:"concurrency,omitempty"`
+    Permissions *Permissions           `yaml:"permissions,omitempty"`
+    Jobs        map[string]Job         `yaml:"jobs"` // populated by discovery
+}
+
+// job.go
+type Job struct {
+    Outputs map[string]OutputRef `yaml:"-"` // excluded from YAML, used for refs
+
+    Name           string              `yaml:"name,omitempty"`
+    RunsOn         any                 `yaml:"runs-on"`
+    Needs          []any               `yaml:"needs,omitempty"` // Job references
+    If             any                 `yaml:"if,omitempty"`
+    Environment    *Environment        `yaml:"environment,omitempty"`
+    Concurrency    *Concurrency        `yaml:"concurrency,omitempty"`
+    Strategy       *Strategy           `yaml:"strategy,omitempty"`
+    Container      *Container          `yaml:"container,omitempty"`
+    Services       map[string]Service  `yaml:"services,omitempty"`
+    Steps          []Step              `yaml:"steps"`
+    TimeoutMinutes int                 `yaml:"timeout-minutes,omitempty"`
+}
+
+// step.go
+type Step struct {
+    ID      string         `yaml:"id,omitempty"`
+    Name    string         `yaml:"name,omitempty"`
+    If      any            `yaml:"if,omitempty"`
+    Uses    string         `yaml:"uses,omitempty"`
+    With    map[string]any `yaml:"with,omitempty"`
+    Run     string         `yaml:"run,omitempty"`
+    Shell   string         `yaml:"shell,omitempty"`
+    Env     map[string]any `yaml:"env,omitempty"`
+    WorkingDirectory string `yaml:"working-directory,omitempty"`
+}
+
+// Output returns an OutputRef for referencing this step's outputs
+func (s Step) Output(name string) OutputRef {
+    return OutputRef{StepID: s.ID, Output: name}
+}
+
+// triggers.go
+type Triggers struct {
+    Push              *PushTrigger              `yaml:"push,omitempty"`
+    PullRequest       *PullRequestTrigger       `yaml:"pull_request,omitempty"`
+    PullRequestTarget *PullRequestTargetTrigger `yaml:"pull_request_target,omitempty"`
+    Schedule          []ScheduleTrigger         `yaml:"schedule,omitempty"`
+    WorkflowDispatch  *WorkflowDispatchTrigger  `yaml:"workflow_dispatch,omitempty"`
+    WorkflowCall      *WorkflowCallTrigger      `yaml:"workflow_call,omitempty"`
+    // ... 30+ event types
+}
+
+// matrix.go
+type Strategy struct {
+    Matrix      *Matrix `yaml:"matrix,omitempty"`
+    FailFast    *bool   `yaml:"fail-fast,omitempty"`
+    MaxParallel int     `yaml:"max-parallel,omitempty"`
+}
+
+type Matrix struct {
+    Values  map[string][]any   `yaml:",inline"`
+    Include []map[string]any   `yaml:"include,omitempty"`
+    Exclude []map[string]any   `yaml:"exclude,omitempty"`
+}
+```
+
+---
+
+## Helper Types (workflow/helpers.go)
+
+```go
+// Env is a shorthand for map[string]any.
+type Env = map[string]any
+
+// With is a shorthand for map[string]any.
+type With = map[string]any
+
+// List creates a typed slice from items.
+func List[T any](items ...T) []T { return items }
+
+// Strings creates a []string slice.
+func Strings(items ...string) []string { return items }
+
+// Ptr returns a pointer to the value.
+func Ptr[T any](v T) *T { return &v }
+```
+
+---
+
+## Expression Contexts (workflow/expressions.go)
+
+```go
+// Expression wraps a GitHub Actions expression string
+type Expression string
+
+func (e Expression) String() string {
+    return fmt.Sprintf("${{ %s }}", string(e))
+}
+
+// Context accessors - used like: workflow.Secrets.Get("TOKEN")
+var GitHub = githubContext{}
+var Runner = runnerContext{}
+var Env = envContext{}
+var Secrets = secretsContext{}
+var Matrix = matrixContext{}
+var Steps = stepsContext{}
+var Needs = needsContext{}
+
+type secretsContext struct{}
+func (secretsContext) Get(name string) Expression {
+    return Expression(fmt.Sprintf("secrets.%s", name))
+}
+
+type matrixContext struct{}
+func (matrixContext) Get(name string) Expression {
+    return Expression(fmt.Sprintf("matrix.%s", name))
+}
+
+type githubContext struct{}
+func (githubContext) Ref() Expression     { return Expression("github.ref") }
+func (githubContext) SHA() Expression     { return Expression("github.sha") }
+func (githubContext) Actor() Expression   { return Expression("github.actor") }
+func (githubContext) EventName() Expression { return Expression("github.event_name") }
+
+// Condition builders
+func Always() Expression  { return Expression("always()") }
+func Failure() Expression { return Expression("failure()") }
+func Success() Expression { return Expression("success()") }
+func Cancelled() Expression { return Expression("cancelled()") }
+
+func Branch(name string) Expression {
+    return Expression(fmt.Sprintf("github.ref == 'refs/heads/%s'", name))
+}
+
+// Composable conditions
+func (e Expression) And(other Expression) Expression {
+    return Expression(fmt.Sprintf("(%s) && (%s)", e, other))
+}
+
+func (e Expression) Or(other Expression) Expression {
+    return Expression(fmt.Sprintf("(%s) || (%s)", e, other))
+}
+```
+
+---
+
+## Generated Action Wrappers (actions/ package)
+
+```go
+// actions/checkout/checkout.go
+// Code generated by wetwire-github codegen. DO NOT EDIT.
+// Source: actions/checkout/action.yml
+
+package checkout
+
+import (
+    wetwire "github.com/lex00/wetwire-github-go"
+    "github.com/lex00/wetwire-github-go/workflow"
+)
+
+// Checkout represents actions/checkout@v4
+type Checkout struct {
+    // Outputs for cross-step references (like AttrRef in wetwire-aws-go)
+    RefOutput    wetwire.OutputRef `yaml:"-"`
+    CommitOutput wetwire.OutputRef `yaml:"-"`
+
+    // Inputs (from action.yml)
+    Repository         string `yaml:"repository,omitempty"`
+    Ref                string `yaml:"ref,omitempty"`
+    Token              string `yaml:"token,omitempty"`
+    SSHKey             string `yaml:"ssh-key,omitempty"`
+    PersistCredentials *bool  `yaml:"persist-credentials,omitempty"`
+    Path               string `yaml:"path,omitempty"`
+    Clean              *bool  `yaml:"clean,omitempty"`
+    FetchDepth         int    `yaml:"fetch-depth,omitempty"`
+    FetchTags          *bool  `yaml:"fetch-tags,omitempty"`
+    Submodules         string `yaml:"submodules,omitempty"`
+    LFS                *bool  `yaml:"lfs,omitempty"`
+}
+
+// Action returns the action reference string
+func (a Checkout) Action() string { return "actions/checkout@v4" }
+
+// ToStep converts to a workflow.Step for use in Steps slice
+func (a Checkout) ToStep() workflow.Step {
+    return workflow.Step{
+        Uses: a.Action(),
+        With: a.toWith(),
+    }
+}
+
+// ToStepWithID converts to a workflow.Step with an ID for output references
+func (a Checkout) ToStepWithID(id string) workflow.Step {
+    return workflow.Step{
+        ID:   id,
+        Uses: a.Action(),
+        With: a.toWith(),
+    }
+}
+```
+
+---
+
+## Integration with wetwire-core-go
+
+Same pattern as wetwire-aws-go:
+
+```go
+// RunnerAgent tools for wetwire-github
+tools := []Tool{
+    "init_package",      // wetwire-github init
+    "write_file",        // Write Go workflow code
+    "read_file",         // Read files
+    "run_lint",          // wetwire-github lint --format json
+    "run_build",         // wetwire-github build --format json
+    "run_validate",      // wetwire-github validate (actionlint)
+    "ask_developer",     // Clarification questions
+}
+```
+
+CLI must support `--format json` for agent integration.
+
+### Agent Tool Contract
+
+Per the [wetwire specification](https://github.com/lex00/wetwire/blob/main/docs/WETWIRE_SPEC.md), RunnerAgent tools MUST map to CLI commands:
+
+| Tool | CLI Command | Description |
+|------|-------------|-------------|
+| `init_package` | `wetwire-github init <name> -o <dir>` | Create new project scaffold |
+| `write_file` | (direct file write) | Write Go workflow code |
+| `read_file` | (direct file read) | Read existing files |
+| `run_lint` | `wetwire-github lint --format json <path>` | Check code quality |
+| `run_build` | `wetwire-github build --format json <path>` | Generate YAML output |
+| `run_validate` | `wetwire-github validate --format json <path>` | Validate via actionlint |
+| `ask_developer` | (conversation) | Request clarification from user |
+
+---
+
+## Actionlint Integration (Go Library)
+
+```go
+// internal/validation/actionlint.go
+import "github.com/rhysd/actionlint"
+
+func ValidateWorkflow(path string, content []byte) (*ValidationResult, error) {
+    linter, _ := actionlint.NewLinter(io.Discard, nil)
+    errs, _ := linter.Lint(path, content, nil)
+
+    result := &ValidationResult{Success: len(errs) == 0}
+    for _, e := range errs {
+        result.Issues = append(result.Issues, ValidationIssue{
+            File:     e.Filepath,
+            Line:     e.Line,
+            Column:   e.Column,
+            Message:  e.Message,
+            RuleID:   e.Kind,
+        })
+    }
+    return result, nil
+}
+```
+
+No external CLI dependency required.
 
 ---
 
@@ -207,7 +813,7 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ Result writing | 3G | [ ] | — |
 | ├─ Session tracking | 3G | [ ] | — |
 | └─ `test` command (full) | 3G | [ ] | wetwire-core-go |
-| **Examples & Testing** | | | |
+| **Reference Example Testing** | | | |
 | ├─ Fetch starter-workflows | 4A | [ ] | Schema Fetching |
 | ├─ Import/rebuild cycle tests | 4A | [ ] | Import, Build |
 | ├─ Round-trip validation | 4A | [ ] | Import, Build, Validate |
@@ -291,54 +897,6 @@ All Phase 1 work streams can be developed **in parallel** with no dependencies o
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### 1A: Core Types (`workflow/`)
-- [ ] `workflow.go` — Workflow struct with ResourceType()
-- [ ] `job.go` — Job struct with OutputRef fields
-- [ ] `step.go` — Step struct with Output() method
-- [ ] `matrix.go` — Matrix, Strategy structs
-- [ ] `triggers.go` — All trigger types (Push, PullRequest, Schedule, etc.)
-- [ ] `conditions.go` — Condition interface + builders
-- [ ] `expressions.go` — Context accessors (GitHub, Runner, Env, Secrets, Matrix)
-- [ ] `helpers.go` — Type aliases (Env, With) + helpers (List, Strings, Ptr)
-- [ ] `contracts.go` — Root-level interfaces (WorkflowResource, OutputRef, etc.)
-
-**Output:** Compilable types, no runtime behavior yet
-
-#### 1B: Serialization (`internal/serialize/`)
-- [ ] `workflow.go` — Workflow → YAML map
-- [ ] `job.go` — Job → YAML map
-- [ ] `step.go` — Step → YAML map
-- [ ] `matrix.go` — Matrix → YAML map
-- [ ] `triggers.go` — Triggers → YAML map
-- [ ] `conditions.go` — Condition → expression string
-- [ ] `yaml.go` — Final YAML output with proper formatting
-
-**Note:** Can start with stub types, integrate with 1A when ready
-
-#### 1C: CLI Framework (`cmd/wetwire-github/`)
-- [ ] `main.go` — Cobra root command
-- [ ] `init.go` — Project scaffolding (functional)
-- [ ] `build.go` — Stub returning "not implemented"
-- [ ] `validate.go` — Stub returning "not implemented"
-- [ ] `list.go` — Stub returning "not implemented"
-- [ ] `lint.go` — Stub returning "not implemented"
-- [ ] `import.go` — Stub returning "not implemented"
-- [ ] `version.go` — Version output
-
-**Output:** Working CLI with `init` functional, other commands stubbed
-
-#### 1D: Schema Fetching (`codegen/`)
-- [ ] `fetch.go` — HTTP fetcher with retry
-- [ ] `manifest.go` — Manifest tracking
-- [ ] `config.go` — Action URLs configuration
-- [ ] Fetch workflow schema from schemastore
-- [ ] Fetch action.yml for each configured action
-- [ ] Write to `specs/` directory
-
-**Output:** `specs/` populated with workflow-schema.json and action.yml files
-
----
-
 ### Phase 2: Core Capabilities (Parallel Streams)
 
 Phase 2 streams have dependencies on Phase 1 but are **parallel to each other**.
@@ -368,87 +926,6 @@ Phase 2 streams have dependencies on Phase 1 but are **parallel to each other**.
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### 2A: Schema Parsing (`codegen/`)
-- [ ] `parse.go` — Parse workflow-schema.json
-- [ ] `parse_action.go` — Parse action.yml files
-- [ ] `schema.go` — Intermediate representation types
-
-**Depends on:** 1D (Schema Fetching)
-
-#### 2B: Action Codegen (`codegen/`)
-- [ ] `generate.go` — Go code generation from parsed actions
-- [ ] `templates/action.go.tmpl` — Template for action wrappers
-- [ ] Code formatting with go/format
-- [ ] Generate `actions/checkout/checkout.go`
-- [ ] Generate `actions/setup_python/setup_python.go`
-- [ ] Generate `actions/setup_node/setup_node.go`
-- [ ] Generate `actions/setup_go/setup_go.go`
-- [ ] Generate `actions/cache/cache.go`
-- [ ] Generate `actions/upload_artifact/upload_artifact.go`
-- [ ] Generate `actions/download_artifact/download_artifact.go`
-
-**Depends on:** 2A (Schema Parsing)
-
-#### 2C: AST Discovery (`internal/discover/`)
-- [ ] `discover.go` — Package scanning with go/parser
-- [ ] `workflow.go` — Workflow variable detection
-- [ ] `job.go` — Job variable detection
-- [ ] `graph.go` — Dependency graph building
-- [ ] `validate.go` — Reference validation
-- [ ] Recursive directory traversal
-- [ ] Vendor/hidden directory exclusion
-
-**Depends on:** 1A (Core Types)
-
-#### 2D: Actionlint Integration (`internal/validation/`)
-- [ ] `actionlint.go` — Library wrapper
-- [ ] `types.go` — ValidationResult, ValidationIssue
-- [ ] `pipeline.go` — Multiple validator pipeline
-
-**Depends on:** None (external library)
-
-#### 2E: Linter Rules (`internal/linter/`)
-- [ ] `linter.go` — Framework and runner
-- [ ] `rule.go` — Rule interface (ID, Description, Check)
-- [ ] `wag001.go` — Use typed action wrappers
-- [ ] `wag002.go` — Use condition builders
-- [ ] `wag003.go` — Use secrets context
-- [ ] `wag004.go` — Use matrix builder
-- [ ] `wag005.go` — Inline structs → named vars
-- [ ] `wag006.go` — Duplicate workflow names
-- [ ] `wag007.go` — File too large
-- [ ] `wag008.go` — Hardcoded expression strings
-- [ ] Recursive package scanning
-- [ ] `--fix` auto-remediation support
-
-**Depends on:** None
-
-#### 2F: YAML Parser (`internal/importer/`)
-- [ ] `parser.go` — Parse workflow YAML files
-- [ ] `ir.go` — Intermediate representation (IRWorkflow, IRJob, IRStep)
-- [ ] Reference graph tracking
-
-**Depends on:** None
-
-#### 2G: Runner / Value Extraction (`internal/runner/`)
-- [ ] `runner.go` — Temp Go program generation
-- [ ] `module.go` — go.mod parsing
-- [ ] `replace.go` — Replace directive handling
-- [ ] `gobinary.go` — Go binary discovery (PATH + common locations)
-- [ ] JSON value extraction and parsing
-
-**Depends on:** 2C (AST Discovery)
-
-#### 2H: Template Builder (`internal/template/`)
-- [ ] `builder.go` — Template construction from discovered resources
-- [ ] `sort.go` — Topological sort (Kahn's algorithm)
-- [ ] `cycle.go` — Cycle detection with error messages
-- [ ] Dependency ordering
-
-**Depends on:** 2C (AST Discovery)
-
----
-
 ### Phase 3: Command Integration (Parallel Streams)
 
 Phase 3 integrates Phase 2 capabilities into CLI commands. Each command can be completed **in parallel**.
@@ -477,80 +954,6 @@ Phase 3 integrates Phase 2 capabilities into CLI commands. Each command can be c
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### 3A: Build Command (full)
-- [ ] Discovery integration (use 2C)
-- [ ] Runner integration (use 2G)
-- [ ] Template builder integration (use 2H)
-- [ ] Multi-workflow support
-- [ ] Output to `.github/workflows/`
-- [ ] `--format json/yaml` for agent integration
-- [ ] `--output` flag
-
-**Depends on:** 1B (Serialization), 2C (AST Discovery), 2G (Runner), 2H (Template Builder)
-
-#### 3B: Validate Command (full)
-- [ ] Integrate actionlint (use 2D)
-- [ ] Validate generated YAML
-- [ ] `--format json/text` output
-
-**Depends on:** 2D (Actionlint Integration)
-
-#### 3C: Lint Command (full)
-- [ ] Integrate linter framework (use 2E)
-- [ ] Recursive package scanning (`./...` pattern)
-- [ ] `--fix` flag support
-- [ ] `--format json/text` output
-- [ ] Exit code 2 for lint issues
-
-**Depends on:** 2E (Linter Rules)
-
-#### 3D: Import Command (full)
-- [ ] YAML parsing (use 2F)
-- [ ] Go code generation from IR
-- [ ] Field name transformation (kebab-case → snake_case)
-- [ ] Reserved name handling
-- [ ] Scaffold: go.mod with module path
-- [ ] Scaffold: cmd/main.go
-- [ ] Scaffold: README.md
-- [ ] Scaffold: CLAUDE.md (AI context)
-- [ ] Scaffold: .gitignore
-- [ ] `--single-file` flag
-- [ ] `--no-scaffold` flag
-- [ ] `--package` flag
-- [ ] `--module` flag
-
-**Depends on:** 1A (Core Types), 2F (YAML Parser)
-
-#### 3E: List Command (full)
-- [ ] Discovery integration (use 2C)
-- [ ] Table output (name, type, file, line)
-- [ ] `--format json` output
-
-**Depends on:** 2C (AST Discovery)
-
-#### 3F: Design Command (AI-assisted)
-- [ ] wetwire-core-go orchestrator integration
-- [ ] Interactive session with developer
-- [ ] Lint feedback loop
-- [ ] `--stream` flag for response streaming
-- [ ] `--max-lint-cycles` flag
-- [ ] `--output` working directory
-
-**Depends on:** 3A-3E (All basic commands), wetwire-core-go
-
-#### 3G: Test Command (Persona-based)
-- [ ] Persona selection (beginner, intermediate, expert, terse, verbose)
-- [ ] Scenario configuration
-- [ ] Result writing (RESULTS.md, session.json, score.json)
-- [ ] Session tracking (questions, lint cycles)
-- [ ] `--persona` flag
-- [ ] `--scenario` flag
-- [ ] `--output` directory
-
-**Depends on:** 3A-3E (All basic commands), wetwire-core-go
-
----
-
 ### Phase 4: Polish & Integration (Parallel Streams)
 
 ```
@@ -560,7 +963,7 @@ Phase 3 integrates Phase 2 capabilities into CLI commands. Each command can be c
 │                                                                          │
 │  ┌────────────────────────────┐  ┌────────────────────────────────────┐ │
 │  │            4A              │  │              4B                    │ │
-│  │    Examples & Testing      │  │     wetwire-core-go Integration   │ │
+│  │  Reference Example Testing │  │     wetwire-core-go Integration   │ │
 │  │                            │  │                                    │ │
 │  │  - Fetch starter-workflows │  │  - RunnerAgent tool definitions   │ │
 │  │  - Import/rebuild tests    │  │  - Agent testing with personas    │ │
@@ -572,13 +975,24 @@ Phase 3 integrates Phase 2 capabilities into CLI commands. Each command can be c
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### 4A: Examples & Testing
-- [ ] Fetch `actions/starter-workflows` examples
-- [ ] Import each example → Go code
+#### 4A: Reference Example Testing
+
+Per the [wetwire specification](https://github.com/lex00/wetwire/blob/main/docs/WETWIRE_SPEC.md), domain packages MUST test against the full set of reference examples.
+
+**Reference source:** [actions/starter-workflows](https://github.com/actions/starter-workflows) (100+ official workflow templates)
+
+- [ ] Fetch `actions/starter-workflows` repository
+- [ ] Import each workflow → Go code
 - [ ] Build Go code → YAML
-- [ ] Diff original vs rebuilt
+- [ ] Diff original vs rebuilt (semantic comparison)
 - [ ] Validate with actionlint
-- [ ] Track success rate
+- [ ] Track success rate (target: 100%)
+- [ ] CI integration (fail if success rate drops)
+
+**Testing script:**
+```bash
+./scripts/import_samples.sh  # Round-trip all starter-workflows
+```
 
 **Depends on:** All Phase 3 commands
 
@@ -590,11 +1004,9 @@ Phase 3 integrates Phase 2 capabilities into CLI commands. Each command can be c
 
 **Depends on:** All Phase 3 commands
 
----
-
 ### Phase 5: Extended Config Types (Parallel Streams)
 
-Phase 5 adds support for additional GitHub YAML configuration types. All streams can be developed **in parallel** with each other and with Phase 4.
+Phase 5 adds support for additional GitHub YAML configuration types. All streams can be developed **in parallel**.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -616,69 +1028,6 @@ Phase 5 adds support for additional GitHub YAML configuration types. All streams
 │      Phase 1-4                Phase 1-4             (FormBody)          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
-
-#### 5A: Dependabot (`dependabot/`)
-- [ ] `dependabot.go` — Dependabot struct (version, registries, updates)
-- [ ] `update.go` — Update struct (package-ecosystem, directory, schedule)
-- [ ] `schedule.go` — Schedule struct (interval, day, time, timezone)
-- [ ] `registries.go` — Registry types (npm, docker, maven, etc.)
-- [ ] `groups.go` — Groups struct (patterns, dependency-type)
-- [ ] `contracts.go` — Dependabot interface additions
-- [ ] Fetch `dependabot-2.0.json` schema
-- [ ] Parse dependabot schema
-- [ ] Dependabot → YAML serialization
-- [ ] AST discovery for Dependabot variables
-- [ ] `build --type dependabot` output to `.github/dependabot.yml`
-- [ ] `import --type dependabot` YAML → Go conversion
-- [ ] `validate --type dependabot` schema validation
-
-**Depends on:** 1B (Serialization patterns), 1C (CLI framework)
-
-#### 5B: Issue Templates (`templates/`)
-- [ ] `issue.go` — IssueTemplate struct (name, description, title, labels, assignees)
-- [ ] `form.go` — FormBody struct (body array)
-- [ ] `elements.go` — FormElement interface + implementations:
-  - [ ] Input element (label, description, placeholder, value, required)
-  - [ ] Textarea element (label, description, placeholder, value, render)
-  - [ ] Dropdown element (label, description, options, default, multiple)
-  - [ ] Checkboxes element (label, description, options)
-  - [ ] Markdown element (value)
-- [ ] `contracts.go` — IssueTemplate interface additions
-- [ ] Fetch `github-issue-forms.json` schema
-- [ ] Parse issue forms schema
-- [ ] IssueTemplate → YAML serialization
-- [ ] AST discovery for IssueTemplate variables
-- [ ] `build --type issue-template` output to `.github/ISSUE_TEMPLATE/`
-- [ ] `import --type issue-template` YAML → Go conversion
-- [ ] `validate --type issue-template` schema validation
-
-**Depends on:** 1B (Serialization patterns), 1C (CLI framework)
-
-#### 5C: Discussion Templates (`templates/`)
-- [ ] `discussion.go` — DiscussionTemplate struct (title, labels, body)
-- [ ] Discussion category handling
-- [ ] AST discovery for DiscussionTemplate variables
-- [ ] `build --type discussion-template` output to `.github/DISCUSSION_TEMPLATE/`
-- [ ] `import --type discussion-template` YAML → Go conversion
-
-**Depends on:** 5B (FormBody reuse from Issue Templates)
-
----
-
-## Parallel Development Matrix
-
-This matrix shows which work can happen simultaneously:
-
-| Week | Stream 1 | Stream 2 | Stream 3 | Stream 4 | Stream 5 |
-|------|----------|----------|----------|----------|----------|
-| 1 | 1A: Core Types | 1C: CLI Framework | 1D: Schema Fetch | — | — |
-| 2 | 1A: (cont.) | 1B: Serialization | 2D: actionlint | 2E: Linter Rules | 2F: YAML Parser |
-| 3 | 2C: AST Discovery | 2A: Schema Parse | 2E: (cont.) | 2F: (cont.) | 5A: Dependabot |
-| 4 | 2G: Runner | 2H: Template | 2B: Action Codegen | 2E: (cont.) | 5A: (cont.) |
-| 5 | 3A: build | 3B: validate | 3C: lint | 3D: import | 5B: Issue Templates |
-| 6 | 3A: (cont.) | 3D: (cont.) | 3C: (cont.) | 3E: list | 5B: (cont.) |
-| 7 | 4A: Examples | 4B: core-go | 3F: design | 3G: test | 5C: Discussion |
-| 8 | 4A: (cont.) | 4B: (cont.) | 3F: (cont.) | 3G: (cont.) | 5C: (cont.) |
 
 ---
 
@@ -717,7 +1066,7 @@ This matrix shows which work can happen simultaneously:
 - [ ] 3G: Test Command (0/7)
 
 ### Phase 4 Progress
-- [ ] 4A: Examples & Testing (0/4)
+- [ ] 4A: Reference Example Testing (0/7)
 - [ ] 4B: wetwire-core-go Integration (0/6)
 
 ### Phase 5 Progress
@@ -760,23 +1109,7 @@ The minimum sequence to reach a working `lint` command:
 
 **Key insight:** `import`, `validate`, and `lint` can all proceed in parallel with `build`, meeting at Phase 4 for round-trip testing.
 
-The minimum sequence to reach Dependabot support:
-
-```
-1B (Serialization) ─┐
-                    ├→ 5A (Dependabot)
-1C (CLI Framework) ─┘
-```
-
-The minimum sequence to reach Issue Template support:
-
-```
-1B (Serialization) ─┐
-                    ├→ 5B (Issue Templates) → 5C (Discussion Templates)
-1C (CLI Framework) ─┘
-```
-
-**Key insight:** Phase 5 streams (Dependabot, Issue Templates) can begin as early as Phase 1 completes, running in parallel with Phases 2-4.
+---
 
 ## Feature Count Summary
 
@@ -786,6 +1119,16 @@ The minimum sequence to reach Issue Template support:
 | Phase 1 | 4 | 41 |
 | Phase 2 | 8 | 47 |
 | Phase 3 | 7 | 44 |
-| Phase 4 | 2 | 10 |
+| Phase 4 | 2 | 13 |
 | Phase 5 | 3 | 32 |
-| **Total** | **29** | **187** |
+| **Total** | **29** | **190** |
+
+---
+
+## Open Questions (Deferred)
+
+1. **Composite actions**: Support generating wrappers for composite actions with multiple steps?
+
+2. **Reusable workflows**: Support `workflow_call` trigger and typed inputs/outputs?
+
+3. **Local actions**: Support `uses: ./path/to/action` syntax?
