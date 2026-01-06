@@ -111,3 +111,19 @@ type GraphResult struct {
 	Nodes   int    `json:"nodes"`
 	Edges   int    `json:"edges"`
 }
+
+// TestResult contains the result of a test operation.
+type TestResult struct {
+	Success bool       `json:"success"`
+	Tests   []TestCase `json:"tests,omitempty"`
+	Passed  int        `json:"passed"`
+	Failed  int        `json:"failed"`
+}
+
+// TestCase represents a single test case result.
+type TestCase struct {
+	Name    string `json:"name"`
+	Persona string `json:"persona,omitempty"`
+	Passed  bool   `json:"passed"`
+	Error   string `json:"error,omitempty"`
+}
