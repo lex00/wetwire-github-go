@@ -65,7 +65,7 @@ Example:
 func init() {
 	buildCmd.Flags().StringVarP(&buildOutput, "output", "o", ".github/workflows", "output directory")
 	buildCmd.Flags().StringVar(&buildFormat, "format", "yaml", "output format (yaml, json)")
-	buildCmd.Flags().StringVar(&buildType, "type", "workflow", "config type (workflow, dependabot, issue-template)")
+	buildCmd.Flags().StringVar(&buildType, "type", "workflow", "config type (workflow, dependabot, issue-template, discussion-template)")
 	buildCmd.Flags().BoolVar(&buildDryRun, "dry-run", false, "show what would be written without writing")
 }
 
@@ -77,6 +77,8 @@ func runBuild(sourcePath, outputDir string, dryRun bool) wetwire.BuildResult {
 		return runBuildDependabot(sourcePath, outputDir, dryRun)
 	case "issue-template":
 		return runBuildIssueTemplate(sourcePath, outputDir, dryRun)
+	case "discussion-template":
+		return runBuildDiscussionTemplate(sourcePath, outputDir, dryRun)
 	default:
 		return runBuildWorkflow(sourcePath, outputDir, dryRun)
 	}
@@ -332,6 +334,100 @@ func runBuildIssueTemplate(sourcePath, outputDir string, dryRun bool) wetwire.Bu
 	}
 
 	// Step 6: Write issue template files
+	for _, tmpl := range built.Templates {
+		// Generate filename from template name
+		filename := toFilename(tmpl.Name) + ".yml"
+		filePath := filepath.Join(absOutputDir, filename)
+
+		if dryRun {
+			result.Workflows = append(result.Workflows, tmpl.Name)
+			result.Files = append(result.Files, filePath)
+			continue
+		}
+
+		if err := os.WriteFile(filePath, tmpl.YAML, 0644); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("writing %s: %v", filename, err))
+			continue
+		}
+
+		result.Workflows = append(result.Workflows, tmpl.Name)
+		result.Files = append(result.Files, filePath)
+	}
+
+	// Success if we wrote at least one file and have no errors
+	result.Success = len(result.Files) > 0 && len(result.Errors) == 0
+
+	return result
+}
+
+// runBuildDiscussionTemplate executes the discussion template build pipeline.
+func runBuildDiscussionTemplate(sourcePath, outputDir string, dryRun bool) wetwire.BuildResult {
+	result := wetwire.BuildResult{
+		Success:   false,
+		Workflows: []string{},
+		Files:     []string{},
+		Errors:    []string{},
+	}
+
+	// Step 1: Discover DiscussionTemplates
+	disc := discover.NewDiscoverer()
+	discovered, err := disc.DiscoverDiscussionTemplates(sourcePath)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("discovery failed: %v", err))
+		return result
+	}
+
+	// Add any discovery errors
+	result.Errors = append(result.Errors, discovered.Errors...)
+
+	if len(discovered.Templates) == 0 {
+		result.Errors = append(result.Errors, "no discussion templates found in "+sourcePath)
+		return result
+	}
+
+	// Step 2: Extract values using runner
+	run := runner.NewRunner()
+	extracted, err := run.ExtractDiscussionTemplates(sourcePath, discovered)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("extraction failed: %v", err))
+		return result
+	}
+
+	if extracted.Error != "" {
+		result.Errors = append(result.Errors, extracted.Error)
+		return result
+	}
+
+	// Step 3: Build templates
+	builder := template.NewBuilder()
+	built, err := builder.BuildDiscussionTemplates(discovered, extracted)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("template build failed: %v", err))
+		return result
+	}
+
+	// Add template builder errors
+	result.Errors = append(result.Errors, built.Errors...)
+
+	// Step 4: Resolve output directory (discussion templates go in .github/DISCUSSION_TEMPLATE/)
+	absOutputDir := outputDir
+	if outputDir == ".github/workflows" {
+		// Default for discussion templates is .github/DISCUSSION_TEMPLATE/
+		absOutputDir = ".github/DISCUSSION_TEMPLATE"
+	}
+	if !filepath.IsAbs(absOutputDir) {
+		absOutputDir = filepath.Join(sourcePath, absOutputDir)
+	}
+
+	// Step 5: Create output directory if needed
+	if !dryRun {
+		if err := os.MkdirAll(absOutputDir, 0755); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("creating output directory: %v", err))
+			return result
+		}
+	}
+
+	// Step 6: Write discussion template files
 	for _, tmpl := range built.Templates {
 		// Generate filename from template name
 		filename := toFilename(tmpl.Name) + ".yml"
