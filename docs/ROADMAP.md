@@ -683,6 +683,8 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ Step struct | 1A | [ ] | — |
 | ├─ Matrix struct | 1A | [ ] | — |
 | ├─ Triggers (all 30+ types) | 1A | [ ] | — |
+| ├─ WorkflowCallTrigger (reusable workflows) | 1A | [ ] | — |
+| ├─ WorkflowInput/Output/Secret types | 1A | [ ] | — |
 | ├─ Conditions interface | 1A | [ ] | — |
 | ├─ Expression contexts | 1A | [ ] | — |
 | ├─ Helper types (Env, With, List, Strings, Ptr) | 1A | [ ] | — |
@@ -695,6 +697,7 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ Step → YAML | 1B | [ ] | Core Types |
 | ├─ Matrix → YAML | 1B | [ ] | Core Types |
 | ├─ Triggers → YAML | 1B | [ ] | Core Types |
+| ├─ Reusable workflow (workflow_call) → YAML | 1B | [ ] | Core Types |
 | ├─ Conditions → expression strings | 1B | [ ] | Core Types |
 | ├─ Struct → map serialization | 1B | [ ] | Core Types |
 | ├─ PascalCase/snake_case conversion | 1B | [ ] | — |
@@ -735,7 +738,8 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ actions/setup_go wrapper | 2B | [ ] | Schema Parsing |
 | ├─ actions/cache wrapper | 2B | [ ] | Schema Parsing |
 | ├─ actions/upload_artifact wrapper | 2B | [ ] | Schema Parsing |
-| └─ actions/download_artifact wrapper | 2B | [ ] | Schema Parsing |
+| ├─ actions/download_artifact wrapper | 2B | [ ] | Schema Parsing |
+| └─ Composite action wrapper support | 2B | [ ] | Schema Parsing |
 | **AST Discovery** | | | |
 | ├─ Package scanning (go/parser) | 2C | [ ] | Core Types |
 | ├─ Workflow variable detection | 2C | [ ] | Core Types |
@@ -796,6 +800,7 @@ Project setup and CI/CD infrastructure (mirroring wetwire-aws-go):
 | ├─ Scaffold: .gitignore | 3D | [ ] | — |
 | ├─ --single-file flag | 3D | [ ] | — |
 | ├─ --no-scaffold flag | 3D | [ ] | — |
+| ├─ Local action wrapper generation | 3D | [ ] | Action Codegen |
 | └─ `import` command (full) | 3D | [ ] | Go code generator |
 | **List Command** | | | |
 | ├─ Table output format | 3E | [ ] | AST Discovery |
@@ -1041,14 +1046,14 @@ Phase 5 adds support for additional GitHub YAML configuration types. All streams
 - [ ] Build Artifacts (0/1)
 
 ### Phase 1 Progress
-- [ ] 1A: Core Types (0/11)
-- [ ] 1B: Serialization (0/9)
+- [ ] 1A: Core Types (0/13)
+- [ ] 1B: Serialization (0/10)
 - [ ] 1C: CLI Framework (0/11)
 - [ ] 1D: Schema Fetching (0/10)
 
 ### Phase 2 Progress
 - [ ] 2A: Schema Parsing (0/3)
-- [ ] 2B: Action Codegen (0/10)
+- [ ] 2B: Action Codegen (0/11)
 - [ ] 2C: AST Discovery (0/7)
 - [ ] 2D: Actionlint Integration (0/3)
 - [ ] 2E: Linter Rules (0/12)
@@ -1060,7 +1065,7 @@ Phase 5 adds support for additional GitHub YAML configuration types. All streams
 - [ ] 3A: Build Command (0/7)
 - [ ] 3B: Validate Command (0/3)
 - [ ] 3C: Lint Command (0/5)
-- [ ] 3D: Import Command (0/13)
+- [ ] 3D: Import Command (0/14)
 - [ ] 3E: List Command (0/3)
 - [ ] 3F: Design Command (0/6)
 - [ ] 3G: Test Command (0/7)
@@ -1116,19 +1121,93 @@ The minimum sequence to reach a working `lint` command:
 | Phase | Streams | Features |
 |-------|---------|----------|
 | Phase 0 | 5 | 13 |
-| Phase 1 | 4 | 41 |
-| Phase 2 | 8 | 47 |
-| Phase 3 | 7 | 44 |
+| Phase 1 | 4 | 44 |
+| Phase 2 | 8 | 48 |
+| Phase 3 | 7 | 45 |
 | Phase 4 | 2 | 13 |
 | Phase 5 | 3 | 32 |
-| **Total** | **29** | **190** |
+| **Total** | **29** | **195** |
 
 ---
 
-## Open Questions (Deferred)
+## Design Decisions
 
-1. **Composite actions**: Support generating wrappers for composite actions with multiple steps?
+### Composite Actions ✅
 
-2. **Reusable workflows**: Support `workflow_call` trigger and typed inputs/outputs?
+**Decision:** Yes, support generating wrappers for composite actions with multiple steps.
 
-3. **Local actions**: Support `uses: ./path/to/action` syntax?
+Composite actions are defined via `action.yml` with `runs.using: composite`. The codegen will:
+- Parse composite action metadata
+- Generate typed wrapper with inputs/outputs
+- `.ToStep()` produces a single step referencing the action
+
+```go
+// Generated wrapper for a composite action
+var BuildAndTest = my_composite.BuildAndTest{
+    WorkingDirectory: "src/",
+    TestFlags:        "-v",
+}.ToStep()
+```
+
+### Reusable Workflows ✅
+
+**Decision:** Yes, support `workflow_call` trigger and typed inputs/outputs.
+
+Reusable workflows allow workflows to be called from other workflows. Support includes:
+- `WorkflowCallTrigger` with typed inputs, outputs, and secrets
+- Caller syntax via `uses: ./.github/workflows/reusable.yml` or `uses: org/repo/.github/workflows/reusable.yml@ref`
+
+```go
+// Reusable workflow definition
+var ReusableCI = workflow.Workflow{
+    On: workflow.Triggers{
+        WorkflowCall: &workflow.WorkflowCallTrigger{
+            Inputs: map[string]workflow.WorkflowInput{
+                "environment": {Type: "string", Required: true},
+            },
+            Outputs: map[string]workflow.WorkflowOutput{
+                "artifact-url": {Value: workflow.Jobs.Get("build").Outputs.Get("url")},
+            },
+            Secrets: map[string]workflow.WorkflowSecret{
+                "deploy-token": {Required: true},
+            },
+        },
+    },
+}
+
+// Calling a reusable workflow
+var DeployStep = workflow.Job{
+    Uses: "./.github/workflows/deploy.yml",
+    With: workflow.With{
+        "environment": "production",
+    },
+    Secrets: "inherit",  // or map specific secrets
+}
+```
+
+### Local Actions ✅
+
+**Decision:** Yes, support `uses: ./path/to/action` syntax.
+
+Local actions (composite or JavaScript actions in the same repo) are common. Support includes:
+
+**Level 1 - Raw path strings (always works):**
+```go
+var BuildStep = workflow.Step{
+    Uses: "./.github/actions/build",
+    With: workflow.With{"target": "release"},
+}
+```
+
+**Level 2 - Optional typed wrappers (project-specific):**
+
+The `import` and `init` commands can optionally scan `.github/actions/` and generate typed wrappers for any local actions found:
+
+```go
+// Generated from .github/actions/build/action.yml
+var BuildStep = local_build.Build{
+    Target: "release",
+}.ToStep()
+```
+
+This is an optional convenience feature - raw paths always work without wrapper generation.
