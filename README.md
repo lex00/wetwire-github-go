@@ -149,7 +149,7 @@ All nested structs become flat variables.
 
 ## Status
 
-Under development. See [docs/ROADMAP.md](docs/ROADMAP.md) for implementation plan and feature matrix.
+Under development. See [Roadmap](https://github.com/lex00/wetwire-github-go/issues/32) for implementation plan and feature matrix.
 
 For the wetwire pattern, see the [Wetwire Specification](https://github.com/lex00/wetwire/blob/main/docs/WETWIRE_SPEC.md).
 
