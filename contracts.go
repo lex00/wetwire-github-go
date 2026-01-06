@@ -127,3 +127,11 @@ type TestCase struct {
 	Passed  bool   `json:"passed"`
 	Error   string `json:"error,omitempty"`
 }
+
+// InitResult contains the result of an init operation.
+type InitResult struct {
+	Success   bool     `json:"success"`
+	OutputDir string   `json:"output_dir,omitempty"`
+	Files     []string `json:"files,omitempty"`
+	Error     string   `json:"error,omitempty"`
+}
