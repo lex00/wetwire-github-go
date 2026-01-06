@@ -38,7 +38,7 @@ func init() {
 	importCmd.Flags().StringVarP(&importOutput, "output", "o", ".", "output directory")
 	importCmd.Flags().BoolVar(&importSingleFile, "single-file", false, "generate all code in a single file")
 	importCmd.Flags().BoolVar(&importNoScaffold, "no-scaffold", false, "skip generating go.mod, README, etc.")
-	importCmd.Flags().StringVar(&importType, "type", "workflow", "config type (workflow, dependabot, issue-template)")
+	importCmd.Flags().StringVar(&importType, "type", "workflow", "config type (workflow, dependabot, issue-template, discussion-template)")
 	importCmd.Flags().StringVar(&importFormat, "format", "text", "output format (text, json)")
 }
 
