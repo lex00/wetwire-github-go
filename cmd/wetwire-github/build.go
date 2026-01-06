@@ -75,6 +75,8 @@ func runBuild(sourcePath, outputDir string, dryRun bool) wetwire.BuildResult {
 	switch buildType {
 	case "dependabot":
 		return runBuildDependabot(sourcePath, outputDir, dryRun)
+	case "issue-template":
+		return runBuildIssueTemplate(sourcePath, outputDir, dryRun)
 	default:
 		return runBuildWorkflow(sourcePath, outputDir, dryRun)
 	}
@@ -253,6 +255,100 @@ func runBuildDependabot(sourcePath, outputDir string, dryRun bool) wetwire.Build
 		}
 
 		result.Workflows = append(result.Workflows, cfg.Name)
+		result.Files = append(result.Files, filePath)
+	}
+
+	// Success if we wrote at least one file and have no errors
+	result.Success = len(result.Files) > 0 && len(result.Errors) == 0
+
+	return result
+}
+
+// runBuildIssueTemplate executes the issue template build pipeline.
+func runBuildIssueTemplate(sourcePath, outputDir string, dryRun bool) wetwire.BuildResult {
+	result := wetwire.BuildResult{
+		Success:   false,
+		Workflows: []string{},
+		Files:     []string{},
+		Errors:    []string{},
+	}
+
+	// Step 1: Discover IssueTemplates
+	disc := discover.NewDiscoverer()
+	discovered, err := disc.DiscoverIssueTemplates(sourcePath)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("discovery failed: %v", err))
+		return result
+	}
+
+	// Add any discovery errors
+	result.Errors = append(result.Errors, discovered.Errors...)
+
+	if len(discovered.Templates) == 0 {
+		result.Errors = append(result.Errors, "no issue templates found in "+sourcePath)
+		return result
+	}
+
+	// Step 2: Extract values using runner
+	run := runner.NewRunner()
+	extracted, err := run.ExtractIssueTemplates(sourcePath, discovered)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("extraction failed: %v", err))
+		return result
+	}
+
+	if extracted.Error != "" {
+		result.Errors = append(result.Errors, extracted.Error)
+		return result
+	}
+
+	// Step 3: Build templates
+	builder := template.NewBuilder()
+	built, err := builder.BuildIssueTemplates(discovered, extracted)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("template build failed: %v", err))
+		return result
+	}
+
+	// Add template builder errors
+	result.Errors = append(result.Errors, built.Errors...)
+
+	// Step 4: Resolve output directory (issue templates go in .github/ISSUE_TEMPLATE/)
+	absOutputDir := outputDir
+	if outputDir == ".github/workflows" {
+		// Default for issue templates is .github/ISSUE_TEMPLATE/
+		absOutputDir = ".github/ISSUE_TEMPLATE"
+	}
+	if !filepath.IsAbs(absOutputDir) {
+		absOutputDir = filepath.Join(sourcePath, absOutputDir)
+	}
+
+	// Step 5: Create output directory if needed
+	if !dryRun {
+		if err := os.MkdirAll(absOutputDir, 0755); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("creating output directory: %v", err))
+			return result
+		}
+	}
+
+	// Step 6: Write issue template files
+	for _, tmpl := range built.Templates {
+		// Generate filename from template name
+		filename := toFilename(tmpl.Name) + ".yml"
+		filePath := filepath.Join(absOutputDir, filename)
+
+		if dryRun {
+			result.Workflows = append(result.Workflows, tmpl.Name)
+			result.Files = append(result.Files, filePath)
+			continue
+		}
+
+		if err := os.WriteFile(filePath, tmpl.YAML, 0644); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("writing %s: %v", filename, err))
+			continue
+		}
+
+		result.Workflows = append(result.Workflows, tmpl.Name)
 		result.Files = append(result.Files, filePath)
 	}
 
