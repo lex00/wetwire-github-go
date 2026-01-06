@@ -20,11 +20,13 @@ wetwire-github init <name> [flags]
 
 **Flags:**
 - `-o, --output <dir>` — Output directory (default: current directory)
+- `--format <format>` — Output format: `text` or `json` (default: `text`)
 
 **Example:**
 ```bash
 wetwire-github init my-workflows
 wetwire-github init my-workflows -o ./projects/
+wetwire-github init my-workflows --format json
 ```
 
 ### `wetwire-github build`
@@ -38,7 +40,8 @@ wetwire-github build <path> [flags]
 **Flags:**
 - `-o, --output <dir>` — Output directory (default: `.github/workflows/`)
 - `--format <format>` — Output format: `yaml` or `json` (default: `yaml`)
-- `--type <type>` — Config type: `workflow`, `dependabot`, `issue-template` (default: `workflow`)
+- `--type <type>` — Config type: `workflow`, `dependabot`, `issue-template`, `discussion-template` (default: `workflow`)
+- `--dry-run` — Show what would be written without writing
 
 **Example:**
 ```bash

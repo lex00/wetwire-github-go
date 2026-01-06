@@ -130,10 +130,10 @@ Import is best-effort. Complex workflows may need manual cleanup:
 
 | Config Type | Output Location | Status |
 |-------------|-----------------|--------|
-| GitHub Actions | `.github/workflows/*.yml` | Planned |
-| Dependabot | `.github/dependabot.yml` | Planned |
-| Issue Templates | `.github/ISSUE_TEMPLATE/*.yml` | Planned |
-| Discussion Templates | `.github/DISCUSSION_TEMPLATE/*.yml` | Planned |
+| GitHub Actions | `.github/workflows/*.yml` | Implemented |
+| Dependabot | `.github/dependabot.yml` | Implemented |
+| Issue Templates | `.github/ISSUE_TEMPLATE/*.yml` | Implemented |
+| Discussion Templates | `.github/DISCUSSION_TEMPLATE/*.yml` | Implemented |
 
 ### How do I generate Dependabot config?
 
@@ -201,5 +201,3 @@ Fix issues based on actionlint messages, then rebuild.
 - [Wetwire Specification](https://github.com/lex00/wetwire/blob/main/docs/WETWIRE_SPEC.md)
 - [CLI Documentation](CLI.md)
 - [Quick Start](QUICK_START.md)
-- [Implementation Plan](PLAN.md)
-- [Roadmap](ROADMAP.md)

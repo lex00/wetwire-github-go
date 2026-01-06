@@ -20,60 +20,87 @@ This creates:
 ```
 my-workflows/
 ├── go.mod
-├── workflows.go      # Your workflow declarations
-├── jobs.go           # Job declarations
-├── triggers.go       # Trigger configurations
-└── cmd/main.go       # Usage instructions
+├── README.md
+├── cmd/main.go               # Usage instructions
+└── workflows/
+    ├── workflows.go          # Your workflow declarations
+    ├── jobs.go               # Job declarations
+    ├── triggers.go           # Trigger configurations
+    └── steps.go              # Step declarations
 ```
 
 ## Define a Workflow
 
-Edit `workflows.go`:
+Edit `workflows/workflows.go`:
 
 ```go
-package myworkflows
+package workflows
 
 import (
     "github.com/lex00/wetwire-github-go/workflow"
-    "github.com/lex00/wetwire-github-go/actions/checkout"
-    "github.com/lex00/wetwire-github-go/actions/setup_go"
 )
 
 // Workflow declaration
 var CI = workflow.Workflow{
     Name: "CI",
     On:   CITriggers,
-}
-
-var CITriggers = workflow.Triggers{
-    Push:        workflow.PushTrigger{Branches: List("main")},
-    PullRequest: workflow.PullRequestTrigger{Branches: List("main")},
+    Jobs: map[string]workflow.Job{
+        "build": Build,
+    },
 }
 ```
 
-Edit `jobs.go`:
+Edit `workflows/triggers.go`:
 
 ```go
-package myworkflows
+package workflows
 
 import (
     "github.com/lex00/wetwire-github-go/workflow"
-    "github.com/lex00/wetwire-github-go/actions/checkout"
-    "github.com/lex00/wetwire-github-go/actions/setup_go"
+)
+
+var CIPush = workflow.PushTrigger{Branches: []string{"main"}}
+var CIPullRequest = workflow.PullRequestTrigger{Branches: []string{"main"}}
+
+var CITriggers = workflow.Triggers{
+    Push:        &CIPush,
+    PullRequest: &CIPullRequest,
+}
+```
+
+Edit `workflows/jobs.go`:
+
+```go
+package workflows
+
+import (
+    "github.com/lex00/wetwire-github-go/workflow"
 )
 
 var Build = workflow.Job{
-    Name:   "build",
     RunsOn: "ubuntu-latest",
     Steps:  BuildSteps,
 }
+```
 
-var BuildSteps = List(
-    checkout.Checkout{}.ToStep(),
-    setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
-    workflow.Step{Run: "go build ./..."},
-    workflow.Step{Run: "go test ./..."},
+Edit `workflows/steps.go`:
+
+```go
+package workflows
+
+import (
+    "github.com/lex00/wetwire-github-go/workflow"
 )
+
+var BuildSteps = []workflow.Step{
+    {Uses: "actions/checkout@v4"},
+    {
+        Uses: "actions/setup-go@v5",
+        With: map[string]any{"go-version": "1.23"},
+    },
+    {Run: "go build ./..."},
+    {Run: "go test ./..."},
+}
 ```
 
 ## Build YAML

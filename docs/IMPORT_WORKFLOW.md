@@ -12,18 +12,14 @@ This generates a complete Go project:
 
 ```
 my-workflows/
-├── go.mod              # Module declaration
-├── go.sum              # Dependencies
-├── README.md           # Generated documentation
-├── CLAUDE.md           # AI assistant context
-├── .gitignore
-├── cmd/
-│   └── main.go         # Usage instructions
-├── workflows.go        # Workflow declarations
-├── jobs.go             # Job declarations
-├── steps.go            # Step declarations
-├── triggers.go         # Trigger configurations
-└── matrix.go           # Matrix configurations (if any)
+├── go.mod                    # Module declaration
+├── README.md                 # Generated documentation
+├── cmd/main.go               # Usage instructions
+└── workflows/
+    ├── workflows.go          # Workflow declarations
+    ├── jobs.go               # Job declarations
+    ├── triggers.go           # Trigger configurations
+    └── steps.go              # Step declarations
 ```
 
 ## How Import Works
@@ -147,6 +143,9 @@ wetwire-github import .github/dependabot.yml --type dependabot -o my-config/
 
 # Issue templates
 wetwire-github import .github/ISSUE_TEMPLATE/bug.yml --type issue-template -o my-templates/
+
+# Discussion templates
+wetwire-github import .github/DISCUSSION_TEMPLATE/idea.yml --type discussion-template -o my-templates/
 ```
 
 ## Matrix Import
@@ -208,22 +207,14 @@ var DeployTriggers = workflow.Triggers{
 
 ## Local Action Detection
 
-The importer detects local actions (`uses: ./path/to/action`) and optionally generates typed wrappers:
+The importer detects local actions (`uses: ./path/to/action`) and preserves them as raw step references:
 
-```bash
-# Generate wrappers for local actions
-wetwire-github import ci.yml --generate-local-wrappers -o my-workflows/
+```go
+workflow.Step{
+    Uses: "./path/to/action",
+    With: workflow.With{"key": "value"},
+}
 ```
-
-## Batch Import
-
-Import multiple workflows at once:
-
-```bash
-wetwire-github import .github/workflows/*.yml -o my-workflows/
-```
-
-Each workflow becomes a separate set of variables with appropriate prefixes.
 
 ## Round-Trip Testing
 

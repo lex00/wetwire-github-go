@@ -128,13 +128,14 @@ wetwire-github init my-ci/
 Generated structure:
 ```
 my-ci/
-├── go.mod              # Module with wetwire-github-go dependency
-├── README.md           # Generated docs
-├── CLAUDE.md           # AI assistant context
-├── cmd/main.go         # Usage instructions
-├── workflows.go        # Workflow declarations
-├── jobs.go             # Job declarations
-└── triggers.go         # Trigger configurations
+├── go.mod                    # Module with wetwire-github-go dependency
+├── README.md                 # Generated docs
+├── cmd/main.go               # Usage instructions
+└── workflows/
+    ├── workflows.go          # Workflow declarations
+    ├── jobs.go               # Job declarations
+    ├── triggers.go           # Trigger configurations
+    └── steps.go              # Step declarations
 ```
 
 All nested structs become flat variables.
@@ -146,6 +147,7 @@ All nested structs become flat variables.
 | **GitHub Actions** | `.github/workflows/*.yml` | workflow schema |
 | **Dependabot** | `.github/dependabot.yml` | dependabot-2.0 |
 | **Issue Templates** | `.github/ISSUE_TEMPLATE/*.yml` | issue-forms |
+| **Discussion Templates** | `.github/DISCUSSION_TEMPLATE/*.yml` | discussion-forms |
 
 ## Status
 
