@@ -39,8 +39,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - `actions/setup_dotnet`: 85.7% → 100% (14+ percentage point improvement) (#140)
   - `internal/agent`: 24.7% → 41.8% (17+ percentage point improvement) (#139)
     - Added 46 test functions covering checkCompletionGate, executeTool routing, AskDeveloper, state management
-  - `internal/linter`: 83.9% → 91.0% (7+ percentage point improvement) (#143)
+  - `internal/linter`: 83.9% → 91.3% (7+ percentage point improvement) (#143, #149)
   - `codegen`: 85.2% → 89.5% (4+ percentage point improvement) (#143)
+- **Additional Lint Rules (WAG013-WAG016)** - 4 new lint rules for code quality (#149)
+  - WAG013: Detect pointer assignments (&Type{}) - wetwire uses value semantics
+  - WAG014: Flag jobs without timeout-minutes setting
+  - WAG015: Suggest caching for setup-go/node/python actions
+  - WAG016: Validate concurrency settings (cancel-in-progress without group)
+- **Additional Example Workflows** - 3 new workflow examples (#148)
+  - `examples/docker-workflow` - Docker build and push to GHCR with multi-stage CI
+  - `examples/release-workflow` - Automated GitHub releases on version tags
+  - `examples/matrix-workflow` - Multi-OS and Go version matrix testing
   - Additional action wrapper test coverage (#142):
     - `actions/aws_ecr_login`: 92.3% → 100% (8+ percentage point improvement)
     - `actions/docker_build_push`: 94.6% → 100% (5+ percentage point improvement)

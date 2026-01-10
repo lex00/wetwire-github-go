@@ -1,0 +1,18 @@
+jobs:
+  Create Release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - id: changelog
+        name: Generate Changelog
+        run: |-
+          echo "## Changes" > CHANGELOG.md
+          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s" >> CHANGELOG.md || echo "- Initial release" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+      - {}
+name: Release
+"on":
+  push:
+    tags:
+      - v*

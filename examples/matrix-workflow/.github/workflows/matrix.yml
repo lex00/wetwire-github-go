@@ -1,0 +1,21 @@
+jobs:
+  Test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    steps:
+      - {}
+      - {}
+      - {}
+      - {}
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: go test -v -race ./...
+name: Matrix Test
+"on":
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main

@@ -81,6 +81,10 @@ func DefaultLinter() *Linter {
 		&WAG010{},
 		&WAG011{},
 		&WAG012{},
+		&WAG013{},
+		&WAG014{},
+		&WAG015{},
+		&WAG016{},
 	)
 }
 
