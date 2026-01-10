@@ -50,7 +50,7 @@ Feature matrix and implementation status for wetwire-github-go.
 | Dependabot | ✅ | ✅ | `.github/dependabot.yml` |
 | Issue Templates | ✅ | ✅ | `.github/ISSUE_TEMPLATE/*.yml` |
 | Discussion Templates | ✅ | ✅ | `.github/DISCUSSION_TEMPLATE/*.yml` |
-| PR Templates | ✅ | ❌ | `.github/PULL_REQUEST_TEMPLATE.md` |
+| PR Templates | ✅ | ✅ | `.github/PULL_REQUEST_TEMPLATE.md` |
 | CODEOWNERS | ✅ | ❌ | `.github/CODEOWNERS` |
 
 ---
@@ -146,7 +146,7 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] Documentation expansion (DEVELOPERS.md #94, INTERNALS.md #95, EXAMPLES.md #96)
 
 ### Phase 6: Future Enhancements
-- [ ] PR Template import support
+- [x] PR Template import support (#103)
 - [ ] CODEOWNERS import support
 - [ ] AWS action wrappers (configure-aws-credentials, s3-sync)
 - [ ] Azure action wrappers (login, webapp-deploy)
