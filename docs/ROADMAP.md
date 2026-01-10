@@ -102,6 +102,10 @@ Type-safe wrappers for popular GitHub Actions:
 | google-github-actions/deploy-cloudrun | `actions/gcp_deploy_cloudrun` | ✅ |
 | google-github-actions/setup-gcloud | `actions/gcp_setup_gcloud` | ✅ |
 | golangci/golangci-lint-action | `actions/golangci_lint` | ✅ |
+| github/codeql-action/init | `actions/codeql_init` | ✅ |
+| github/codeql-action/analyze | `actions/codeql_analyze` | ✅ |
+| aquasecurity/trivy-action | `actions/trivy` | ✅ |
+| ossf/scorecard-action | `actions/scorecard` | ✅ |
 
 ---
 
