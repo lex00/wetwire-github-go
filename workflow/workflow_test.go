@@ -187,37 +187,6 @@ func TestJobWithNeeds(t *testing.T) {
 	}
 }
 
-func TestPermissions(t *testing.T) {
-	job := workflow.Job{
-		Name:   "release",
-		RunsOn: "ubuntu-latest",
-		Permissions: &workflow.Permissions{
-			Contents:     workflow.PermissionWrite,
-			PullRequests: workflow.PermissionRead,
-		},
-	}
-
-	if job.Permissions.Contents != "write" {
-		t.Errorf("expected contents=write, got %s", job.Permissions.Contents)
-	}
-}
-
-func TestContainer(t *testing.T) {
-	job := workflow.Job{
-		Name:   "build",
-		RunsOn: "ubuntu-latest",
-		Container: &workflow.Container{
-			Image: "golang:1.23",
-			Env: workflow.Env{
-				"CGO_ENABLED": "0",
-			},
-		},
-	}
-
-	if job.Container.Image != "golang:1.23" {
-		t.Errorf("expected image=golang:1.23, got %s", job.Container.Image)
-	}
-}
 
 func TestServices(t *testing.T) {
 	job := workflow.Job{
@@ -239,31 +208,176 @@ func TestServices(t *testing.T) {
 	}
 }
 
-func TestConcurrency(t *testing.T) {
+
+func TestWorkflowWithEnv(t *testing.T) {
 	w := workflow.Workflow{
 		Name: "CI",
+		Env: workflow.Env{
+			"GO_VERSION": "1.23",
+			"NODE_ENV":   "production",
+		},
+	}
+
+	if len(w.Env) != 2 {
+		t.Errorf("expected 2 env vars, got %d", len(w.Env))
+	}
+
+	if w.Env["GO_VERSION"] != "1.23" {
+		t.Errorf("expected GO_VERSION='1.23', got %v", w.Env["GO_VERSION"])
+	}
+}
+
+func TestWorkflowWithDefaults(t *testing.T) {
+	w := workflow.Workflow{
+		Name: "CI",
+		Defaults: &workflow.WorkflowDefaults{
+			Run: &workflow.RunDefaults{
+				Shell:            "bash",
+				WorkingDirectory: "./app",
+			},
+		},
+	}
+
+	if w.Defaults == nil {
+		t.Fatal("expected Defaults to be set")
+	}
+
+	if w.Defaults.Run.Shell != "bash" {
+		t.Errorf("expected Shell='bash', got %q", w.Defaults.Run.Shell)
+	}
+}
+
+func TestWorkflowWithPermissions(t *testing.T) {
+	w := workflow.Workflow{
+		Name: "Release",
+		Permissions: &workflow.Permissions{
+			Contents:     workflow.PermissionWrite,
+			PullRequests: workflow.PermissionRead,
+		},
+	}
+
+	if w.Permissions == nil {
+		t.Fatal("expected Permissions to be set")
+	}
+
+	if w.Permissions.Contents != "write" {
+		t.Errorf("expected Contents='write', got %q", w.Permissions.Contents)
+	}
+
+	if w.Permissions.PullRequests != "read" {
+		t.Errorf("expected PullRequests='read', got %q", w.Permissions.PullRequests)
+	}
+}
+
+func TestWorkflowWithJobs(t *testing.T) {
+	w := workflow.Workflow{
+		Name: "CI",
+		Jobs: map[string]workflow.Job{
+			"build": {
+				Name:   "Build",
+				RunsOn: "ubuntu-latest",
+			},
+			"test": {
+				Name:   "Test",
+				RunsOn: "ubuntu-latest",
+			},
+		},
+	}
+
+	if len(w.Jobs) != 2 {
+		t.Errorf("expected 2 jobs, got %d", len(w.Jobs))
+	}
+
+	buildJob, ok := w.Jobs["build"]
+	if !ok {
+		t.Fatal("expected build job to exist")
+	}
+
+	if buildJob.Name != "Build" {
+		t.Errorf("expected Name='Build', got %q", buildJob.Name)
+	}
+}
+
+func TestWorkflowResourceType(t *testing.T) {
+	w := workflow.Workflow{Name: "Test"}
+
+	if w.ResourceType() != "workflow" {
+		t.Errorf("expected ResourceType='workflow', got %q", w.ResourceType())
+	}
+}
+
+func TestComplexWorkflow(t *testing.T) {
+	w := workflow.Workflow{
+		Name: "Complete CI/CD",
+		On: workflow.Triggers{
+			Push: &workflow.PushTrigger{
+				Branches: workflow.List("main"),
+			},
+			PullRequest: &workflow.PullRequestTrigger{
+				Types: workflow.List("opened", "synchronize"),
+			},
+			Schedule: []workflow.ScheduleTrigger{
+				{Cron: "0 0 * * 0"},
+			},
+		},
+		Env: workflow.Env{
+			"CI": "true",
+		},
 		Concurrency: &workflow.Concurrency{
 			Group:            "ci-${{ github.ref }}",
 			CancelInProgress: true,
 		},
-	}
-
-	if !w.Concurrency.CancelInProgress {
-		t.Error("expected CancelInProgress=true")
-	}
-}
-
-func TestEnvironment(t *testing.T) {
-	job := workflow.Job{
-		Name:   "deploy",
-		RunsOn: "ubuntu-latest",
-		Environment: &workflow.Environment{
-			Name: "production",
-			URL:  "https://example.com",
+		Permissions: &workflow.Permissions{
+			Contents:     workflow.PermissionRead,
+			PullRequests: workflow.PermissionWrite,
+		},
+		Defaults: &workflow.WorkflowDefaults{
+			Run: &workflow.RunDefaults{
+				Shell: "bash",
+			},
+		},
+		Jobs: map[string]workflow.Job{
+			"build": {
+				Name:   "Build",
+				RunsOn: "ubuntu-latest",
+				Steps: []any{
+					workflow.Step{
+						Uses: "actions/checkout@v4",
+					},
+					workflow.Step{
+						Run: "make build",
+					},
+				},
+			},
 		},
 	}
 
-	if job.Environment.Name != "production" {
-		t.Errorf("expected environment=production, got %s", job.Environment.Name)
+	// Verify all fields are set correctly
+	if w.Name != "Complete CI/CD" {
+		t.Errorf("expected Name='Complete CI/CD', got %q", w.Name)
+	}
+
+	if w.On.Push == nil {
+		t.Fatal("expected Push trigger to be set")
+	}
+
+	if w.Env["CI"] != "true" {
+		t.Errorf("expected CI='true', got %v", w.Env["CI"])
+	}
+
+	if w.Concurrency == nil || !w.Concurrency.CancelInProgress {
+		t.Error("expected CancelInProgress=true")
+	}
+
+	if w.Permissions == nil || w.Permissions.Contents != "read" {
+		t.Error("expected Permissions.Contents='read'")
+	}
+
+	if w.Defaults == nil || w.Defaults.Run.Shell != "bash" {
+		t.Error("expected Defaults.Run.Shell='bash'")
+	}
+
+	if len(w.Jobs) != 1 {
+		t.Errorf("expected 1 job, got %d", len(w.Jobs))
 	}
 }

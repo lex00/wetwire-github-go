@@ -227,3 +227,166 @@ func TestExpressionInEnv(t *testing.T) {
 		t.Errorf("unexpected expression: %s", expr.Raw())
 	}
 }
+
+func TestAdditionalGitHubContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		expr     workflow.Expression
+		expected string
+	}{
+		{"RefType", workflow.GitHub.RefType(), "github.ref_type"},
+		{"RepositoryOwner", workflow.GitHub.RepositoryOwner(), "github.repository_owner"},
+		{"Workspace", workflow.GitHub.Workspace(), "github.workspace"},
+		{"RunID", workflow.GitHub.RunID(), "github.run_id"},
+		{"RunNumber", workflow.GitHub.RunNumber(), "github.run_number"},
+		{"RunAttempt", workflow.GitHub.RunAttempt(), "github.run_attempt"},
+		{"Job", workflow.GitHub.Job(), "github.job"},
+		{"ServerURL", workflow.GitHub.ServerURL(), "github.server_url"},
+		{"APIURL", workflow.GitHub.APIURL(), "github.api_url"},
+		{"GraphQLURL", workflow.GitHub.GraphQLURL(), "github.graphql_url"},
+		{"HeadRef", workflow.GitHub.HeadRef(), "github.head_ref"},
+		{"BaseRef", workflow.GitHub.BaseRef(), "github.base_ref"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.expr.Raw() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, tt.expr.Raw())
+			}
+		})
+	}
+}
+
+func TestAdditionalRunnerContext(t *testing.T) {
+	tests := []struct {
+		name     string
+		expr     workflow.Expression
+		expected string
+	}{
+		{"Temp", workflow.Runner.Temp(), "runner.temp"},
+		{"ToolCache", workflow.Runner.ToolCache(), "runner.tool_cache"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.expr.Raw() != tt.expected {
+				t.Errorf("expected %q, got %q", tt.expected, tt.expr.Raw())
+			}
+		})
+	}
+}
+
+func TestStepsContextAdditional(t *testing.T) {
+	t.Run("Conclusion", func(t *testing.T) {
+		expr := workflow.Steps.Conclusion("deploy")
+		expected := "steps.deploy.conclusion"
+		if expr.Raw() != expected {
+			t.Errorf("expected %q, got %q", expected, expr.Raw())
+		}
+	})
+}
+
+func TestStringFunctions(t *testing.T) {
+	t.Run("Contains", func(t *testing.T) {
+		expr := workflow.Contains(
+			workflow.GitHub.Ref(),
+			workflow.Expression("'refs/heads/main'"),
+		)
+		// The function uses Expression.String() which wraps in ${{ }}
+		expected := "contains(${{ github.ref }}, ${{ 'refs/heads/main' }})"
+		if expr.Raw() != expected {
+			t.Errorf("expected %q, got %q", expected, expr.Raw())
+		}
+	})
+
+	t.Run("StartsWith", func(t *testing.T) {
+		expr := workflow.StartsWith(
+			workflow.GitHub.Ref(),
+			workflow.Expression("'refs/tags/'"),
+		)
+		expected := "startsWith(${{ github.ref }}, ${{ 'refs/tags/' }})"
+		if expr.Raw() != expected {
+			t.Errorf("expected %q, got %q", expected, expr.Raw())
+		}
+	})
+
+	t.Run("EndsWith", func(t *testing.T) {
+		expr := workflow.EndsWith(
+			workflow.GitHub.RefName(),
+			workflow.Expression("'-rc'"),
+		)
+		expected := "endsWith(${{ github.ref_name }}, ${{ '-rc' }})"
+		if expr.Raw() != expected {
+			t.Errorf("expected %q, got %q", expected, expr.Raw())
+		}
+	})
+
+	t.Run("Format", func(t *testing.T) {
+		expr := workflow.Format(
+			"Version: {0}",
+			workflow.GitHub.SHA(),
+		)
+		expected := "format('Version: {0}', github.sha)"
+		if expr.Raw() != expected {
+			t.Errorf("expected %q, got %q", expected, expr.Raw())
+		}
+	})
+
+	t.Run("Join", func(t *testing.T) {
+		expr := workflow.Join(
+			workflow.Expression("github.event.commits.*.message"),
+			", ",
+		)
+		expected := "join(${{ github.event.commits.*.message }}, ', ')"
+		if expr.Raw() != expected {
+			t.Errorf("expected %q, got %q", expected, expr.Raw())
+		}
+	})
+
+	t.Run("ToJSON", func(t *testing.T) {
+		expr := workflow.ToJSON(workflow.GitHub.Event("pull_request"))
+		expected := "toJSON(${{ github.event.pull_request }})"
+		if expr.Raw() != expected {
+			t.Errorf("expected %q, got %q", expected, expr.Raw())
+		}
+	})
+
+	t.Run("FromJSON", func(t *testing.T) {
+		expr := workflow.FromJSON(workflow.Steps.Get("config", "json"))
+		expected := "fromJSON(${{ steps.config.outputs.json }})"
+		if expr.Raw() != expected {
+			t.Errorf("expected %q, got %q", expected, expr.Raw())
+		}
+	})
+}
+
+func TestComplexExpressionChaining(t *testing.T) {
+	expr := workflow.Branch("main").
+		And(workflow.Push()).
+		Or(workflow.Branch("develop").And(workflow.PullRequest()))
+
+	expected := "((github.ref == 'refs/heads/main') && (github.event_name == 'push')) || ((github.ref == 'refs/heads/develop') && (github.event_name == 'pull_request'))"
+	if expr.Raw() != expected {
+		t.Errorf("expected %q, got %q", expected, expr.Raw())
+	}
+}
+
+func TestOutputRefExpression(t *testing.T) {
+	step := workflow.Step{
+		ID:   "build",
+		Uses: "actions/setup-go@v4",
+	}
+
+	ref := step.Output("version")
+
+	// Test String() method
+	if ref.String() != "${{ steps.build.outputs.version }}" {
+		t.Errorf("expected '${{ steps.build.outputs.version }}', got %q", ref.String())
+	}
+
+	// Test Expression() method
+	expr := ref.Expression()
+	if expr.Raw() != "steps.build.outputs.version" {
+		t.Errorf("expected 'steps.build.outputs.version', got %q", expr.Raw())
+	}
+}

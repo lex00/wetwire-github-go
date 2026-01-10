@@ -1,6 +1,8 @@
 package importer
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -223,5 +225,53 @@ func TestCodeownersCodeGenerator_MultilineComment(t *testing.T) {
 		if !strings.Contains(code, `Comment:`) {
 			t.Error("Generated code missing Comment field")
 		}
+	}
+}
+
+func TestParseCodeownersFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "CODEOWNERS")
+
+	content := []byte(`# Backend team
+*.go @backend-team
+
+# Frontend team
+*.js @frontend-team
+`)
+
+	if err := os.WriteFile(path, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	ir, err := ParseCodeownersFile(path)
+	if err != nil {
+		t.Fatalf("ParseCodeownersFile() error = %v", err)
+	}
+
+	if len(ir.Rules) != 2 {
+		t.Errorf("len(Rules) = %d, want 2", len(ir.Rules))
+	}
+}
+
+func TestParseCodeownersFile_NotFound(t *testing.T) {
+	_, err := ParseCodeownersFile("/nonexistent/path/CODEOWNERS")
+	if err == nil {
+		t.Error("ParseCodeownersFile() expected error for nonexistent file")
+	}
+}
+
+func TestParseCodeownersLine_Invalid(t *testing.T) {
+	// Invalid line with only a pattern, no owners
+	_, err := parseCodeownersLine("*.go")
+	if err == nil {
+		t.Error("parseCodeownersLine() expected error for line without owners")
+	}
+}
+
+func TestParseCodeownersContent_InvalidLine(t *testing.T) {
+	content := "*.go\n"
+	_, err := ParseCodeownersContent(content)
+	if err == nil {
+		t.Error("ParseCodeownersContent() expected error for invalid line")
 	}
 }

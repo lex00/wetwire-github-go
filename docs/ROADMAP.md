@@ -106,6 +106,10 @@ Type-safe wrappers for popular GitHub Actions:
 | github/codeql-action/analyze | `actions/codeql_analyze` | ✅ |
 | aquasecurity/trivy-action | `actions/trivy` | ✅ |
 | ossf/scorecard-action | `actions/scorecard` | ✅ |
+| actions/labeler | `actions/labeler` | ✅ |
+| actions/stale | `actions/stale` | ✅ |
+| peter-evans/create-pull-request | `actions/create_pull_request` | ✅ |
+| actions/dependency-review-action | `actions/dependency_review` | ✅ |
 
 ---
 
