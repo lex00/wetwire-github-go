@@ -170,3 +170,69 @@ func containsSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestGeneratePRTemplateCode_ContentWithBackticks(t *testing.T) {
+	content := "# PR Template\n\nUse `backticks` for code.\n\n```go\nfunc main() {}\n```"
+	templates := map[string]*IRPRTemplate{
+		"CodePR": {
+			Name:    "code",
+			Content: content,
+		},
+	}
+
+	gen := &PRTemplateCodeGenerator{PackageName: "workflows"}
+	code, err := gen.Generate(templates)
+	if err != nil {
+		t.Fatalf("Generate error: %v", err)
+	}
+
+	templatesGo := code.Files["templates.go"]
+
+	// Content with backticks should be quoted
+	if !containsStr(templatesGo, "Content:") {
+		t.Error("expected Content field")
+	}
+	// Should use quoted string, not raw string literal
+	if containsStr(templatesGo, "Content: `") {
+		t.Error("should not use backtick literal when content has backticks")
+	}
+}
+
+func TestFormatPRTemplateContent_WithBackticks(t *testing.T) {
+	content := "Code: `example`"
+	result := formatPRTemplateContent(content)
+
+	// Should use quoted string since content has backticks
+	if !containsStr(result, `"`) {
+		t.Error("should use quoted string for content with backticks")
+	}
+}
+
+func TestFormatPRTemplateContent_WithoutBackticks(t *testing.T) {
+	content := "No backticks here"
+	result := formatPRTemplateContent(content)
+
+	// Should use raw string literal
+	if !containsStr(result, "`") {
+		t.Error("should use backtick literal for content without backticks")
+	}
+}
+
+func TestGeneratePRTemplateCode_Empty(t *testing.T) {
+	templates := map[string]*IRPRTemplate{}
+
+	gen := &PRTemplateCodeGenerator{PackageName: "workflows"}
+	code, err := gen.Generate(templates)
+	if err != nil {
+		t.Fatalf("Generate error: %v", err)
+	}
+
+	if code.Templates != 0 {
+		t.Errorf("Templates = %d, want 0", code.Templates)
+	}
+
+	templatesGo := code.Files["templates.go"]
+	if !containsStr(templatesGo, "package workflows") {
+		t.Error("expected package declaration even with no templates")
+	}
+}

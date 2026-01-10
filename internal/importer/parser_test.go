@@ -349,3 +349,483 @@ func TestIRJob_GetNeeds_Nil(t *testing.T) {
 		t.Errorf("GetNeeds() = %v, want empty", job.GetNeeds())
 	}
 }
+
+func TestParser_Parse_WorkflowDispatch(t *testing.T) {
+	yaml := []byte(`name: Manual
+on: workflow_dispatch
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "manual"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.On.WorkflowDispatch == nil {
+		t.Error("workflow.On.WorkflowDispatch is nil")
+	}
+}
+
+func TestParser_Parse_WorkflowCall(t *testing.T) {
+	yaml := []byte(`name: Reusable
+on: workflow_call
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "reusable"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.On.WorkflowCall == nil {
+		t.Error("workflow.On.WorkflowCall is nil")
+	}
+}
+
+func TestParser_Parse_Schedule(t *testing.T) {
+	yaml := []byte(`name: Scheduled
+on:
+  schedule:
+    - cron: "0 0 * * *"
+    - cron: "0 12 * * *"
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "scheduled"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if len(workflow.On.Schedule) != 2 {
+		t.Errorf("len(workflow.On.Schedule) = %d, want 2", len(workflow.On.Schedule))
+	}
+	if workflow.On.Schedule[0].Cron != "0 0 * * *" {
+		t.Errorf("Schedule[0].Cron = %q, want %q", workflow.On.Schedule[0].Cron, "0 0 * * *")
+	}
+}
+
+func TestParser_Parse_RepositoryDispatch(t *testing.T) {
+	yaml := []byte(`name: Dispatch
+on: repository_dispatch
+jobs:
+  handle:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "dispatched"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.On.RepositoryDispatch == nil {
+		t.Error("workflow.On.RepositoryDispatch is nil")
+	}
+}
+
+func TestParser_Parse_Release(t *testing.T) {
+	yaml := []byte(`name: Release
+on: release
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "release"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.On.Release == nil {
+		t.Error("workflow.On.Release is nil")
+	}
+}
+
+func TestParser_Parse_Issues(t *testing.T) {
+	yaml := []byte(`name: Issues
+on: issues
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "issue"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.On.Issues == nil {
+		t.Error("workflow.On.Issues is nil")
+	}
+}
+
+func TestParser_Parse_PullRequestTarget(t *testing.T) {
+	yaml := []byte(`name: PR Target
+on: pull_request_target
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "pr target"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.On.PullRequestTarget == nil {
+		t.Error("workflow.On.PullRequestTarget is nil")
+	}
+}
+
+func TestParser_Parse_FileNotFound(t *testing.T) {
+	_, err := ParseWorkflowFile("/nonexistent/path/to/file.yml")
+	if err == nil {
+		t.Error("ParseFile() expected error for nonexistent file")
+	}
+}
+
+func TestParser_ParseFile_InvalidYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "invalid.yml")
+
+	invalidYAML := []byte("invalid: yaml: [[[")
+	if err := os.WriteFile(path, invalidYAML, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := ParseWorkflowFile(path)
+	if err == nil {
+		t.Error("ParseFile() expected error for invalid YAML")
+	}
+}
+
+func TestParser_Parse_ComplexMatrix(t *testing.T) {
+	yaml := []byte(`name: Matrix
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ["1.22", "1.23"]
+        include:
+          - os: ubuntu-latest
+            go: "1.21"
+        exclude:
+          - os: windows-latest
+            go: "1.22"
+    steps:
+      - run: echo "test"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	matrix := workflow.Jobs["test"].Strategy.Matrix
+	if matrix == nil {
+		t.Fatal("Matrix is nil")
+	}
+
+	if len(matrix.Values["os"]) != 3 {
+		t.Errorf("Matrix.Values[os] length = %d, want 3", len(matrix.Values["os"]))
+	}
+
+	if len(matrix.Include) != 1 {
+		t.Errorf("Matrix.Include length = %d, want 1", len(matrix.Include))
+	}
+
+	if len(matrix.Exclude) != 1 {
+		t.Errorf("Matrix.Exclude length = %d, want 1", len(matrix.Exclude))
+	}
+}
+
+func TestParser_Parse_JobWithContainer(t *testing.T) {
+	yaml := []byte(`name: Container
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: node:18
+      credentials:
+        username: user
+        password: pass
+      env:
+        NODE_ENV: test
+      ports:
+        - 80
+      volumes:
+        - /data
+      options: --cpus 1
+    steps:
+      - run: echo "containerized"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	container := workflow.Jobs["test"].Container
+	if container == nil {
+		t.Fatal("Container is nil")
+	}
+
+	if container.Image != "node:18" {
+		t.Errorf("Container.Image = %q, want %q", container.Image, "node:18")
+	}
+
+	if container.Credentials == nil || container.Credentials.Username != "user" {
+		t.Error("Container credentials not parsed correctly")
+	}
+
+	if len(container.Env) == 0 {
+		t.Error("Container env is empty")
+	}
+
+	if container.Options != "--cpus 1" {
+		t.Errorf("Container.Options = %q, want %q", container.Options, "--cpus 1")
+	}
+}
+
+func TestParser_Parse_JobWithServices(t *testing.T) {
+	yaml := []byte(`name: Services
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+    steps:
+      - run: echo "services"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	services := workflow.Jobs["test"].Services
+	if services == nil || services["postgres"] == nil {
+		t.Fatal("Services not parsed correctly")
+	}
+
+	postgres := services["postgres"]
+	if postgres.Image != "postgres:14" {
+		t.Errorf("Service.Image = %q, want %q", postgres.Image, "postgres:14")
+	}
+}
+
+func TestParser_Parse_JobWithOutputs(t *testing.T) {
+	yaml := []byte(`name: Outputs
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      artifact: ${{ steps.build.outputs.path }}
+    steps:
+      - id: get-version
+        run: echo "version=1.0.0" >> $GITHUB_OUTPUT
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	outputs := workflow.Jobs["build"].Outputs
+	if len(outputs) != 2 {
+		t.Errorf("len(outputs) = %d, want 2", len(outputs))
+	}
+
+	if _, ok := outputs["version"]; !ok {
+		t.Error("Missing version output")
+	}
+}
+
+func TestParser_Parse_ReusableWorkflowJob(t *testing.T) {
+	yaml := []byte(`name: Caller
+on: push
+jobs:
+  call-workflow:
+    uses: ./.github/workflows/reusable.yml
+    with:
+      config: production
+    secrets: inherit
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	job := workflow.Jobs["call-workflow"]
+	if job.Uses != "./.github/workflows/reusable.yml" {
+		t.Errorf("Job.Uses = %q, want %q", job.Uses, "./.github/workflows/reusable.yml")
+	}
+
+	if job.With == nil || job.With["config"] != "production" {
+		t.Error("Job with parameters not parsed correctly")
+	}
+
+	if job.Secrets != "inherit" {
+		t.Errorf("Job.Secrets = %v, want %q", job.Secrets, "inherit")
+	}
+}
+
+func TestParser_Parse_WorkflowPermissions(t *testing.T) {
+	yaml := []byte(`name: Permissions
+on: push
+permissions:
+  contents: read
+  issues: write
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.Permissions["contents"] != "read" {
+		t.Error("Workflow permissions not parsed correctly")
+	}
+}
+
+func TestParser_Parse_WorkflowDefaults(t *testing.T) {
+	yaml := []byte(`name: Defaults
+on: push
+defaults:
+  run:
+    shell: bash
+    working-directory: ./src
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.Defaults == nil || workflow.Defaults.Run == nil {
+		t.Fatal("Defaults not parsed")
+	}
+
+	if workflow.Defaults.Run.Shell != "bash" {
+		t.Errorf("Defaults.Run.Shell = %q, want %q", workflow.Defaults.Run.Shell, "bash")
+	}
+
+	if workflow.Defaults.Run.WorkingDirectory != "./src" {
+		t.Errorf("Defaults.Run.WorkingDirectory = %q, want %q", workflow.Defaults.Run.WorkingDirectory, "./src")
+	}
+}
+
+func TestParser_Parse_WorkflowConcurrency(t *testing.T) {
+	yaml := []byte(`name: Concurrency
+on: push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+`)
+
+	workflow, err := ParseWorkflow(yaml)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+
+	if workflow.Concurrency == nil {
+		t.Fatal("Concurrency not parsed")
+	}
+
+	if !workflow.Concurrency.CancelInProgress {
+		t.Error("Concurrency.CancelInProgress should be true")
+	}
+}
+
+func TestIRJob_GetRunsOn_StringSlice(t *testing.T) {
+	job := &IRJob{
+		RunsOn: []string{"ubuntu-latest", "macos-latest"},
+	}
+	if job.GetRunsOn() != "ubuntu-latest" {
+		t.Errorf("GetRunsOn() = %q, want %q", job.GetRunsOn(), "ubuntu-latest")
+	}
+}
+
+func TestIRJob_GetNeeds_StringSlice(t *testing.T) {
+	job := &IRJob{
+		Needs: []string{"build", "test"},
+	}
+	needs := job.GetNeeds()
+	if len(needs) != 2 || needs[0] != "build" || needs[1] != "test" {
+		t.Errorf("GetNeeds() = %v, want [build test]", needs)
+	}
+}
+
+func TestBuildReferenceGraph_ReusableWorkflow(t *testing.T) {
+	workflow := &IRWorkflow{
+		Jobs: map[string]*IRJob{
+			"call-workflow": {
+				Uses: "./.github/workflows/reusable.yml",
+			},
+		},
+	}
+
+	graph := BuildReferenceGraph(workflow)
+
+	// Reusable workflow should be in used actions
+	found := false
+	for _, action := range graph.UsedActions {
+		if action == "./.github/workflows/reusable.yml" {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("Reusable workflow not found in UsedActions")
+	}
+}
