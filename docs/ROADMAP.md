@@ -145,6 +145,8 @@ Type-safe wrappers for popular GitHub Actions:
 | helm/kind-action | `actions/kind` | ✅ |
 | fossas/fossa-action | `actions/fossa` | ✅ |
 | azure/k8s-set-context | `actions/k8s_set_context` | ✅ |
+| dawidd6/action-download-artifact | `actions/dawidd6_download_artifact` | ✅ |
+| anothrNick/github-tag-action | `actions/github_tag_action` | ✅ |
 
 ---
 

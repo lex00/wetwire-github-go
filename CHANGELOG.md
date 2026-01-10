@@ -142,6 +142,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `helm/kind-action@v1` - Create Kubernetes clusters with KinD for testing
   - `fossas/fossa-action@v1` - FOSSA license compliance scanning
   - `azure/k8s-set-context@v4` - Set Kubernetes context for AKS/Arc deployments
+- **Container Services Example** - Database integration testing workflow (#191)
+  - Job.Container for running steps in a Docker container (golang:1.24)
+  - Job.Services with PostgreSQL and Redis service containers
+  - Health check configuration via Options field
+  - Environment variables for database connection strings
+- **Artifact Pipeline Example** - Multi-stage build-test-release workflow (#192)
+  - Build → Test → Release pipeline with artifact passing
+  - upload_artifact/download_artifact action wrappers for artifact management
+  - Conditional release job with workflow.StartsWith() for tag detection
+  - Cross-platform binary builds (Linux, macOS, Windows)
+- **Additional Action Wrappers** - 2 typed wrappers for cross-workflow artifacts and tagging (#193)
+  - `dawidd6/action-download-artifact@v6` - Download artifacts from other workflow runs
+  - `anothrNick/github-tag-action@v1` - Automated semantic version tagging
 - **Additional Example Workflows** - 3 new workflow examples (#148)
   - `examples/docker-workflow` - Docker build and push to GHCR with multi-stage CI
   - `examples/release-workflow` - Automated GitHub releases on version tags
