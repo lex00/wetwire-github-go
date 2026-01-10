@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - `docs/ROADMAP.md` - Feature matrix and implementation status
 - `lint --fix` - Automatic fixing for WAG001 (raw uses: strings → typed action wrappers)
+- Documentation examples for all 7 action wrapper packages in QUICK_START.md
 
 ### Fixed
 - Documentation accuracy: project structures, CLI flags, status tables
