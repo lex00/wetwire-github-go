@@ -65,7 +65,7 @@ Example:
 func init() {
 	buildCmd.Flags().StringVarP(&buildOutput, "output", "o", ".github/workflows", "output directory")
 	buildCmd.Flags().StringVar(&buildFormat, "format", "yaml", "output format (yaml, json)")
-	buildCmd.Flags().StringVar(&buildType, "type", "workflow", "config type (workflow, dependabot, issue-template, discussion-template)")
+	buildCmd.Flags().StringVar(&buildType, "type", "workflow", "config type (workflow, dependabot, issue-template, discussion-template, pr-template)")
 	buildCmd.Flags().BoolVar(&buildDryRun, "dry-run", false, "show what would be written without writing")
 }
 
@@ -79,6 +79,8 @@ func runBuild(sourcePath, outputDir string, dryRun bool) wetwire.BuildResult {
 		return runBuildIssueTemplate(sourcePath, outputDir, dryRun)
 	case "discussion-template":
 		return runBuildDiscussionTemplate(sourcePath, outputDir, dryRun)
+	case "pr-template":
+		return runBuildPRTemplate(sourcePath, outputDir, dryRun)
 	default:
 		return runBuildWorkflow(sourcePath, outputDir, dryRun)
 	}
@@ -441,6 +443,100 @@ func runBuildDiscussionTemplate(sourcePath, outputDir string, dryRun bool) wetwi
 
 		if err := os.WriteFile(filePath, tmpl.YAML, 0644); err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("writing %s: %v", filename, err))
+			continue
+		}
+
+		result.Workflows = append(result.Workflows, tmpl.Name)
+		result.Files = append(result.Files, filePath)
+	}
+
+	// Success if we wrote at least one file and have no errors
+	result.Success = len(result.Files) > 0 && len(result.Errors) == 0
+
+	return result
+}
+
+// runBuildPRTemplate executes the PR template build pipeline.
+func runBuildPRTemplate(sourcePath, outputDir string, dryRun bool) wetwire.BuildResult {
+	result := wetwire.BuildResult{
+		Success:   false,
+		Workflows: []string{},
+		Files:     []string{},
+		Errors:    []string{},
+	}
+
+	// Step 1: Discover PRTemplates
+	disc := discover.NewDiscoverer()
+	discovered, err := disc.DiscoverPRTemplates(sourcePath)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("discovery failed: %v", err))
+		return result
+	}
+
+	// Add any discovery errors
+	result.Errors = append(result.Errors, discovered.Errors...)
+
+	if len(discovered.Templates) == 0 {
+		result.Errors = append(result.Errors, "no PR templates found in "+sourcePath)
+		return result
+	}
+
+	// Step 2: Extract values using runner
+	run := runner.NewRunner()
+	extracted, err := run.ExtractPRTemplates(sourcePath, discovered)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("extraction failed: %v", err))
+		return result
+	}
+
+	if extracted.Error != "" {
+		result.Errors = append(result.Errors, extracted.Error)
+		return result
+	}
+
+	// Step 3: Build templates
+	builder := template.NewBuilder()
+	built, err := builder.BuildPRTemplates(discovered, extracted)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("template build failed: %v", err))
+		return result
+	}
+
+	// Add template builder errors
+	result.Errors = append(result.Errors, built.Errors...)
+
+	// Step 4: Resolve output directory (PR templates go in .github/)
+	absOutputDir := outputDir
+	if outputDir == ".github/workflows" {
+		// Default for PR templates is .github/
+		absOutputDir = ".github"
+	}
+	if !filepath.IsAbs(absOutputDir) {
+		absOutputDir = filepath.Join(sourcePath, absOutputDir)
+	}
+
+	// Step 5: Write PR template files
+	for _, tmpl := range built.Templates {
+		// Use the Filename from the template (handles PULL_REQUEST_TEMPLATE/ subdirectory)
+		filePath := filepath.Join(absOutputDir, tmpl.Filename)
+
+		// Create parent directory if needed (for named templates in PULL_REQUEST_TEMPLATE/)
+		if !dryRun {
+			parentDir := filepath.Dir(filePath)
+			if err := os.MkdirAll(parentDir, 0755); err != nil {
+				result.Errors = append(result.Errors, fmt.Sprintf("creating directory: %v", err))
+				continue
+			}
+		}
+
+		if dryRun {
+			result.Workflows = append(result.Workflows, tmpl.Name)
+			result.Files = append(result.Files, filePath)
+			continue
+		}
+
+		if err := os.WriteFile(filePath, tmpl.Content, 0644); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("writing %s: %v", tmpl.Filename, err))
 			continue
 		}
 

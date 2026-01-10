@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **PR Templates** - Full support for GitHub Pull Request templates (#83)
+  - `templates.PRTemplate` type with Name, Content, and Filename() method
+  - AST-based discovery of PRTemplate declarations
+  - Runner extraction for PRTemplate content
+  - `build --type pr-template` to generate markdown files
+  - Support for default (PULL_REQUEST_TEMPLATE.md) and named templates (PULL_REQUEST_TEMPLATE/{name}.md)
 - `docs/ROADMAP.md` - Feature matrix and implementation status
 - `lint --fix` - Automatic fixing for WAG001 (raw uses: strings → typed action wrappers)
 - Documentation examples for all 7 action wrapper packages in QUICK_START.md
@@ -61,6 +67,7 @@ Initial release with full GitHub Actions workflow generation from typed Go decla
 - **Dependabot** - `.github/dependabot.yml`
 - **Issue Templates** - `.github/ISSUE_TEMPLATE/*.yml`
 - **Discussion Templates** - `.github/DISCUSSION_TEMPLATE/*.yml`
+- **PR Templates** - `.github/PULL_REQUEST_TEMPLATE.md` or `.github/PULL_REQUEST_TEMPLATE/*.md`
 
 #### Linter Rules
 - `WAG001` - Use typed action wrappers instead of raw `uses:` strings
