@@ -99,6 +99,111 @@ func TestSetupJava_Inputs_Distributions(t *testing.T) {
 	}
 }
 
+func TestSetupJava_Inputs_JavaVersionFile(t *testing.T) {
+	a := SetupJava{
+		Distribution:    "temurin",
+		JavaVersionFile: ".java-version",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["java-version-file"] != ".java-version" {
+		t.Errorf("inputs[java-version-file] = %v, want .java-version", inputs["java-version-file"])
+	}
+}
+
+func TestSetupJava_Inputs_JdkFile(t *testing.T) {
+	a := SetupJava{
+		Distribution: "temurin",
+		JdkFile:      "/path/to/jdk.tar.gz",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["jdk-file"] != "/path/to/jdk.tar.gz" {
+		t.Errorf("inputs[jdk-file] = %v, want /path/to/jdk.tar.gz", inputs["jdk-file"])
+	}
+}
+
+func TestSetupJava_Inputs_SettingsPath(t *testing.T) {
+	a := SetupJava{
+		JavaVersion:  "17",
+		Distribution: "temurin",
+		SettingsPath: ".m2/settings.xml",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["settings-path"] != ".m2/settings.xml" {
+		t.Errorf("inputs[settings-path] = %v, want .m2/settings.xml", inputs["settings-path"])
+	}
+}
+
+func TestSetupJava_Inputs_GPG(t *testing.T) {
+	a := SetupJava{
+		JavaVersion:   "17",
+		Distribution:  "temurin",
+		GPGPrivateKey: "${{ secrets.GPG_PRIVATE_KEY }}",
+		GPGPassphrase: "GPG_PASSPHRASE",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["gpg-private-key"] != "${{ secrets.GPG_PRIVATE_KEY }}" {
+		t.Errorf("inputs[gpg-private-key] = %v, want secret reference", inputs["gpg-private-key"])
+	}
+	if inputs["gpg-passphrase"] != "GPG_PASSPHRASE" {
+		t.Errorf("inputs[gpg-passphrase] = %v, want GPG_PASSPHRASE", inputs["gpg-passphrase"])
+	}
+}
+
+func TestSetupJava_Inputs_CacheDependencyPath(t *testing.T) {
+	a := SetupJava{
+		JavaVersion:         "17",
+		Distribution:        "temurin",
+		Cache:               "gradle",
+		CacheDependencyPath: "build.gradle",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["cache-dependency-path"] != "build.gradle" {
+		t.Errorf("inputs[cache-dependency-path] = %v, want build.gradle", inputs["cache-dependency-path"])
+	}
+}
+
+func TestSetupJava_Inputs_Token(t *testing.T) {
+	a := SetupJava{
+		JavaVersion:  "17",
+		Distribution: "temurin",
+		Token:        "${{ secrets.GITHUB_TOKEN }}",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["token"] != "${{ secrets.GITHUB_TOKEN }}" {
+		t.Errorf("inputs[token] = %v, want secret reference", inputs["token"])
+	}
+}
+
+func TestSetupJava_Inputs_MvnToolchain(t *testing.T) {
+	a := SetupJava{
+		JavaVersion:        "17",
+		Distribution:       "temurin",
+		MvnToolchainID:     "my-toolchain",
+		MvnToolchainVendor: "openjdk",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["mvn-toolchain-id"] != "my-toolchain" {
+		t.Errorf("inputs[mvn-toolchain-id] = %v, want my-toolchain", inputs["mvn-toolchain-id"])
+	}
+	if inputs["mvn-toolchain-vendor"] != "openjdk" {
+		t.Errorf("inputs[mvn-toolchain-vendor] = %v, want openjdk", inputs["mvn-toolchain-vendor"])
+	}
+}
+
 func TestSetupJava_ImplementsStepAction(t *testing.T) {
 	a := SetupJava{}
 	// Verify SetupJava implements StepAction interface

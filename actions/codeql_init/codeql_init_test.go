@@ -54,6 +54,62 @@ func TestCodeQLInit_Inputs_Config(t *testing.T) {
 	}
 }
 
+func TestCodeQLInit_Inputs_ExternalRepositoryToken(t *testing.T) {
+	a := CodeQLInit{
+		Languages:               "go",
+		ExternalRepositoryToken: "${{ secrets.EXTERNAL_REPO_TOKEN }}",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["external-repository-token"] != "${{ secrets.EXTERNAL_REPO_TOKEN }}" {
+		t.Errorf("inputs[external-repository-token] = %v, want secret reference", inputs["external-repository-token"])
+	}
+}
+
+func TestCodeQLInit_Inputs_Tools(t *testing.T) {
+	a := CodeQLInit{
+		Languages: "go",
+		Tools:     "https://github.com/github/codeql-action/releases/download/codeql-bundle-20230101/codeql-bundle.tar.gz",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["tools"] != "https://github.com/github/codeql-action/releases/download/codeql-bundle-20230101/codeql-bundle.tar.gz" {
+		t.Errorf("inputs[tools] = %v, want tools URL", inputs["tools"])
+	}
+}
+
+func TestCodeQLInit_Inputs_Debug(t *testing.T) {
+	a := CodeQLInit{
+		Languages: "go",
+		Debug:     true,
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["debug"] != true {
+		t.Errorf("inputs[debug] = %v, want true", inputs["debug"])
+	}
+}
+
+func TestCodeQLInit_Inputs_PerformanceOptions(t *testing.T) {
+	a := CodeQLInit{
+		Languages: "go",
+		RAM:       "4096",
+		Threads:   "4",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["ram"] != "4096" {
+		t.Errorf("inputs[ram] = %v, want 4096", inputs["ram"])
+	}
+	if inputs["threads"] != "4" {
+		t.Errorf("inputs[threads] = %v, want 4", inputs["threads"])
+	}
+}
+
 func TestCodeQLInit_ImplementsStepAction(t *testing.T) {
 	a := CodeQLInit{}
 	var _ workflow.StepAction = a
