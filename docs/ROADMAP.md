@@ -43,6 +43,8 @@ Feature matrix and implementation status for wetwire-github-go.
 | WAG014 | ✅ | Flag jobs without timeout-minutes setting |
 | WAG015 | ✅ | Suggest caching for setup-go/node/python actions |
 | WAG016 | ✅ | Validate concurrency settings |
+| WAG017 | ✅ | Suggest adding explicit permissions scope for security |
+| WAG018 | ✅ | Detect dangerous pull_request_target patterns with checkout actions |
 
 ---
 

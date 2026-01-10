@@ -43,6 +43,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `internal/linter`: 83.9% → 91.3% (7+ percentage point improvement) (#143, #149)
   - `codegen`: 85.2% → 95.7% (10+ percentage point improvement) (#143, #158)
   - `internal/runner`: 89.9% → 90.8% (additional edge case tests) (#158)
+- **Security Lint Rules (WAG017-WAG018)** - 2 new security-focused lint rules (#160, #161)
+  - WAG017: Suggest adding explicit permissions scope for workflow security
+  - WAG018: Detect dangerous pull_request_target patterns with checkout actions
+- **Agent Test Coverage Improvement** - Increased from 55.2% to 58.8% (#162)
+  - Added 97 tests covering tool routing, error handling, state management, completion gate logic
 - **Additional Lint Rules (WAG013-WAG016)** - 4 new lint rules for code quality (#149)
   - WAG013: Detect pointer assignments (&Type{}) - wetwire uses value semantics
   - WAG014: Flag jobs without timeout-minutes setting
