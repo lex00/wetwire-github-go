@@ -135,6 +135,9 @@ Type-safe wrappers for popular GitHub Actions:
 | reviewdog/action-setup | `actions/reviewdog` | ✅ |
 | super-linter/super-linter | `actions/super_linter` | ✅ |
 | github/codeql-action/upload-sarif | `actions/upload_sarif` | ✅ |
+| sigstore/cosign-installer | `actions/cosign_installer` | ✅ |
+| actions-rs/cargo | `actions/cargo` | ✅ |
+| EndBug/add-and-commit | `actions/add_and_commit` | ✅ |
 
 ---
 
