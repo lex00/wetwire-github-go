@@ -101,6 +101,7 @@ Type-safe wrappers for popular GitHub Actions:
 | google-github-actions/auth | `actions/gcp_auth` | ✅ |
 | google-github-actions/deploy-cloudrun | `actions/gcp_deploy_cloudrun` | ✅ |
 | google-github-actions/setup-gcloud | `actions/gcp_setup_gcloud` | ✅ |
+| golangci/golangci-lint-action | `actions/golangci_lint` | ✅ |
 
 ---
 

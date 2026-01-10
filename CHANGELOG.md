@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
+- **Golangci-lint Action Wrapper** - Typed wrapper for golangci-lint-action@v6 (#119)
+  - Run golangci-lint for Go code linting
+  - Supports: `version`, `working-directory`, `args`, `only-new-issues`, cache options
 - **GCP Action Wrappers** - 3 typed wrappers for Google Cloud GitHub Actions (#107)
   - `google-github-actions/auth@v2` - Authenticate to Google Cloud with OIDC or service account keys
   - `google-github-actions/deploy-cloudrun@v2` - Deploy containers or source to Cloud Run services/jobs
