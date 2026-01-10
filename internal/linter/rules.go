@@ -549,6 +549,330 @@ func (r *WAG008) Check(fset *token.FileSet, file *ast.File, path string) []LintI
 	return issues
 }
 
+// WAG009 validates matrix dimension values are not empty.
+type WAG009 struct{}
+
+func (r *WAG009) ID() string          { return "WAG009" }
+func (r *WAG009) Description() string { return "Validate matrix dimension values" }
+
+func (r *WAG009) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		lit, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		typeName := getTypeName(lit.Type)
+		if typeName != "workflow.Matrix" && typeName != "Matrix" {
+			return true
+		}
+
+		// Look for Values field
+		for _, elt := range lit.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kv.Key.(*ast.Ident)
+			if !ok || key.Name != "Values" {
+				continue
+			}
+
+			// Check the map for empty slices
+			if mapLit, ok := kv.Value.(*ast.CompositeLit); ok {
+				for _, mapElt := range mapLit.Elts {
+					if mapKV, ok := mapElt.(*ast.KeyValueExpr); ok {
+						// Check if value is an empty slice
+						if sliceLit, ok := mapKV.Value.(*ast.CompositeLit); ok {
+							if len(sliceLit.Elts) == 0 {
+								pos := fset.Position(mapKV.Pos())
+								var dimName string
+								if bl, ok := mapKV.Key.(*ast.BasicLit); ok {
+									dimName = strings.Trim(bl.Value, `"'`)
+								}
+								issues = append(issues, LintIssue{
+									File:     path,
+									Line:     pos.Line,
+									Column:   pos.Column,
+									Severity: "error",
+									Message:  fmt.Sprintf("Empty matrix dimension %q - must have at least one value", dimName),
+									Rule:     r.ID(),
+									Fixable:  false,
+								})
+							}
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	return issues
+}
+
+// WAG010 flags missing recommended action inputs.
+type WAG010 struct{}
+
+func (r *WAG010) ID() string          { return "WAG010" }
+func (r *WAG010) Description() string { return "Flag missing recommended action inputs" }
+
+// recommendedInputs maps action types to their recommended inputs.
+var recommendedInputs = map[string][]string{
+	"setup_go.SetupGo":         {"GoVersion", "GoVersionFile"},     // At least one should be set
+	"setup_java.SetupJava":     {"JavaVersion", "Distribution"},    // Both are recommended
+	"setup_node.SetupNode":     {"NodeVersion", "NodeVersionFile"}, // At least one should be set
+	"setup_python.SetupPython": {"PythonVersion"},                  // Recommended
+	"setup_dotnet.SetupDotnet": {"DotnetVersion"},                  // Recommended
+	"setup_ruby.SetupRuby":     {"RubyVersion"},                    // Recommended
+	"setup_rust.SetupRust":     {"Toolchain"},                      // Recommended
+}
+
+func (r *WAG010) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		// Look for action wrapper usage with .ToStep()
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+
+		// Check if this is a .ToStep() call
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "ToStep" {
+			return true
+		}
+
+		// Get the receiver - should be a composite literal
+		lit, ok := sel.X.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		typeName := getTypeName(lit.Type)
+		recommended, exists := recommendedInputs[typeName]
+		if !exists {
+			return true
+		}
+
+		// Collect set fields
+		setFields := make(map[string]bool)
+		for _, elt := range lit.Elts {
+			if kv, ok := elt.(*ast.KeyValueExpr); ok {
+				if key, ok := kv.Key.(*ast.Ident); ok {
+					setFields[key.Name] = true
+				}
+			}
+		}
+
+		// Check if any recommended field is set
+		hasRecommended := false
+		for _, field := range recommended {
+			if setFields[field] {
+				hasRecommended = true
+				break
+			}
+		}
+
+		if !hasRecommended && len(recommended) > 0 {
+			pos := fset.Position(lit.Pos())
+			issues = append(issues, LintIssue{
+				File:     path,
+				Line:     pos.Line,
+				Column:   pos.Column,
+				Severity: "warning",
+				Message:  fmt.Sprintf("%s: consider setting %s", typeName, strings.Join(recommended, " or ")),
+				Rule:     r.ID(),
+				Fixable:  false,
+			})
+		}
+		return true
+	})
+
+	return issues
+}
+
+// WAG011 detects potential unreachable jobs.
+type WAG011 struct{}
+
+func (r *WAG011) ID() string          { return "WAG011" }
+func (r *WAG011) Description() string { return "Detect potential unreachable jobs" }
+
+func (r *WAG011) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	// Track jobs and their dependencies
+	jobDeps := make(map[string][]string)
+	jobPositions := make(map[string]token.Position)
+
+	// First pass: collect all jobs and their dependencies
+	ast.Inspect(file, func(n ast.Node) bool {
+		// Look for job variable declarations
+		genDecl, ok := n.(*ast.GenDecl)
+		if !ok {
+			return true
+		}
+
+		for _, spec := range genDecl.Specs {
+			valueSpec, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+
+			for i, name := range valueSpec.Names {
+				if len(valueSpec.Values) <= i {
+					continue
+				}
+
+				lit, ok := valueSpec.Values[i].(*ast.CompositeLit)
+				if !ok {
+					continue
+				}
+
+				typeName := getTypeName(lit.Type)
+				if typeName != "workflow.Job" && typeName != "Job" {
+					continue
+				}
+
+				jobPositions[name.Name] = fset.Position(name.Pos())
+
+				// Extract dependencies from Needs field
+				for _, elt := range lit.Elts {
+					kv, ok := elt.(*ast.KeyValueExpr)
+					if !ok {
+						continue
+					}
+					key, ok := kv.Key.(*ast.Ident)
+					if !ok || key.Name != "Needs" {
+						continue
+					}
+
+					// Extract dependency names
+					deps := extractDependencyNames(kv.Value)
+					jobDeps[name.Name] = deps
+				}
+			}
+		}
+		return true
+	})
+
+	// Check for jobs that depend on undefined jobs
+	definedJobs := make(map[string]bool)
+	for name := range jobPositions {
+		definedJobs[name] = true
+	}
+
+	for jobName, deps := range jobDeps {
+		for _, dep := range deps {
+			if !definedJobs[dep] {
+				pos := jobPositions[jobName]
+				issues = append(issues, LintIssue{
+					File:     path,
+					Line:     pos.Line,
+					Column:   pos.Column,
+					Severity: "error",
+					Message:  fmt.Sprintf("Job %q depends on undefined job %q", jobName, dep),
+					Rule:     r.ID(),
+					Fixable:  false,
+				})
+			}
+		}
+	}
+
+	return issues
+}
+
+// extractDependencyNames extracts job names from a Needs field value.
+func extractDependencyNames(expr ast.Expr) []string {
+	var names []string
+
+	switch v := expr.(type) {
+	case *ast.Ident:
+		names = append(names, v.Name)
+	case *ast.CompositeLit:
+		for _, elt := range v.Elts {
+			if ident, ok := elt.(*ast.Ident); ok {
+				names = append(names, ident.Name)
+			}
+		}
+	}
+
+	return names
+}
+
+// WAG012 warns about deprecated action versions.
+type WAG012 struct{}
+
+func (r *WAG012) ID() string          { return "WAG012" }
+func (r *WAG012) Description() string { return "Warn about deprecated action versions" }
+
+// deprecatedVersions maps action patterns to their deprecated versions and recommended versions.
+var deprecatedVersions = map[string]struct {
+	deprecated  []string
+	recommended string
+}{
+	"actions/checkout":          {[]string{"v1", "v2", "v3"}, "v4"},
+	"actions/setup-go":          {[]string{"v1", "v2", "v3", "v4"}, "v5"},
+	"actions/setup-node":        {[]string{"v1", "v2", "v3"}, "v4"},
+	"actions/setup-python":      {[]string{"v1", "v2", "v3", "v4"}, "v5"},
+	"actions/setup-java":        {[]string{"v1", "v2", "v3"}, "v4"},
+	"actions/cache":             {[]string{"v1", "v2", "v3"}, "v4"},
+	"actions/upload-artifact":   {[]string{"v1", "v2", "v3"}, "v4"},
+	"actions/download-artifact": {[]string{"v1", "v2", "v3"}, "v4"},
+	"actions/setup-dotnet":      {[]string{"v1", "v2", "v3"}, "v4"},
+}
+
+func (r *WAG012) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		bl, ok := n.(*ast.BasicLit)
+		if !ok || bl.Kind != token.STRING {
+			return true
+		}
+
+		val := strings.Trim(bl.Value, `"'`)
+
+		// Check if this looks like an action reference
+		if !strings.Contains(val, "/") || !strings.Contains(val, "@") {
+			return true
+		}
+
+		// Parse action reference
+		parts := strings.Split(val, "@")
+		if len(parts) != 2 {
+			return true
+		}
+
+		actionName := parts[0]
+		version := parts[1]
+
+		if info, exists := deprecatedVersions[actionName]; exists {
+			for _, deprecated := range info.deprecated {
+				if version == deprecated {
+					pos := fset.Position(bl.Pos())
+					issues = append(issues, LintIssue{
+						File:     path,
+						Line:     pos.Line,
+						Column:   pos.Column,
+						Severity: "warning",
+						Message:  fmt.Sprintf("Action %s@%s is deprecated, use %s@%s", actionName, version, actionName, info.recommended),
+						Rule:     r.ID(),
+						Fixable:  false,
+					})
+					break
+				}
+			}
+		}
+		return true
+	})
+
+	return issues
+}
+
 // Helper function to get type name from AST expression
 func getTypeName(expr ast.Expr) string {
 	switch t := expr.(type) {

@@ -77,6 +77,10 @@ func DefaultLinter() *Linter {
 		&WAG006{},
 		&WAG007{MaxJobs: 10},
 		&WAG008{},
+		&WAG009{},
+		&WAG010{},
+		&WAG011{},
+		&WAG012{},
 	)
 }
 

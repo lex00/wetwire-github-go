@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Additional Lint Rules (WAG009-WAG012)** - 4 new lint rules for workflow quality (#86)
+  - WAG009: Validate matrix dimension values (empty matrix detection)
+  - WAG010: Flag missing recommended action inputs (e.g., GoVersion for setup_go)
+  - WAG011: Detect potential unreachable jobs (undefined job dependencies)
+  - WAG012: Warn about deprecated action versions (e.g., checkout@v2 → v4)
 - **Additional Action Wrappers** - 5 new typed wrappers for popular GitHub Actions (#85)
   - `actions/setup_java` - Set up Java JDK with distribution selection
   - `actions/setup_dotnet` - Set up .NET SDK
