@@ -65,7 +65,7 @@ Example:
 func init() {
 	buildCmd.Flags().StringVarP(&buildOutput, "output", "o", ".github/workflows", "output directory")
 	buildCmd.Flags().StringVar(&buildFormat, "format", "yaml", "output format (yaml, json)")
-	buildCmd.Flags().StringVar(&buildType, "type", "workflow", "config type (workflow, dependabot, issue-template, discussion-template, pr-template)")
+	buildCmd.Flags().StringVar(&buildType, "type", "workflow", "config type (workflow, dependabot, issue-template, discussion-template, pr-template, codeowners)")
 	buildCmd.Flags().BoolVar(&buildDryRun, "dry-run", false, "show what would be written without writing")
 }
 
@@ -81,6 +81,8 @@ func runBuild(sourcePath, outputDir string, dryRun bool) wetwire.BuildResult {
 		return runBuildDiscussionTemplate(sourcePath, outputDir, dryRun)
 	case "pr-template":
 		return runBuildPRTemplate(sourcePath, outputDir, dryRun)
+	case "codeowners":
+		return runBuildCodeowners(sourcePath, outputDir, dryRun)
 	default:
 		return runBuildWorkflow(sourcePath, outputDir, dryRun)
 	}
@@ -541,6 +543,98 @@ func runBuildPRTemplate(sourcePath, outputDir string, dryRun bool) wetwire.Build
 		}
 
 		result.Workflows = append(result.Workflows, tmpl.Name)
+		result.Files = append(result.Files, filePath)
+	}
+
+	// Success if we wrote at least one file and have no errors
+	result.Success = len(result.Files) > 0 && len(result.Errors) == 0
+
+	return result
+}
+
+// runBuildCodeowners executes the CODEOWNERS build pipeline.
+func runBuildCodeowners(sourcePath, outputDir string, dryRun bool) wetwire.BuildResult {
+	result := wetwire.BuildResult{
+		Success:   false,
+		Workflows: []string{},
+		Files:     []string{},
+		Errors:    []string{},
+	}
+
+	// Step 1: Discover Codeowners configs
+	disc := discover.NewDiscoverer()
+	discovered, err := disc.DiscoverCodeowners(sourcePath)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("discovery failed: %v", err))
+		return result
+	}
+
+	// Add any discovery errors
+	result.Errors = append(result.Errors, discovered.Errors...)
+
+	if len(discovered.Configs) == 0 {
+		result.Errors = append(result.Errors, "no codeowners configs found in "+sourcePath)
+		return result
+	}
+
+	// Step 2: Extract values using runner
+	run := runner.NewRunner()
+	extracted, err := run.ExtractCodeowners(sourcePath, discovered)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("extraction failed: %v", err))
+		return result
+	}
+
+	if extracted.Error != "" {
+		result.Errors = append(result.Errors, extracted.Error)
+		return result
+	}
+
+	// Step 3: Build templates
+	builder := template.NewBuilder()
+	built, err := builder.BuildCodeowners(discovered, extracted)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("template build failed: %v", err))
+		return result
+	}
+
+	// Add template builder errors
+	result.Errors = append(result.Errors, built.Errors...)
+
+	// Step 4: Resolve output directory (CODEOWNERS goes in .github/)
+	absOutputDir := outputDir
+	if outputDir == ".github/workflows" {
+		// Default for codeowners is .github/
+		absOutputDir = ".github"
+	}
+	if !filepath.IsAbs(absOutputDir) {
+		absOutputDir = filepath.Join(sourcePath, absOutputDir)
+	}
+
+	// Step 5: Create output directory if needed
+	if !dryRun {
+		if err := os.MkdirAll(absOutputDir, 0755); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("creating output directory: %v", err))
+			return result
+		}
+	}
+
+	// Step 6: Write CODEOWNERS file (always named CODEOWNERS)
+	for _, cfg := range built.Configs {
+		filePath := filepath.Join(absOutputDir, "CODEOWNERS")
+
+		if dryRun {
+			result.Workflows = append(result.Workflows, cfg.Name)
+			result.Files = append(result.Files, filePath)
+			continue
+		}
+
+		if err := os.WriteFile(filePath, cfg.Content, 0644); err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("writing CODEOWNERS: %v", err))
+			continue
+		}
+
+		result.Workflows = append(result.Workflows, cfg.Name)
 		result.Files = append(result.Files, filePath)
 	}
 
