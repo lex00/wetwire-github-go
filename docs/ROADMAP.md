@@ -108,7 +108,7 @@ Type-safe wrappers for popular GitHub Actions:
 | Import Workflow | ✅ | `docs/IMPORT_WORKFLOW.md` |
 | FAQ | ✅ | `docs/FAQ.md` |
 | Roadmap | ✅ | `docs/ROADMAP.md` |
-| Developers | ❌ | `docs/DEVELOPERS.md` |
+| Developers | ✅ | `docs/DEVELOPERS.md` |
 | Internals | ❌ | `docs/INTERNALS.md` |
 | Examples | ❌ | `docs/EXAMPLES.md` |
 

@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **DEVELOPERS.md** - Comprehensive developer guide (#94)
+  - Development setup and prerequisites
+  - Project structure overview
+  - Guide for adding action wrappers
+  - Guide for adding lint rules
+  - Contributing guidelines
 - **Codecov Action Wrapper** - Typed wrapper for `codecov/codecov-action@v5` (#93)
   - Upload code coverage reports to Codecov
   - Supports: `token`, `files`, `directory`, `flags`, `name`, `fail_ci_if_error`, `verbose`, `working-directory`, `env_vars`, `use_oidc`
