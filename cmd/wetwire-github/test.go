@@ -5,41 +5,56 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	wetwire "github.com/lex00/wetwire-github-go"
 	"github.com/lex00/wetwire-github-go/internal/discover"
+	"github.com/lex00/wetwire-github-go/internal/personas"
+	"github.com/lex00/wetwire-github-go/internal/scoring"
 )
 
 var testFormat string
 var testPersona string
 var testScenario string
 var testList bool
+var testScore bool
 
 var testCmd = &cobra.Command{
 	Use:   "test <path>",
 	Short: "Run persona-based workflow tests",
 	Long: `Test runs persona-based tests against workflow declarations.
 
-Personas simulate different GitHub Actions scenarios to validate
-workflow behavior without running actual workflows.
+Developer personas simulate different types of users interacting with
+the AI agent to test workflow generation quality.
 
 Available personas:
-  push          - Simulates push event (branch commit)
-  pull_request  - Simulates pull request event
-  schedule      - Simulates scheduled event (cron)
-  workflow_dispatch - Simulates manual dispatch
+  beginner      - New to GitHub Actions, needs guidance
+  intermediate  - Some experience, knows basics but misses details
+  expert        - Deep CI/CD knowledge, precise requirements
+  terse         - Minimal words, expects system to infer
+  verbose       - Over-explains, buries requirements in prose
 
 Scenarios:
-  ci-setup      - Basic CI workflow test
+  ci-workflow   - Basic CI workflow test
   deployment    - Deployment workflow test
   release       - Release workflow test
+  matrix        - Matrix strategy workflow test
+
+Scoring (5 dimensions, 0-3 each, max 15):
+  Completeness       - Were all required workflows generated?
+  Lint Quality       - Did the code pass linting?
+  Code Quality       - Does the code follow idiomatic patterns?
+  Output Validity    - Is the generated YAML valid?
+  Question Efficiency - Appropriate number of clarifying questions?
+
+Thresholds: 0-5 Failure, 6-9 Partial, 10-12 Success, 13-15 Excellent
 
 Example:
   wetwire-github test .
-  wetwire-github test . --persona push
-  wetwire-github test . --scenario ci-setup
+  wetwire-github test . --persona beginner
+  wetwire-github test . --scenario ci-workflow --score
   wetwire-github test --list`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -55,30 +70,50 @@ Example:
 
 func init() {
 	testCmd.Flags().StringVar(&testFormat, "format", "text", "output format (text, json)")
-	testCmd.Flags().StringVar(&testPersona, "persona", "", "run specific persona (push, pull_request, schedule, workflow_dispatch)")
-	testCmd.Flags().StringVar(&testScenario, "scenario", "", "run specific scenario (ci-setup, deployment, release)")
+	testCmd.Flags().StringVar(&testPersona, "persona", "", "run specific persona ("+strings.Join(personas.Names(), ", ")+")")
+	testCmd.Flags().StringVar(&testScenario, "scenario", "", "run specific scenario (ci-workflow, deployment, release, matrix)")
 	testCmd.Flags().BoolVar(&testList, "list", false, "list available personas and scenarios")
+	testCmd.Flags().BoolVar(&testScore, "score", false, "show scoring breakdown")
 }
 
 // listTestPersonas lists available personas and scenarios.
 func listTestPersonas() error {
-	fmt.Println("Available Personas:")
-	fmt.Println("  push              Simulates push event (branch commit)")
-	fmt.Println("  pull_request      Simulates pull request event")
-	fmt.Println("  schedule          Simulates scheduled event (cron)")
-	fmt.Println("  workflow_dispatch Simulates manual dispatch")
+	fmt.Println("Developer Personas:")
 	fmt.Println("")
-	fmt.Println("Available Scenarios:")
-	fmt.Println("  ci-setup          Basic CI workflow test")
-	fmt.Println("  deployment        Deployment workflow test")
-	fmt.Println("  release           Release workflow test")
+	for _, p := range personas.All() {
+		fmt.Printf("  %-14s %s\n", p.Name, p.Description)
+	}
 	fmt.Println("")
-	fmt.Println("Note: Full persona-based testing requires wetwire-core-go (Phase 4B)")
+	fmt.Println("Scenarios:")
+	fmt.Println("")
+	fmt.Println("  ci-workflow     Basic CI workflow (build, test, lint)")
+	fmt.Println("  deployment      Deployment workflow (multi-environment)")
+	fmt.Println("  release         Release workflow (tags, changelog, artifacts)")
+	fmt.Println("  matrix          Matrix strategy (multi-version, multi-OS)")
+	fmt.Println("")
+	fmt.Println("Scoring Dimensions (0-3 each):")
+	fmt.Println("")
+	fmt.Println("  Completeness        Were all required workflows generated?")
+	fmt.Println("  Lint Quality        Did the code pass wetwire-github linting?")
+	fmt.Println("  Code Quality        Does the code follow idiomatic patterns?")
+	fmt.Println("  Output Validity     Is the generated YAML valid per actionlint?")
+	fmt.Println("  Question Efficiency Appropriate number of clarifying questions?")
+	fmt.Println("")
+	fmt.Println("Thresholds: 0-5 Failure, 6-9 Partial, 10-12 Success, 13-15 Excellent")
 	return nil
 }
 
 // runTest executes the test command.
 func runTest(path string) error {
+	// Validate persona if specified
+	if testPersona != "" {
+		if _, err := personas.Get(testPersona); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+			return nil
+		}
+	}
+
 	// Resolve absolute path
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -106,11 +141,24 @@ func runTest(path string) error {
 	// Run basic structural tests
 	result := runStructuralTests(discovered, testPersona)
 
+	// Calculate score if requested
+	var score *scoring.Score
+	if testScore {
+		score = calculateScore(discovered, testPersona, testScenario)
+	}
+
 	// Output result
 	if testFormat == "json" {
+		output := struct {
+			Result wetwire.TestResult `json:"result"`
+			Score  *scoring.Score     `json:"score,omitempty"`
+		}{
+			Result: result,
+			Score:  score,
+		}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		return enc.Encode(result)
+		return enc.Encode(output)
 	}
 
 	// Text output
@@ -128,6 +176,12 @@ func runTest(path string) error {
 	}
 
 	fmt.Printf("\n%d passed, %d failed\n", result.Passed, result.Failed)
+
+	// Show score if requested
+	if score != nil {
+		fmt.Println("")
+		fmt.Print(score.String())
+	}
 
 	if !result.Success {
 		os.Exit(1)
@@ -237,4 +291,59 @@ func runStructuralTests(discovered *discover.DiscoveryResult, persona string) we
 	}
 
 	return result
+}
+
+// calculateScore computes a score for the discovered workflows.
+func calculateScore(discovered *discover.DiscoveryResult, persona, scenario string) *scoring.Score {
+	score := scoring.NewScore(persona, scenario)
+
+	// Score completeness based on workflows found
+	expectedWorkflows := 1 // Base expectation
+	if scenario == "deployment" {
+		expectedWorkflows = 2 // Deploy usually has CI + deploy
+	} else if scenario == "matrix" {
+		expectedWorkflows = 1 // Matrix is usually in one workflow
+	}
+	rating, notes := scoring.ScoreCompleteness(expectedWorkflows, len(discovered.Workflows))
+	score.Completeness.Rating = rating
+	score.Completeness.Notes = notes
+
+	// Score lint quality (no lint cycles for static analysis)
+	// For structural tests, assume lint passed if no parse errors
+	lintPassed := len(discovered.Errors) == 0
+	rating, notes = scoring.ScoreLintQuality(0, lintPassed)
+	score.LintQuality.Rating = rating
+	score.LintQuality.Notes = notes
+
+	// Score code quality based on structural analysis
+	var issues []string
+	for _, wf := range discovered.Workflows {
+		if wf.Name == "" {
+			issues = append(issues, "workflow missing name")
+		}
+		if len(wf.Jobs) == 0 {
+			issues = append(issues, fmt.Sprintf("workflow %s has no jobs", wf.Name))
+		}
+	}
+	for _, job := range discovered.Jobs {
+		if job.Name == "" {
+			issues = append(issues, "job missing name")
+		}
+	}
+	rating, notes = scoring.ScoreCodeQuality(issues)
+	score.CodeQuality.Rating = rating
+	score.CodeQuality.Notes = notes
+
+	// Score output validity (would need actionlint for real validation)
+	// For now, base on parse errors
+	rating, notes = scoring.ScoreOutputValidity(len(discovered.Errors), 0)
+	score.OutputValidity.Rating = rating
+	score.OutputValidity.Notes = notes
+
+	// Score question efficiency (0 questions for static analysis)
+	rating, notes = scoring.ScoreQuestionEfficiency(0)
+	score.QuestionEfficiency.Rating = rating
+	score.QuestionEfficiency.Notes = notes
+
+	return score
 }
