@@ -21,8 +21,8 @@ func TestDefaultLinter(t *testing.T) {
 	if l == nil {
 		t.Error("DefaultLinter() returned nil")
 	}
-	if len(l.Rules()) != 8 {
-		t.Errorf("len(Rules()) = %d, want 8", len(l.Rules()))
+	if len(l.Rules()) != 12 {
+		t.Errorf("len(Rules()) = %d, want 12", len(l.Rules()))
 	}
 }
 
@@ -228,11 +228,16 @@ func TestRuleIDs(t *testing.T) {
 		&WAG006{},
 		&WAG007{},
 		&WAG008{},
+		&WAG009{},
+		&WAG010{},
+		&WAG011{},
+		&WAG012{},
 	}
 
 	expectedIDs := []string{
 		"WAG001", "WAG002", "WAG003", "WAG004",
 		"WAG005", "WAG006", "WAG007", "WAG008",
+		"WAG009", "WAG010", "WAG011", "WAG012",
 	}
 
 	for i, rule := range rules {
@@ -435,5 +440,229 @@ var Step = ` + tc.input + `
 			t.Errorf("Fixed content should contain %q for input %s\nGot: %s",
 				tc.expected, tc.input, string(fixResult.Content))
 		}
+	}
+}
+
+func TestWAG009_Check_EmptyMatrix(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Matrix = workflow.Matrix{
+	Values: map[string][]any{
+		"os": {},
+	},
+}
+`)
+
+	l := NewLinter(&WAG009{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG009 should have found empty matrix dimension")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG009" {
+			found = true
+			if issue.Severity != "error" {
+				t.Error("WAG009 issues should be severity 'error'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG009 issue not found")
+	}
+}
+
+func TestWAG009_Check_ValidMatrix(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Matrix = workflow.Matrix{
+	Values: map[string][]any{
+		"os": {"ubuntu-latest", "macos-latest"},
+	},
+}
+`)
+
+	l := NewLinter(&WAG009{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG009 should not flag valid matrix with values")
+	}
+}
+
+func TestWAG010_Check_MissingInput(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/actions/setup_go"
+
+var Step = setup_go.SetupGo{}.ToStep()
+`)
+
+	l := NewLinter(&WAG010{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG010 should have flagged missing GoVersion")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG010" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Expected WAG010 issue not found")
+	}
+}
+
+func TestWAG010_Check_HasInput(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/actions/setup_go"
+
+var Step = setup_go.SetupGo{GoVersion: "1.23"}.ToStep()
+`)
+
+	l := NewLinter(&WAG010{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG010 should not flag when GoVersion is set")
+	}
+}
+
+func TestWAG011_Check_UndefinedDependency(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Build = workflow.Job{
+	Name:   "build",
+	RunsOn: "ubuntu-latest",
+}
+
+var Deploy = workflow.Job{
+	Name:   "deploy",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{Build, Test}, // Test is not defined
+}
+`)
+
+	l := NewLinter(&WAG011{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG011 should have flagged undefined job dependency")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG011" {
+			found = true
+			if issue.Severity != "error" {
+				t.Error("WAG011 issues should be severity 'error'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG011 issue not found")
+	}
+}
+
+func TestWAG011_Check_ValidDependency(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Build = workflow.Job{
+	Name:   "build",
+	RunsOn: "ubuntu-latest",
+}
+
+var Deploy = workflow.Job{
+	Name:   "deploy",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{Build},
+}
+`)
+
+	l := NewLinter(&WAG011{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG011 should not flag valid job dependencies")
+	}
+}
+
+func TestWAG012_Check_DeprecatedVersion(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{Uses: "actions/checkout@v2"}
+`)
+
+	l := NewLinter(&WAG012{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG012 should have flagged deprecated action version")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG012" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Expected WAG012 issue not found")
+	}
+}
+
+func TestWAG012_Check_CurrentVersion(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{Uses: "actions/checkout@v4"}
+`)
+
+	l := NewLinter(&WAG012{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG012 should not flag current action versions")
 	}
 }
