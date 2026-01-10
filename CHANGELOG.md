@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `internal/validation`: 55.3% → 89.5% (34+ percentage point improvement) (#130)
   - `internal/discover`: 61.0% → 93.8% (33+ percentage point improvement) (#131)
   - 188 test functions in workflow package covering all expression contexts, conditions, triggers
-  - Action wrapper test coverage improvements (#137):
+  - Action wrapper test coverage improvements (#137, #140):
     - `actions/checkout`: 70.7% → 100% (29+ percentage point improvement)
     - `actions/gcp_auth`: 69.7% → 100% (30+ percentage point improvement)
     - `actions/gcp_deploy_cloudrun`: 74.4% → 100% (26+ percentage point improvement)
@@ -32,6 +32,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - `actions/codeql_init`: 76.2% → 100% (24+ percentage point improvement)
     - `actions/setup_go`: 76.5% → 100% (24+ percentage point improvement)
     - `actions/setup_java`: 78.0% → 100% (22+ percentage point improvement)
+    - `actions/setup_ruby`: 81.0% → 100% (19+ percentage point improvement) (#140)
+    - `actions/azure_webapps_deploy`: 81.5% → 100% (19+ percentage point improvement) (#140)
+    - `actions/golangci_lint`: 84.0% → 100% (16+ percentage point improvement) (#140)
+    - `actions/azure_login`: 85.7% → 100% (14+ percentage point improvement) (#140)
+    - `actions/setup_dotnet`: 85.7% → 100% (14+ percentage point improvement) (#140)
+  - `internal/agent`: 24.7% → 41.8% (17+ percentage point improvement) (#139)
+    - Added 46 test functions covering checkCompletionGate, executeTool routing, AskDeveloper, state management
 - **Documentation** - Additional contributor guides (#133, #134)
   - `docs/CODEGEN.md` - Action wrapper code generation guide
   - `CONTRIBUTING.md` - Contribution guidelines with development setup, PR process, testing requirements

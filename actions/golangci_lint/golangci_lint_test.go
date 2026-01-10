@@ -74,6 +74,91 @@ func TestGolangciLint_Inputs_CacheOptions(t *testing.T) {
 	}
 }
 
+func TestGolangciLint_Inputs_ProblemMatchers(t *testing.T) {
+	a := GolangciLint{
+		Version:         "v1.61",
+		ProblemMatchers: true,
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["problem-matchers"] != true {
+		t.Errorf("inputs[problem-matchers] = %v, want true", inputs["problem-matchers"])
+	}
+}
+
+func TestGolangciLint_Inputs_GithubToken(t *testing.T) {
+	a := GolangciLint{
+		Version:     "v1.61",
+		GithubToken: "${{ secrets.GITHUB_TOKEN }}",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["github-token"] != "${{ secrets.GITHUB_TOKEN }}" {
+		t.Errorf("inputs[github-token] = %v, want secret reference", inputs["github-token"])
+	}
+}
+
+func TestGolangciLint_Inputs_InstallMode(t *testing.T) {
+	a := GolangciLint{
+		Version:     "v1.61",
+		InstallMode: "binary",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["install-mode"] != "binary" {
+		t.Errorf("inputs[install-mode] = %v, want binary", inputs["install-mode"])
+	}
+}
+
+func TestGolangciLint_Inputs_GoModules(t *testing.T) {
+	a := GolangciLint{
+		Version:   "v1.61",
+		GoModules: true,
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["go-modules"] != true {
+		t.Errorf("inputs[go-modules] = %v, want true", inputs["go-modules"])
+	}
+}
+
+func TestGolangciLint_Inputs_BooleanFalse(t *testing.T) {
+	a := GolangciLint{
+		Version:         "v1.61",
+		OnlyNewIssues:   false,
+		SkipBuildCache:  false,
+		SkipPkgCache:    false,
+		ProblemMatchers: false,
+		GoModules:       false,
+		SkipCache:       false,
+	}
+
+	inputs := a.Inputs()
+
+	if _, ok := inputs["only-new-issues"]; ok {
+		t.Error("only-new-issues=false should not be in inputs")
+	}
+	if _, ok := inputs["skip-build-cache"]; ok {
+		t.Error("skip-build-cache=false should not be in inputs")
+	}
+	if _, ok := inputs["skip-pkg-cache"]; ok {
+		t.Error("skip-pkg-cache=false should not be in inputs")
+	}
+	if _, ok := inputs["problem-matchers"]; ok {
+		t.Error("problem-matchers=false should not be in inputs")
+	}
+	if _, ok := inputs["go-modules"]; ok {
+		t.Error("go-modules=false should not be in inputs")
+	}
+	if _, ok := inputs["skip-cache"]; ok {
+		t.Error("skip-cache=false should not be in inputs")
+	}
+}
+
 func TestGolangciLint_ImplementsStepAction(t *testing.T) {
 	a := GolangciLint{}
 	var _ workflow.StepAction = a
