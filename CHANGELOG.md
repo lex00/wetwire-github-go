@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **CODEOWNERS** - Full support for GitHub CODEOWNERS files (#84)
+  - `codeowners.Owners` type with Rules (Pattern, Owners, Comment)
+  - AST-based discovery of Owners declarations
+  - Runner extraction for codeowners rules
+  - `build --type codeowners` to generate CODEOWNERS file
+  - Serialization to CODEOWNERS text format with comments
 - **PR Templates** - Full support for GitHub Pull Request templates (#83)
   - `templates.PRTemplate` type with Name, Content, and Filename() method
   - AST-based discovery of PRTemplate declarations
@@ -68,6 +74,7 @@ Initial release with full GitHub Actions workflow generation from typed Go decla
 - **Issue Templates** - `.github/ISSUE_TEMPLATE/*.yml`
 - **Discussion Templates** - `.github/DISCUSSION_TEMPLATE/*.yml`
 - **PR Templates** - `.github/PULL_REQUEST_TEMPLATE.md` or `.github/PULL_REQUEST_TEMPLATE/*.md`
+- **CODEOWNERS** - `.github/CODEOWNERS`
 
 #### Linter Rules
 - `WAG001` - Use typed action wrappers instead of raw `uses:` strings
