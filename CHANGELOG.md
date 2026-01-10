@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Docker Action Wrappers** - 3 typed wrappers for container CI/CD (#92)
+  - `docker/login-action@v3` - Authenticate with Docker registries (Docker Hub, GHCR, ECR)
+  - `docker/build-push-action@v6` - Build and push images with Buildx support
+  - `docker/setup-buildx-action@v3` - Set up Docker Buildx for multi-platform builds
 - **github-script Action Wrapper** - Typed wrapper for `actions/github-script@v7` (#91)
   - Run JavaScript in workflows with access to GitHub API
   - Supports inputs: `script`, `github-token`, `debug`, `user-agent`, `previews`, `result-encoding`, `retries`, `retry-exempt-status-codes`
