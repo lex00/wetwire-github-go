@@ -148,12 +148,34 @@ wetwire-github graph . --format dot -o workflow.dot
 AI-assisted workflow design (requires wetwire-core-go).
 
 ```bash
-wetwire-github design [flags]
+wetwire-github design [prompt] [flags]
 ```
 
 **Flags:**
-- `--stream` — Stream output
+- `--stream` — Stream output tokens
 - `--max-lint-cycles <n>` — Maximum lint/fix cycles (default: 5)
+- `--model <model>` — Claude model to use (default: claude-sonnet-4-20250514)
+- `-w, --workdir <dir>` — Working directory for generated files (default: .)
+
+**MCP Server Mode:**
+
+To run as an MCP server for IDE integration (e.g., Kiro, Claude Desktop):
+
+```bash
+wetwire-github design --mcp-server
+```
+
+This starts the MCP protocol over stdio with the following tools:
+- `wetwire_init` — Initialize a new wetwire-github project
+- `wetwire_lint` — Lint Go packages for WAG001-WAG008 rules
+- `wetwire_build` — Generate YAML workflows from Go declarations
+- `wetwire_validate` — Validate YAML using actionlint
+
+**Example:**
+```bash
+wetwire-github design "Create a CI workflow for a Go project"
+wetwire-github design --stream "Add matrix testing for Go 1.22 and 1.23"
+```
 
 ### `wetwire-github test`
 

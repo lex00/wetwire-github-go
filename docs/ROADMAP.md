@@ -19,7 +19,7 @@ Feature matrix and implementation status for wetwire-github-go.
 | `graph` | ✅ Complete | Mermaid and DOT output |
 | `design` | ✅ Complete | AI-assisted workflow generation via wetwire-core-go |
 | `test` | ✅ Complete | Structural tests + 5 personas + 5-dimension scoring |
-| `mcp` | ❌ Missing | MCP server for IDE integration (#68) |
+| `mcp` | ✅ Complete | MCP server via `design --mcp-server` for IDE integration |
 
 ---
 
@@ -110,12 +110,12 @@ Type-safe wrappers for popular GitHub Actions:
 - Issue templates
 - Discussion templates
 
-### Phase 4: Agent Integration 🚧
+### Phase 4: Agent Integration ✅
 - [x] wetwire-core-go dependency
 - [x] Tool definitions (7 tools)
 - [x] Design command implementation (#66)
 - [x] Test command personas (#67)
-- [ ] MCP server support (#68)
+- [x] MCP server support (#68)
 
 ### Phase 5: Polish
 - [x] Lint --fix implementation (#65)

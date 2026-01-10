@@ -16,6 +16,7 @@ var designStream bool
 var designMaxLintCycles int
 var designModel string
 var designWorkDir string
+var designMCPServer bool
 
 var designCmd = &cobra.Command{
 	Use:   "design [prompt]",
@@ -41,6 +42,10 @@ Example:
 
 Requires ANTHROPIC_API_KEY environment variable to be set.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Run MCP server if requested
+		if designMCPServer {
+			return runMCPServer()
+		}
 		prompt := strings.Join(args, " ")
 		return runDesign(prompt)
 	},
@@ -51,6 +56,8 @@ func init() {
 	designCmd.Flags().IntVar(&designMaxLintCycles, "max-lint-cycles", 5, "maximum lint/fix cycles")
 	designCmd.Flags().StringVar(&designModel, "model", "claude-sonnet-4-20250514", "model to use")
 	designCmd.Flags().StringVarP(&designWorkDir, "workdir", "w", ".", "working directory for generated files")
+	designCmd.Flags().BoolVar(&designMCPServer, "mcp-server", false, "Run as MCP server (internal use)")
+	_ = designCmd.Flags().MarkHidden("mcp-server")
 }
 
 // consoleDeveloper implements orchestrator.Developer for console input.

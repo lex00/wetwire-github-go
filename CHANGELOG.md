@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `--persona` flag to run specific persona
   - `--score` flag to show scoring breakdown
   - `--list` flag to list available personas and scenarios
+- MCP server support for IDE integration (#68)
+  - `design --mcp-server` flag starts MCP protocol server over stdio
+  - 4 MCP tools: wetwire_init, wetwire_lint, wetwire_build, wetwire_validate
+  - Enables integration with Kiro, Claude Desktop, and other MCP-compatible IDEs
 
 ### Fixed
 - Documentation accuracy: project structures, CLI flags, status tables
