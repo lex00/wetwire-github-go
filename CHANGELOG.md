@@ -79,6 +79,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Trivy vulnerability scanning with SARIF upload
   - SLSA build provenance attestation
   - Explicit permissions at workflow and job levels
+- **Additional Action Wrappers** - 3 typed wrappers for GitHub Pages deployment (#174)
+  - `actions/configure-pages@v5` - Configure GitHub Pages settings
+  - `actions/deploy-pages@v4` - Deploy artifacts to GitHub Pages
+  - `actions/upload-pages-artifact@v3` - Upload artifacts for Pages deployment
+- **Scheduled Workflow Example** - Example demonstrating schedule and dispatch triggers (#172)
+  - Schedule trigger with cron patterns
+  - Workflow dispatch with typed inputs (choice, boolean, string)
+  - Conditional job execution based on event type
 - **Performance Benchmarks** - Benchmarks for key operations (#157)
   - `internal/discover` - AST discovery benchmarks
   - `internal/serialize` - YAML serialization benchmarks

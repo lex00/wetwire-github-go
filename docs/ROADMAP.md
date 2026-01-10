@@ -129,6 +129,9 @@ Type-safe wrappers for popular GitHub Actions:
 | mikepenz/action-junit-report | `actions/junit_report` | ✅ |
 | actions/create-release | `actions/create_release` | ✅ |
 | actions/upload-release-asset | `actions/upload_release_asset` | ✅ |
+| actions/configure-pages | `actions/configure_pages` | ✅ |
+| actions/deploy-pages | `actions/deploy_pages` | ✅ |
+| actions/upload-pages-artifact | `actions/upload_pages_artifact` | ✅ |
 
 ---
 
