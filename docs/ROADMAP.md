@@ -92,7 +92,7 @@ Type-safe wrappers for popular GitHub Actions:
 | docker/build-push-action | `actions/docker_build_push` | ✅ |
 | docker/login-action | `actions/docker_login` | ✅ |
 | docker/setup-buildx-action | `actions/docker_setup_buildx` | ✅ |
-| codecov/codecov-action | `actions/codecov` | ❌ |
+| codecov/codecov-action | `actions/codecov` | ✅ |
 
 ---
 
