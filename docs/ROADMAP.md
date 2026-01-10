@@ -93,6 +93,14 @@ Type-safe wrappers for popular GitHub Actions:
 | docker/login-action | `actions/docker_login` | ✅ |
 | docker/setup-buildx-action | `actions/docker_setup_buildx` | ✅ |
 | codecov/codecov-action | `actions/codecov` | ✅ |
+| aws-actions/configure-aws-credentials | `actions/aws_configure_credentials` | ✅ |
+| aws-actions/amazon-ecr-login | `actions/aws_ecr_login` | ✅ |
+| azure/login | `actions/azure_login` | ✅ |
+| azure/webapps-deploy | `actions/azure_webapps_deploy` | ✅ |
+| azure/docker-login | `actions/azure_docker_login` | ✅ |
+| google-github-actions/auth | `actions/gcp_auth` | ✅ |
+| google-github-actions/deploy-cloudrun | `actions/gcp_deploy_cloudrun` | ✅ |
+| google-github-actions/setup-gcloud | `actions/gcp_setup_gcloud` | ✅ |
 
 ---
 
@@ -145,12 +153,18 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] More action wrappers (github-script #91, docker actions #92, codecov #93)
 - [x] Documentation expansion (DEVELOPERS.md #94, INTERNALS.md #95, EXAMPLES.md #96)
 
-### Phase 6: Future Enhancements
+### Phase 6: Cloud Platform Wrappers ✅
 - [x] PR Template import support (#103)
 - [x] CODEOWNERS import support (#104)
-- [ ] AWS action wrappers (configure-aws-credentials, s3-sync) (#105)
-- [ ] Azure action wrappers (login, webapp-deploy) (#106)
-- [ ] GCP action wrappers (auth, deploy-cloudrun) (#107)
+- [x] AWS action wrappers (configure-aws-credentials, ecr-login) (#105)
+- [x] Azure action wrappers (login, webapp-deploy, docker-login) (#106)
+- [x] GCP action wrappers (auth, deploy-cloudrun, setup-gcloud) (#107)
+- [x] Remove .ToStep() refactor - pure struct-literal pattern (#110)
+
+### Phase 7: Future Enhancements
+- [ ] Type-safe intrinsics for GitHub expression contexts
+- [ ] Dedicated graph package for visualization export
+- [ ] Additional documentation (VERSIONING.md, ADOPTION.md)
 - [ ] Performance optimization
 
 ---
