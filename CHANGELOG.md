@@ -11,6 +11,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `lint --fix` - Automatic fixing for WAG001 (raw uses: strings → typed action wrappers)
 - Documentation examples for all 7 action wrapper packages in QUICK_START.md
 - `examples/ci-workflow` - Complete CI workflow example with matrix strategy and typed action wrappers
+- `design` command now fully integrated with wetwire-core-go for AI-assisted workflow generation
+  - Interactive AI session using Anthropic Claude API
+  - Streaming output support (`--stream`)
+  - Lint enforcement with configurable max cycles (`--max-lint-cycles`)
+  - 7 agent tools: init_package, write_file, read_file, run_lint, run_build, run_validate, ask_developer
 
 ### Fixed
 - Documentation accuracy: project structures, CLI flags, status tables

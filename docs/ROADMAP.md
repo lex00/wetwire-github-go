@@ -17,7 +17,7 @@ Feature matrix and implementation status for wetwire-github-go.
 | `list` | ✅ Complete | Lists workflows, jobs, triggers |
 | `init` | ✅ Complete | Scaffolds new projects |
 | `graph` | ✅ Complete | Mermaid and DOT output |
-| `design` | 🚧 Stub | Needs wetwire-core-go integration (#66) |
+| `design` | ✅ Complete | AI-assisted workflow generation via wetwire-core-go |
 | `test` | ⚠️ Partial | Basic structural tests only, needs personas (#67) |
 | `mcp` | ❌ Missing | MCP server for IDE integration (#68) |
 
@@ -53,15 +53,16 @@ Feature matrix and implementation status for wetwire-github-go.
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Tool definitions | ❌ | `init_package`, `write_file`, `run_lint`, etc. |
-| System prompt | ❌ | GitHub Actions domain knowledge |
-| RunnerAgent integration | ❌ | AI-assisted workflow generation |
-| DeveloperAgent integration | ❌ | Persona simulation |
-| Orchestrator | ❌ | Design mode conversation |
-| Persona testing | ❌ | 5 standard personas (Beginner, Intermediate, Expert, Terse, Verbose) |
+| Tool definitions | ✅ | `init_package`, `write_file`, `run_lint`, `run_build`, `run_validate`, `read_file`, `ask_developer` |
+| System prompt | ✅ | GitHub Actions domain knowledge |
+| GitHubAgent integration | ✅ | AI-assisted workflow generation |
+| Streaming support | ✅ | `--stream` flag for token streaming |
+| Lint enforcement | ✅ | Automatic lint after file writes |
+| ConsoleDeveloper | ✅ | Interactive question/answer |
+| Persona testing | ❌ | 5 standard personas (#67) |
 | 5-dimension scoring | ❌ | Completeness, Lint, Code, Output, Questions |
 
-See issues #66, #67 for implementation tracking.
+See issues #67 for persona testing implementation.
 
 ---
 
@@ -112,9 +113,9 @@ Type-safe wrappers for popular GitHub Actions:
 - Discussion templates
 
 ### Phase 4: Agent Integration 🚧
-- [ ] wetwire-core-go dependency
-- [ ] Tool definitions
-- [ ] Design command implementation (#66)
+- [x] wetwire-core-go dependency
+- [x] Tool definitions (7 tools)
+- [x] Design command implementation (#66)
 - [ ] Test command personas (#67)
 - [ ] MCP server support (#68)
 
