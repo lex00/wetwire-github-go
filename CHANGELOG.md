@@ -70,6 +70,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `actions/attest-build-provenance@v1` - SLSA build provenance attestation for supply chain security
   - `docker/metadata-action@v5` - Extract metadata for Docker builds (tags, labels, annotations)
   - `mikepenz/action-junit-report@v4` - Publish JUnit test results as GitHub check runs
+- **Additional Action Wrappers** - 3 typed wrappers for releases and Rust (#168, #169)
+  - `actions/create-release@v1` - Create GitHub releases (legacy, with migration guide)
+  - `actions/upload-release-asset@v1` - Upload assets to GitHub releases (legacy)
+  - `actions-rs/toolchain@v1` - Rust toolchain setup with components and targets
+- **Security Workflow Example** - Comprehensive security workflow demonstrating WAG017/WAG018 (#170)
+  - CodeQL static analysis with security-extended queries
+  - Trivy vulnerability scanning with SARIF upload
+  - SLSA build provenance attestation
+  - Explicit permissions at workflow and job levels
 - **Performance Benchmarks** - Benchmarks for key operations (#157)
   - `internal/discover` - AST discovery benchmarks
   - `internal/serialize` - YAML serialization benchmarks
