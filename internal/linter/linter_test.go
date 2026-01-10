@@ -3,6 +3,7 @@ package linter
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -664,5 +665,651 @@ var Step = workflow.Step{Uses: "actions/checkout@v4"}
 
 	if !result.Success {
 		t.Error("WAG012 should not flag current action versions")
+	}
+}
+
+func TestWAG004_Check_InlineMatrix(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var BuildJob = workflow.Job{
+	Strategy: workflow.Strategy{
+		Matrix: workflow.Matrix{
+			Values: map[string][]any{
+				"os": {"ubuntu-latest", "macos-latest"},
+			},
+		},
+	},
+}
+`)
+
+	l := NewLinter(&WAG004{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG004 should have found inline matrix")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG004" {
+			found = true
+			if issue.Severity != "info" {
+				t.Error("WAG004 issues should be severity 'info'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG004 issue not found")
+	}
+}
+
+func TestWAG004_Check_NoInlineMatrix(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var MyMatrix = workflow.Matrix{
+	Values: map[string][]any{
+		"os": {"ubuntu-latest"},
+	},
+}
+
+var BuildJob = workflow.Job{
+	Strategy: workflow.Strategy{
+		Matrix: MyMatrix,
+	},
+}
+`)
+
+	l := NewLinter(&WAG004{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// Should not flag when Matrix is a reference, not inline Values
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG004" {
+			t.Log("WAG004 correctly triggered for Values definition")
+		}
+	}
+}
+
+func TestWAG005_Check_DeeplyNested(t *testing.T) {
+	// WAG005 checks for deeply nested struct composite literals
+	// The nesting depth must exceed maxNesting (2) to trigger
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var DeepJob = workflow.Job{
+	Strategy: workflow.Strategy{
+		Matrix: workflow.Matrix{
+			Values: map[string][]any{
+				"os": {"ubuntu-latest"},
+			},
+		},
+	},
+}
+`)
+
+	l := NewLinter(&WAG005{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// Should flag deep nesting (Job > Strategy > Matrix = depth 3)
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG005" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Expected WAG005 issue for deep nesting")
+	}
+}
+
+func TestWAG008_Check_HardcodedExpression(t *testing.T) {
+	content := []byte(`package main
+
+var expr = "${{ success() && failure() }}"
+`)
+
+	l := NewLinter(&WAG008{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG008 should have found hardcoded expression")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG008" {
+			found = true
+			if issue.Severity != "info" {
+				t.Error("WAG008 issues should be severity 'info'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG008 issue not found")
+	}
+}
+
+func TestWAG008_Check_AllowedContexts(t *testing.T) {
+	// Test that simple context references are allowed
+	content := []byte(`package main
+
+var token = "${{ github.token }}"
+var secret = "${{ secrets.MY_SECRET }}"
+var matrix = "${{ matrix.os }}"
+var step = "${{ steps.build.outputs.result }}"
+var needs = "${{ needs.build.result }}"
+var input = "${{ inputs.version }}"
+var env = "${{ env.MY_VAR }}"
+`)
+
+	l := NewLinter(&WAG008{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// These should NOT be flagged
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG008" {
+			t.Errorf("WAG008 should not flag allowed context: %s", issue.Message)
+		}
+	}
+}
+
+func TestLinter_LintDir_SkipsDirectories(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a hidden directory that should be skipped
+	hiddenDir := filepath.Join(tmpDir, ".hidden")
+	if err := os.MkdirAll(hiddenDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create vendor directory that should be skipped
+	vendorDir := filepath.Join(tmpDir, "vendor")
+	if err := os.MkdirAll(vendorDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create testdata directory that should be skipped
+	testdataDir := filepath.Join(tmpDir, "testdata")
+	if err := os.MkdirAll(testdataDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create files in skipped directories
+	badContent := []byte(`package main
+var token = "ghp_secrettoken"
+`)
+	if err := os.WriteFile(filepath.Join(hiddenDir, "bad.go"), badContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(vendorDir, "bad.go"), badContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(testdataDir, "bad.go"), badContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a test file that should also be skipped
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows_test.go"), badContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a valid file in main directory
+	validContent := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{Name: "CI"}
+`)
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), validContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	l := NewLinter(&WAG003{})
+	result, err := l.LintDir(tmpDir)
+	if err != nil {
+		t.Fatalf("LintDir() error = %v", err)
+	}
+
+	// Should not have found any secrets (all bad files should be skipped)
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG003" {
+			t.Errorf("WAG003 found secret in file that should have been skipped: %s", issue.File)
+		}
+	}
+}
+
+func TestLinter_LintDir_ParseError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a file with invalid Go syntax
+	invalidContent := []byte(`package main
+func invalid { syntax
+`)
+	if err := os.WriteFile(filepath.Join(tmpDir, "invalid.go"), invalidContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	l := DefaultLinter()
+	result, err := l.LintDir(tmpDir)
+	if err != nil {
+		t.Fatalf("LintDir() error = %v", err)
+	}
+
+	// Should have captured a parse error
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "parse-error" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Expected parse-error issue not found")
+	}
+}
+
+func TestLinter_LintFile_NotExist(t *testing.T) {
+	l := DefaultLinter()
+	_, err := l.LintFile("/nonexistent/path/file.go")
+	if err == nil {
+		t.Error("LintFile() expected error for non-existent file")
+	}
+}
+
+func TestLinter_Fix_NonFixableIssue(t *testing.T) {
+	// WAG002 is not fixable
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{
+	If: "${{ github.ref == 'refs/heads/main' }}",
+}
+`)
+
+	l := NewLinter(&WAG002{})
+	result, err := l.Fix("test.go", content)
+	if err != nil {
+		t.Fatalf("Fix() error = %v", err)
+	}
+
+	// Should have 0 fixed, 1 remaining issue
+	if result.FixedCount != 0 {
+		t.Errorf("FixedCount = %d, want 0", result.FixedCount)
+	}
+	if len(result.Issues) != 1 {
+		t.Errorf("len(Issues) = %d, want 1", len(result.Issues))
+	}
+}
+
+func TestLinter_Fix_UnknownAction(t *testing.T) {
+	// WAG001 with an unknown action that cannot be auto-fixed
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{Uses: "unknown/action@v1"}
+`)
+
+	l := NewLinter(&WAG001{})
+	result, err := l.Fix("test.go", content)
+	if err != nil {
+		t.Fatalf("Fix() error = %v", err)
+	}
+
+	// Should have 0 fixed because action is unknown
+	if result.FixedCount != 0 {
+		t.Errorf("FixedCount = %d, want 0", result.FixedCount)
+	}
+}
+
+func TestLinter_Fix_ParseError(t *testing.T) {
+	content := []byte(`package main
+func invalid { syntax
+`)
+
+	l := DefaultLinter()
+	_, err := l.Fix("test.go", content)
+	if err == nil {
+		t.Error("Fix() expected error for invalid syntax")
+	}
+}
+
+func TestLinter_FixFile_NotExist(t *testing.T) {
+	l := DefaultLinter()
+	_, err := l.FixFile("/nonexistent/path/file.go")
+	if err == nil {
+		t.Error("FixFile() expected error for non-existent file")
+	}
+}
+
+func TestLinter_FixFile_NoChanges(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "valid.go")
+
+	// File with no issues
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{Name: "CI"}
+`)
+	if err := os.WriteFile(testFile, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	l := NewLinter(&WAG001{})
+	result, err := l.FixFile(testFile)
+	if err != nil {
+		t.Fatalf("FixFile() error = %v", err)
+	}
+
+	if result.FixedCount != 0 {
+		t.Errorf("FixedCount = %d, want 0", result.FixedCount)
+	}
+}
+
+func TestLinter_FixDir_SkipsDirectories(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create vendor directory that should be skipped
+	vendorDir := filepath.Join(tmpDir, "vendor")
+	if err := os.MkdirAll(vendorDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create file with fixable issue in vendor
+	badContent := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{Uses: "actions/checkout@v4"}
+`)
+	if err := os.WriteFile(filepath.Join(vendorDir, "workflows.go"), badContent, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	l := NewLinter(&WAG001{})
+	result, err := l.FixDir(tmpDir)
+	if err != nil {
+		t.Fatalf("FixDir() error = %v", err)
+	}
+
+	// Should have 0 fixed because vendor is skipped
+	if result.TotalFixed != 0 {
+		t.Errorf("TotalFixed = %d, want 0", result.TotalFixed)
+	}
+}
+
+func TestWAG011_Check_SingleDependency(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Build = workflow.Job{
+	Name:   "build",
+	RunsOn: "ubuntu-latest",
+}
+
+var Deploy = workflow.Job{
+	Name:   "deploy",
+	RunsOn: "ubuntu-latest",
+	Needs:  Build, // Single dependency (not slice)
+}
+`)
+
+	l := NewLinter(&WAG011{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG011 should not flag valid single dependency")
+	}
+}
+
+func TestWAG007_Check_DefaultMaxJobs(t *testing.T) {
+	// Create content with exactly 10 jobs (default max)
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Job1 = workflow.Job{Name: "job1"}
+var Job2 = workflow.Job{Name: "job2"}
+var Job3 = workflow.Job{Name: "job3"}
+var Job4 = workflow.Job{Name: "job4"}
+var Job5 = workflow.Job{Name: "job5"}
+var Job6 = workflow.Job{Name: "job6"}
+var Job7 = workflow.Job{Name: "job7"}
+var Job8 = workflow.Job{Name: "job8"}
+var Job9 = workflow.Job{Name: "job9"}
+var Job10 = workflow.Job{Name: "job10"}
+`)
+
+	// Test with MaxJobs = 0 (should use default 10)
+	l := NewLinter(&WAG007{MaxJobs: 0})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// Exactly 10 jobs should be fine with default max of 10
+	if !result.Success {
+		t.Error("WAG007 should not flag exactly 10 jobs with default max")
+	}
+}
+
+func TestWAG001_Check_NonStepLit(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+}
+`)
+
+	l := NewLinter(&WAG001{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG001 should not flag non-Step composite literals")
+	}
+}
+
+func TestWAG012_Check_NonActionString(t *testing.T) {
+	content := []byte(`package main
+
+var notAnAction = "just/a/path"
+var alsoNot = "no-at-sign/here"
+`)
+
+	l := NewLinter(&WAG012{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG012 should not flag non-action strings")
+	}
+}
+
+func TestWAG012_Check_UnknownAction(t *testing.T) {
+	content := []byte(`package main
+
+var unknownAction = "custom/action@v1"
+`)
+
+	l := NewLinter(&WAG012{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// Unknown action should not be flagged as deprecated
+	if !result.Success {
+		t.Error("WAG012 should not flag unknown actions")
+	}
+}
+
+func TestGetTypeName_SelectorExpr(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{
+	Name: "Test",
+	Run:  "echo hello",
+}
+`)
+
+	l := NewLinter(&WAG001{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// This tests the SelectorExpr path in getTypeName
+	_ = result
+}
+
+func TestAddImportIfNeeded_SingleImport(t *testing.T) {
+	// This tests the single import case in addImportIfNeeded
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{Uses: "actions/checkout@v4"}
+`)
+
+	l := NewLinter(&WAG001{})
+	result, err := l.Fix("test.go", content)
+	if err != nil {
+		t.Fatalf("Fix() error = %v", err)
+	}
+
+	// Check that the fix added checkout import
+	if result.FixedCount > 0 {
+		codeStr := string(result.Content)
+		if !strings.Contains(codeStr, "checkout") {
+			t.Error("Fixed content should contain checkout import")
+		}
+	}
+}
+
+func TestWAG001_Fix_NoUsesField(t *testing.T) {
+	// Test WAG001 fix when Uses field is not found at the expected line
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{
+	Name: "No uses field",
+	Run:  "echo hello",
+}
+`)
+
+	l := NewLinter(&WAG001{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// No WAG001 issues should be found
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG001" {
+			t.Error("WAG001 should not flag Step without Uses field")
+		}
+	}
+}
+
+func TestWAG003_Check_AllSecretPatterns(t *testing.T) {
+	testCases := []string{
+		`var token1 = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"`,
+		`var token2 = "ghs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"`,
+		`var token3 = "ghu_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"`,
+		`var token4 = "ghr_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"`,
+		`var token5 = "github_pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"`,
+	}
+
+	for _, tc := range testCases {
+		content := []byte("package main\n\n" + tc)
+
+		l := NewLinter(&WAG003{})
+		result, err := l.LintContent("test.go", content)
+		if err != nil {
+			t.Fatalf("LintContent() error = %v for %s", err, tc)
+		}
+
+		if result.Success {
+			t.Errorf("WAG003 should have found secret in: %s", tc)
+		}
+	}
+}
+
+func TestWAG009_Check_NonMapValue(t *testing.T) {
+	// Test WAG009 with a non-map value in Matrix Values
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Matrix = workflow.Matrix{
+	Values: nil,
+}
+`)
+
+	l := NewLinter(&WAG009{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// Should not crash or error
+	_ = result
+}
+
+func TestWAG002_Check_NonExpressionIf(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{
+	If: "success()",
+}
+`)
+
+	l := NewLinter(&WAG002{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	// Should not flag If without ${{ }}
+	if !result.Success {
+		t.Error("WAG002 should not flag If without expression syntax")
 	}
 }

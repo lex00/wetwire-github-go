@@ -39,6 +39,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - `actions/setup_dotnet`: 85.7% → 100% (14+ percentage point improvement) (#140)
   - `internal/agent`: 24.7% → 41.8% (17+ percentage point improvement) (#139)
     - Added 46 test functions covering checkCompletionGate, executeTool routing, AskDeveloper, state management
+  - `internal/linter`: 83.9% → 91.0% (7+ percentage point improvement) (#143)
+  - `codegen`: 85.2% → 89.5% (4+ percentage point improvement) (#143)
+  - Additional action wrapper test coverage (#142):
+    - `actions/aws_ecr_login`: 92.3% → 100% (8+ percentage point improvement)
+    - `actions/docker_build_push`: 94.6% → 100% (5+ percentage point improvement)
+    - `actions/gh_release`: 97.0% → 100% (3+ percentage point improvement)
+    - `actions/codecov`: 97.1% → 100% (3+ percentage point improvement)
 - **Documentation** - Additional contributor guides (#133, #134)
   - `docs/CODEGEN.md` - Action wrapper code generation guide
   - `CONTRIBUTING.md` - Contribution guidelines with development setup, PR process, testing requirements

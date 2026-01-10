@@ -135,6 +135,18 @@ func TestCodecov_Inputs_MinimalConfig(t *testing.T) {
 	}
 }
 
+func TestCodecov_Inputs_DryRun(t *testing.T) {
+	c := Codecov{
+		DryRun: true,
+	}
+
+	inputs := c.Inputs()
+
+	if inputs["dry_run"] != true {
+		t.Errorf("inputs[dry_run] = %v, want true", inputs["dry_run"])
+	}
+}
+
 func TestCodecov_ImplementsStepAction(t *testing.T) {
 	var _ workflow.StepAction = Codecov{}
 }

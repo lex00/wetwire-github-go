@@ -62,6 +62,18 @@ func TestAWSECRLogin_Inputs_BoolFields(t *testing.T) {
 	}
 }
 
+func TestAWSECRLogin_Inputs_HTTPProxy(t *testing.T) {
+	a := AWSECRLogin{
+		HTTPProxy: "http://proxy.example.com:8080",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["http-proxy"] != "http://proxy.example.com:8080" {
+		t.Errorf("inputs[http-proxy] = %v, want %q", inputs["http-proxy"], "http://proxy.example.com:8080")
+	}
+}
+
 func TestAWSECRLogin_ImplementsStepAction(t *testing.T) {
 	a := AWSECRLogin{}
 	var _ workflow.StepAction = a
