@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
+- **GCP Action Wrappers** - 3 typed wrappers for Google Cloud GitHub Actions (#107)
+  - `google-github-actions/auth@v2` - Authenticate to Google Cloud with OIDC or service account keys
+  - `google-github-actions/deploy-cloudrun@v2` - Deploy containers or source to Cloud Run services/jobs
+  - `google-github-actions/setup-gcloud@v2` - Set up and configure the Google Cloud SDK (gcloud)
 - **Azure Action Wrappers** - 3 typed wrappers for Azure GitHub Actions (#106)
   - `azure/login@v2` - Login to Azure with service principal or OIDC
   - `azure/webapps-deploy@v3` - Deploy to Azure Web Apps or Web App for Containers
