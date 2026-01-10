@@ -165,6 +165,18 @@ func TestGHRelease_Inputs_MultipleFiles(t *testing.T) {
 	}
 }
 
+func TestGHRelease_Inputs_BodyPath(t *testing.T) {
+	a := GHRelease{
+		BodyPath: "./CHANGELOG.md",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["body_path"] != "./CHANGELOG.md" {
+		t.Errorf("inputs[body_path] = %v, want %q", inputs["body_path"], "./CHANGELOG.md")
+	}
+}
+
 func TestGHRelease_ImplementsStepAction(t *testing.T) {
 	var _ workflow.StepAction = GHRelease{}
 }

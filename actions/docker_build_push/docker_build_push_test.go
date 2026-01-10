@@ -124,6 +124,23 @@ func TestDockerBuildPush_Inputs_MultiPlatform(t *testing.T) {
 	}
 }
 
+func TestDockerBuildPush_Inputs_LoadAndNoCache(t *testing.T) {
+	d := DockerBuildPush{
+		Context: ".",
+		Load:    true,
+		NoCache: true,
+	}
+
+	inputs := d.Inputs()
+
+	if inputs["load"] != true {
+		t.Errorf("inputs[load] = %v, want true", inputs["load"])
+	}
+	if inputs["no-cache"] != true {
+		t.Errorf("inputs[no-cache] = %v, want true", inputs["no-cache"])
+	}
+}
+
 func TestDockerBuildPush_ImplementsStepAction(t *testing.T) {
 	var _ workflow.StepAction = DockerBuildPush{}
 }
