@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **PR Template Import** - Import existing PULL_REQUEST_TEMPLATE.md files to Go code (#103)
+  - Parse markdown PR templates
+  - Generate `templates.PRTemplate` declarations
+  - Support multiline content with raw string literals
 - **EXAMPLES.md** - Workflow examples catalog (#96)
   - Basic CI workflow
   - Multi-language matrix builds
