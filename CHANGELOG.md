@@ -127,8 +127,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `internal/discover` - AST discovery benchmarks
   - `internal/serialize` - YAML serialization benchmarks
   - `internal/importer` - Import and code generation benchmarks
-  - `internal/runner` - Value extraction benchmarks
-  - `internal/linter` - Linting benchmarks for all 16 rules
+- **Monorepo Workflow Example** - Comprehensive example for monorepo CI (#187)
+  - Path filters on triggers to only run on relevant changes
+  - Change detection using dorny/paths-filter action
+  - Conditional job execution based on detected changes
+  - Parallel service builds for API (Go), Web (Node.js), and Shared (Go)
+  - Job outputs for passing change detection results to downstream jobs
+- **Deployment Workflow Example** - Multi-environment deployment example (#188)
+  - Staging and production deployment jobs with environment protection
+  - workflow.Environment with name and URL for deployment tracking
+  - Conditional deployment based on trigger (push vs workflow_dispatch)
+  - Health check verification steps
+- **Additional Action Wrappers** - 3 typed wrappers for Kubernetes and compliance (#189)
+  - `helm/kind-action@v1` - Create Kubernetes clusters with KinD for testing
+  - `fossas/fossa-action@v1` - FOSSA license compliance scanning
+  - `azure/k8s-set-context@v4` - Set Kubernetes context for AKS/Arc deployments
 - **Additional Example Workflows** - 3 new workflow examples (#148)
   - `examples/docker-workflow` - Docker build and push to GHCR with multi-stage CI
   - `examples/release-workflow` - Automated GitHub releases on version tags
