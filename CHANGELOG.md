@@ -66,6 +66,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `actions/first-interaction@v1` - First-time contributor greeting
   - `actions/add-to-project@v1` - Add issues/PRs to GitHub Projects
   - `actions/create-github-app-token@v1` - GitHub App token creation
+- **Additional Action Wrappers** - 3 typed wrappers for CI/CD (#164, #165, #166)
+  - `actions/attest-build-provenance@v1` - SLSA build provenance attestation for supply chain security
+  - `docker/metadata-action@v5` - Extract metadata for Docker builds (tags, labels, annotations)
+  - `mikepenz/action-junit-report@v4` - Publish JUnit test results as GitHub check runs
 - **Performance Benchmarks** - Benchmarks for key operations (#157)
   - `internal/discover` - AST discovery benchmarks
   - `internal/serialize` - YAML serialization benchmarks
