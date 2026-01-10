@@ -1,0 +1,34 @@
+jobs:
+  Build and Push:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - if: github.ref == 'refs/heads/main'
+        name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+      - {}
+      - if: github.ref == 'refs/heads/main'
+        name: Push to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          push: true
+          tags: |-
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+name: Docker
+"on":
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main

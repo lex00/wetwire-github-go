@@ -873,3 +873,286 @@ func getTypeName(expr ast.Expr) string {
 	}
 	return ""
 }
+
+// WAG013 checks for pointer assignments (&Type{}) in workflow declarations.
+type WAG013 struct{}
+
+func (r *WAG013) ID() string          { return "WAG013" }
+func (r *WAG013) Description() string { return "Avoid pointer assignments (&Type{}) - use value types" }
+
+func (r *WAG013) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		unary, ok := n.(*ast.UnaryExpr)
+		if !ok || unary.Op != token.AND {
+			return true
+		}
+
+		// Check if this is &Type{} pattern
+		comp, ok := unary.X.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		// Check if the type is a workflow-related type
+		typeName := getTypeName(comp.Type)
+		if isWorkflowType(typeName) {
+			pos := fset.Position(unary.Pos())
+			issues = append(issues, LintIssue{
+				File:     path,
+				Line:     pos.Line,
+				Column:   pos.Column,
+				Severity: "error",
+				Message:  fmt.Sprintf("Avoid pointer assignment &%s{} - use value type instead", typeName),
+				Rule:     r.ID(),
+				Fixable:  false,
+			})
+		}
+		return true
+	})
+
+	return issues
+}
+
+// isWorkflowType checks if a type name is a workflow-related type.
+func isWorkflowType(typeName string) bool {
+	workflowTypes := map[string]bool{
+		"workflow.Workflow":    true,
+		"workflow.Job":         true,
+		"workflow.Step":        true,
+		"workflow.Strategy":    true,
+		"workflow.Matrix":      true,
+		"workflow.Triggers":    true,
+		"workflow.Concurrency": true,
+		"Workflow":             true,
+		"Job":                  true,
+		"Step":                 true,
+		"Strategy":             true,
+		"Matrix":               true,
+		"Triggers":             true,
+		"Concurrency":          true,
+	}
+	return workflowTypes[typeName]
+}
+
+// WAG014 checks for jobs without TimeoutMinutes set.
+type WAG014 struct{}
+
+func (r *WAG014) ID() string          { return "WAG014" }
+func (r *WAG014) Description() string { return "Jobs should have timeout-minutes set" }
+
+func (r *WAG014) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		lit, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		typeName := getTypeName(lit.Type)
+		if typeName != "workflow.Job" && typeName != "Job" {
+			return true
+		}
+
+		// Check if TimeoutMinutes is set
+		hasTimeout := false
+		for _, elt := range lit.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kv.Key.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if key.Name == "TimeoutMinutes" {
+				hasTimeout = true
+				break
+			}
+		}
+
+		if !hasTimeout {
+			pos := fset.Position(lit.Pos())
+			issues = append(issues, LintIssue{
+				File:     path,
+				Line:     pos.Line,
+				Column:   pos.Column,
+				Severity: "warning",
+				Message:  "Job missing TimeoutMinutes - consider adding a timeout (e.g., 30 minutes)",
+				Rule:     r.ID(),
+				Fixable:  false,
+			})
+		}
+		return true
+	})
+
+	return issues
+}
+
+// WAG015 suggests caching for setup actions.
+type WAG015 struct{}
+
+func (r *WAG015) ID() string { return "WAG015" }
+func (r *WAG015) Description() string {
+	return "Suggest caching for setup actions (setup-go, setup-node, setup-python)"
+}
+
+// setupActionsNeedingCache maps setup action types to their display names.
+var setupActionsNeedingCache = map[string]string{
+	"setup_go.SetupGo":         "setup-go",
+	"setup_node.SetupNode":     "setup-node",
+	"setup_python.SetupPython": "setup-python",
+	"SetupGo":                  "setup-go",
+	"SetupNode":                "setup-node",
+	"SetupPython":              "setup-python",
+}
+
+func (r *WAG015) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	// Track steps arrays and their contents
+	type stepsInfo struct {
+		hasCache       bool
+		setupActions   []struct {
+			typeName string
+			pos      token.Position
+		}
+	}
+
+	stepsArrays := make(map[string]*stepsInfo)
+
+	// Find all steps arrays and their contents
+	ast.Inspect(file, func(n ast.Node) bool {
+		// Look for slice composite literals
+		comp, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		// Check if this is []any
+		arrType, ok := comp.Type.(*ast.ArrayType)
+		if !ok {
+			return true
+		}
+		elemIdent, ok := arrType.Elt.(*ast.Ident)
+		if !ok || elemIdent.Name != "any" {
+			return true
+		}
+
+		// This is a []any, analyze its elements
+		info := &stepsInfo{}
+		for _, elt := range comp.Elts {
+			switch e := elt.(type) {
+			case *ast.CompositeLit:
+				typeName := getTypeName(e.Type)
+				if typeName == "cache.Cache" || typeName == "Cache" {
+					info.hasCache = true
+				}
+				if _, isSetup := setupActionsNeedingCache[typeName]; isSetup {
+					info.setupActions = append(info.setupActions, struct {
+						typeName string
+						pos      token.Position
+					}{typeName: typeName, pos: fset.Position(e.Pos())})
+				}
+			}
+		}
+
+		// If there are setup actions but no cache, report issues
+		if !info.hasCache {
+			for _, setup := range info.setupActions {
+				displayName := setupActionsNeedingCache[setup.typeName]
+				issues = append(issues, LintIssue{
+					File:     path,
+					Line:     setup.pos.Line,
+					Column:   setup.pos.Column,
+					Severity: "warning",
+					Message:  fmt.Sprintf("Consider adding cache action for %s to improve build performance", displayName),
+					Rule:     r.ID(),
+					Fixable:  false,
+				})
+			}
+		}
+
+		return true
+	})
+
+	_ = stepsArrays // unused, but kept for potential future expansion
+
+	return issues
+}
+
+// WAG016 validates concurrency settings.
+type WAG016 struct{}
+
+func (r *WAG016) ID() string          { return "WAG016" }
+func (r *WAG016) Description() string { return "Validate concurrency settings" }
+
+func (r *WAG016) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		lit, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		typeName := getTypeName(lit.Type)
+		if typeName != "workflow.Concurrency" && typeName != "Concurrency" {
+			return true
+		}
+
+		// Check for CancelInProgress without Group
+		hasGroup := false
+		hasCancelInProgress := false
+		var cancelPos token.Position
+
+		for _, elt := range lit.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kv.Key.(*ast.Ident)
+			if !ok {
+				continue
+			}
+
+			switch key.Name {
+			case "Group":
+				// Check if Group has a non-empty value
+				if bl, ok := kv.Value.(*ast.BasicLit); ok && bl.Kind == token.STRING {
+					val := strings.Trim(bl.Value, `"'`)
+					if val != "" {
+						hasGroup = true
+					}
+				} else if _, ok := kv.Value.(*ast.Ident); ok {
+					// Group is a variable reference
+					hasGroup = true
+				}
+			case "CancelInProgress":
+				// Check if CancelInProgress is true
+				if ident, ok := kv.Value.(*ast.Ident); ok && ident.Name == "true" {
+					hasCancelInProgress = true
+					cancelPos = fset.Position(kv.Pos())
+				}
+			}
+		}
+
+		if hasCancelInProgress && !hasGroup {
+			issues = append(issues, LintIssue{
+				File:     path,
+				Line:     cancelPos.Line,
+				Column:   cancelPos.Column,
+				Severity: "warning",
+				Message:  "CancelInProgress is set without a Group - define a concurrency group",
+				Rule:     r.ID(),
+				Fixable:  false,
+			})
+		}
+
+		return true
+	})
+
+	return issues
+}

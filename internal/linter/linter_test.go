@@ -22,8 +22,8 @@ func TestDefaultLinter(t *testing.T) {
 	if l == nil {
 		t.Error("DefaultLinter() returned nil")
 	}
-	if len(l.Rules()) != 12 {
-		t.Errorf("len(Rules()) = %d, want 12", len(l.Rules()))
+	if len(l.Rules()) != 16 {
+		t.Errorf("len(Rules()) = %d, want 16", len(l.Rules()))
 	}
 }
 
@@ -233,12 +233,17 @@ func TestRuleIDs(t *testing.T) {
 		&WAG010{},
 		&WAG011{},
 		&WAG012{},
+		&WAG013{},
+		&WAG014{},
+		&WAG015{},
+		&WAG016{},
 	}
 
 	expectedIDs := []string{
 		"WAG001", "WAG002", "WAG003", "WAG004",
 		"WAG005", "WAG006", "WAG007", "WAG008",
 		"WAG009", "WAG010", "WAG011", "WAG012",
+		"WAG013", "WAG014", "WAG015", "WAG016",
 	}
 
 	for i, rule := range rules {
@@ -1311,5 +1316,342 @@ var Step = workflow.Step{
 	// Should not flag If without ${{ }}
 	if !result.Success {
 		t.Error("WAG002 should not flag If without expression syntax")
+	}
+}
+
+// WAG013 Tests - Avoid pointer assignments
+
+func TestWAG013_Check_PointerAssignment(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = &workflow.Workflow{
+	Name: "CI",
+}
+`)
+
+	l := NewLinter(&WAG013{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG013 should have found pointer assignment")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG013" {
+			found = true
+			if issue.Severity != "error" {
+				t.Error("WAG013 issues should be severity 'error'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG013 issue not found")
+	}
+}
+
+func TestWAG013_Check_NestedPointer(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var BuildJob = workflow.Job{
+	Name:     "build",
+	Strategy: &workflow.Strategy{},
+}
+`)
+
+	l := NewLinter(&WAG013{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG013 should have found nested pointer assignment")
+	}
+}
+
+func TestWAG013_Check_NoPointer(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+}
+`)
+
+	l := NewLinter(&WAG013{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG013 should not flag value type assignments")
+	}
+}
+
+// WAG014 Tests - Missing timeout-minutes
+
+func TestWAG014_Check_MissingTimeout(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var BuildJob = workflow.Job{
+	Name:   "build",
+	RunsOn: "ubuntu-latest",
+}
+`)
+
+	l := NewLinter(&WAG014{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG014 should have flagged missing TimeoutMinutes")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG014" {
+			found = true
+			if issue.Severity != "warning" {
+				t.Error("WAG014 issues should be severity 'warning'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG014 issue not found")
+	}
+}
+
+func TestWAG014_Check_HasTimeout(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var BuildJob = workflow.Job{
+	Name:           "build",
+	RunsOn:         "ubuntu-latest",
+	TimeoutMinutes: 30,
+}
+`)
+
+	l := NewLinter(&WAG014{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG014 should not flag when TimeoutMinutes is set")
+	}
+}
+
+// WAG015 Tests - Suggest caching for setup actions
+
+func TestWAG015_Check_SetupGoWithoutCache(t *testing.T) {
+	content := []byte(`package main
+
+import (
+	"github.com/lex00/wetwire-github-go/workflow"
+	"github.com/lex00/wetwire-github-go/actions/setup_go"
+)
+
+var BuildSteps = []any{
+	setup_go.SetupGo{GoVersion: "1.23"},
+	workflow.Step{Run: "go build ./..."},
+}
+
+var BuildJob = workflow.Job{
+	Name:   "build",
+	RunsOn: "ubuntu-latest",
+	Steps:  BuildSteps,
+}
+`)
+
+	l := NewLinter(&WAG015{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG015 should have suggested caching for setup-go")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG015" {
+			found = true
+			if issue.Severity != "warning" {
+				t.Error("WAG015 issues should be severity 'warning'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG015 issue not found")
+	}
+}
+
+func TestWAG015_Check_SetupGoWithCache(t *testing.T) {
+	content := []byte(`package main
+
+import (
+	"github.com/lex00/wetwire-github-go/workflow"
+	"github.com/lex00/wetwire-github-go/actions/setup_go"
+	"github.com/lex00/wetwire-github-go/actions/cache"
+)
+
+var BuildSteps = []any{
+	setup_go.SetupGo{GoVersion: "1.23"},
+	cache.Cache{Path: "~/go/pkg/mod", Key: "go-mod"},
+	workflow.Step{Run: "go build ./..."},
+}
+
+var BuildJob = workflow.Job{
+	Name:   "build",
+	RunsOn: "ubuntu-latest",
+	Steps:  BuildSteps,
+}
+`)
+
+	l := NewLinter(&WAG015{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG015 should not flag when cache is present")
+	}
+}
+
+func TestWAG015_Check_SetupNodeWithoutCache(t *testing.T) {
+	content := []byte(`package main
+
+import (
+	"github.com/lex00/wetwire-github-go/workflow"
+	"github.com/lex00/wetwire-github-go/actions/setup_node"
+)
+
+var BuildSteps = []any{
+	setup_node.SetupNode{NodeVersion: "20"},
+	workflow.Step{Run: "npm install"},
+}
+
+var BuildJob = workflow.Job{
+	Name:   "build",
+	RunsOn: "ubuntu-latest",
+	Steps:  BuildSteps,
+}
+`)
+
+	l := NewLinter(&WAG015{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG015 should have suggested caching for setup-node")
+	}
+}
+
+// WAG016 Tests - Validate concurrency settings
+
+func TestWAG016_Check_CancelWithoutGroup(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+	Concurrency: workflow.Concurrency{
+		CancelInProgress: true,
+	},
+}
+`)
+
+	l := NewLinter(&WAG016{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG016 should have flagged cancel-in-progress without group")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG016" {
+			found = true
+			if issue.Severity != "warning" {
+				t.Error("WAG016 issues should be severity 'warning'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG016 issue not found")
+	}
+}
+
+func TestWAG016_Check_CancelWithGroup(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+	Concurrency: workflow.Concurrency{
+		Group:            "ci-${{ github.ref }}",
+		CancelInProgress: true,
+	},
+}
+`)
+
+	l := NewLinter(&WAG016{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG016 should not flag when group is defined with cancel-in-progress")
+	}
+}
+
+func TestWAG016_Check_GroupOnly(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+	Concurrency: workflow.Concurrency{
+		Group: "ci-${{ github.ref }}",
+	},
+}
+`)
+
+	l := NewLinter(&WAG016{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG016 should not flag when only group is defined")
 	}
 }
