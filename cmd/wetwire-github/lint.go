@@ -73,6 +73,11 @@ func runLint(path string) error {
 	// Create linter with default rules
 	l := linter.DefaultLinter()
 
+	// Handle --fix flag
+	if lintFix {
+		return runLintWithFix(l, absPath, info.IsDir())
+	}
+
 	var lintResult *linter.LintResult
 
 	// Lint file or directory
@@ -105,21 +110,75 @@ func runLint(path string) error {
 		}
 	}
 
-	// Handle --fix flag (not yet implemented)
-	if lintFix {
-		fixableCount := 0
-		for _, issue := range result.Issues {
-			if issue.Fixable {
-				fixableCount++
+	// Output result
+	outputLintResult(result)
+	return nil
+}
+
+// runLintWithFix applies automatic fixes to the code.
+func runLintWithFix(l *linter.Linter, absPath string, isDir bool) error {
+	var fixResult *linter.FixResult
+	var fixDirResult *linter.FixDirResult
+	var err error
+
+	if isDir {
+		fixDirResult, err = l.FixDir(absPath)
+		if err != nil {
+			outputLintError(absPath, fmt.Sprintf("fix failed: %v", err))
+			return nil
+		}
+
+		if lintFormat == "json" {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			_ = enc.Encode(map[string]any{
+				"success":     true,
+				"fixed_count": fixDirResult.TotalFixed,
+				"files":       fixDirResult.Files,
+			})
+		} else {
+			if fixDirResult.TotalFixed > 0 {
+				fmt.Printf("Fixed %d issue(s) in %d file(s):\n", fixDirResult.TotalFixed, len(fixDirResult.Files))
+				for _, f := range fixDirResult.Files {
+					fmt.Printf("  %s\n", f)
+				}
+			} else {
+				fmt.Println("No fixable issues found")
 			}
 		}
-		if fixableCount > 0 && lintFormat != "json" {
-			fmt.Fprintf(os.Stderr, "warning: --fix is not yet implemented (%d fixable issues)\n", fixableCount)
+	} else {
+		fixResult, err = l.FixFile(absPath)
+		if err != nil {
+			outputLintError(absPath, fmt.Sprintf("fix failed: %v", err))
+			return nil
+		}
+
+		if lintFormat == "json" {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			_ = enc.Encode(map[string]any{
+				"success":     true,
+				"fixed_count": fixResult.FixedCount,
+				"remaining":   len(fixResult.Issues),
+			})
+		} else {
+			if fixResult.FixedCount > 0 {
+				fmt.Printf("Fixed %d issue(s) in %s\n", fixResult.FixedCount, absPath)
+			} else {
+				fmt.Println("No fixable issues found")
+			}
+
+			// Report remaining unfixable issues
+			if len(fixResult.Issues) > 0 {
+				fmt.Printf("\n%d issue(s) could not be fixed:\n", len(fixResult.Issues))
+				for _, issue := range fixResult.Issues {
+					fmt.Printf("  %s:%d:%d: %s [%s]\n",
+						issue.File, issue.Line, issue.Column, issue.Message, issue.Rule)
+				}
+			}
 		}
 	}
 
-	// Output result
-	outputLintResult(result)
 	return nil
 }
 

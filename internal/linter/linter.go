@@ -31,6 +31,27 @@ type Rule interface {
 	Check(fset *token.FileSet, file *ast.File, path string) []LintIssue
 }
 
+// Fixer is an optional interface that rules can implement to provide auto-fix capability.
+type Fixer interface {
+	// Fix attempts to fix an issue and returns the modified source code.
+	// The issue parameter contains information about what to fix.
+	// Returns the fixed source code, or nil if the fix could not be applied.
+	Fix(fset *token.FileSet, file *ast.File, path string, src []byte, issue LintIssue) ([]byte, error)
+}
+
+// FixResult contains the result of a fix operation.
+type FixResult struct {
+	Content    []byte `json:"-"`
+	FixedCount int    `json:"fixed_count"`
+	Issues     []LintIssue `json:"issues,omitempty"` // Remaining unfixed issues
+}
+
+// FixDirResult contains the result of fixing a directory.
+type FixDirResult struct {
+	Files      []string `json:"files"`
+	TotalFixed int      `json:"total_fixed"`
+}
+
 // Linter runs rules against Go source code.
 type Linter struct {
 	rules []Rule
@@ -162,4 +183,134 @@ func (l *Linter) AddRule(rule Rule) {
 // Rules returns the list of rules configured in the linter.
 func (l *Linter) Rules() []Rule {
 	return l.rules
+}
+
+// Fix applies fixes to Go source code from memory.
+func (l *Linter) Fix(path string, content []byte) (*FixResult, error) {
+	// Parse the source
+	file, err := parser.ParseFile(l.fset, path, content, parser.ParseComments)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &FixResult{
+		Content:    content,
+		FixedCount: 0,
+		Issues:     []LintIssue{},
+	}
+
+	// Collect all issues first
+	var allIssues []LintIssue
+	for _, rule := range l.rules {
+		issues := rule.Check(l.fset, file, path)
+		allIssues = append(allIssues, issues...)
+	}
+
+	// Try to fix each issue
+	currentContent := content
+	for _, issue := range allIssues {
+		if !issue.Fixable {
+			result.Issues = append(result.Issues, issue)
+			continue
+		}
+
+		// Find the rule that generated this issue
+		for _, rule := range l.rules {
+			if rule.ID() != issue.Rule {
+				continue
+			}
+
+			// Check if rule implements Fixer
+			fixer, ok := rule.(Fixer)
+			if !ok {
+				result.Issues = append(result.Issues, issue)
+				continue
+			}
+
+			// Re-parse with current content
+			currentFile, err := parser.ParseFile(l.fset, path, currentContent, parser.ParseComments)
+			if err != nil {
+				result.Issues = append(result.Issues, issue)
+				continue
+			}
+
+			// Apply fix
+			fixed, err := fixer.Fix(l.fset, currentFile, path, currentContent, issue)
+			if err != nil || fixed == nil {
+				result.Issues = append(result.Issues, issue)
+				continue
+			}
+
+			currentContent = fixed
+			result.FixedCount++
+			break
+		}
+	}
+
+	result.Content = currentContent
+	return result, nil
+}
+
+// FixFile applies fixes to a Go file and writes the result back.
+func (l *Linter) FixFile(path string) (*FixResult, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := l.Fix(path, content)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write back if changes were made
+	if result.FixedCount > 0 {
+		if err := os.WriteFile(path, result.Content, 0644); err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+// FixDir applies fixes to all Go files in a directory.
+func (l *Linter) FixDir(dir string) (*FixDirResult, error) {
+	result := &FixDirResult{
+		Files:      []string{},
+		TotalFixed: 0,
+	}
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories and non-Go files
+		if info.IsDir() {
+			name := info.Name()
+			if strings.HasPrefix(name, ".") || name == "vendor" || name == "testdata" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
+		fileResult, err := l.FixFile(path)
+		if err != nil {
+			// Continue on error
+			return nil
+		}
+
+		if fileResult.FixedCount > 0 {
+			result.Files = append(result.Files, path)
+			result.TotalFixed += fileResult.FixedCount
+		}
+
+		return nil
+	})
+
+	return result, err
 }

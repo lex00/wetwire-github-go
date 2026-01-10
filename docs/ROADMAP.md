@@ -11,7 +11,7 @@ Feature matrix and implementation status for wetwire-github-go.
 | Command | Status | Notes |
 |---------|--------|-------|
 | `build` | ✅ Complete | Generates .github/workflows/*.yml |
-| `lint` | ⚠️ Partial | `--fix` not implemented (#65) |
+| `lint` | ✅ Complete | Includes `--fix` for WAG001 |
 | `import` | ✅ Complete | Supports workflow, dependabot, issue-template, discussion-template |
 | `validate` | ✅ Complete | Uses actionlint |
 | `list` | ✅ Complete | Lists workflows, jobs, triggers |
@@ -119,7 +119,7 @@ Type-safe wrappers for popular GitHub Actions:
 - [ ] MCP server support (#68)
 
 ### Phase 5: Polish
-- [ ] Lint --fix implementation (#65)
+- [x] Lint --fix implementation (#65)
 - [ ] Additional action wrappers
 - [ ] Performance optimization
 
