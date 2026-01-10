@@ -15,3 +15,8 @@ var versionCmd = &cobra.Command{
 		fmt.Printf("  built:  %s\n", date)
 	},
 }
+
+// getVersion returns the version string.
+func getVersion() string {
+	return version
+}
