@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **github-script Action Wrapper** - Typed wrapper for `actions/github-script@v7` (#91)
+  - Run JavaScript in workflows with access to GitHub API
+  - Supports inputs: `script`, `github-token`, `debug`, `user-agent`, `previews`, `result-encoding`, `retries`, `retry-exempt-status-codes`
 - **Additional Lint Rules (WAG009-WAG012)** - 4 new lint rules for workflow quality (#86)
   - WAG009: Validate matrix dimension values (empty matrix detection)
   - WAG010: Flag missing recommended action inputs (e.g., GoVersion for setup_go)
