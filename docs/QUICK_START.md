@@ -148,6 +148,113 @@ Check generated YAML with actionlint:
 wetwire-github validate .github/workflows/ci.yml
 ```
 
+## Using Typed Action Wrappers
+
+Instead of raw `uses:` strings, use typed action wrappers for better IDE support and type safety.
+
+### Checkout
+
+```go
+import "github.com/lex00/wetwire-github-go/actions/checkout"
+
+var CheckoutStep = checkout.Checkout{
+    FetchDepth: 0,          // Full history for git operations
+    Submodules: "recursive", // Checkout submodules
+}.ToStep()
+```
+
+### Setup Go
+
+```go
+import "github.com/lex00/wetwire-github-go/actions/setup_go"
+
+var SetupGoStep = setup_go.SetupGo{
+    GoVersion: "1.23",
+    Cache:     true,
+}.ToStep()
+```
+
+### Setup Node
+
+```go
+import "github.com/lex00/wetwire-github-go/actions/setup_node"
+
+var SetupNodeStep = setup_node.SetupNode{
+    NodeVersion: "20",
+    Cache:       "npm",
+}.ToStep()
+```
+
+### Setup Python
+
+```go
+import "github.com/lex00/wetwire-github-go/actions/setup_python"
+
+var SetupPythonStep = setup_python.SetupPython{
+    PythonVersion: "3.12",
+    Cache:         "pip",
+}.ToStep()
+```
+
+### Cache
+
+```go
+import "github.com/lex00/wetwire-github-go/actions/cache"
+
+var CacheStep = cache.Cache{
+    Path:        "~/.cache/go-build\n~/go/pkg/mod",
+    Key:         "go-${{ runner.os }}-${{ hashFiles('**/go.sum') }}",
+    RestoreKeys: "go-${{ runner.os }}-",
+}.ToStep()
+```
+
+### Upload Artifact
+
+```go
+import "github.com/lex00/wetwire-github-go/actions/upload_artifact"
+
+var UploadStep = upload_artifact.UploadArtifact{
+    Name:          "build-artifacts",
+    Path:          "dist/",
+    RetentionDays: 7,
+}.ToStep()
+```
+
+### Download Artifact
+
+```go
+import "github.com/lex00/wetwire-github-go/actions/download_artifact"
+
+var DownloadStep = download_artifact.DownloadArtifact{
+    Name: "build-artifacts",
+    Path: "dist/",
+}.ToStep()
+```
+
+### Complete Example with Typed Actions
+
+```go
+package workflows
+
+import (
+    "github.com/lex00/wetwire-github-go/workflow"
+    "github.com/lex00/wetwire-github-go/actions/checkout"
+    "github.com/lex00/wetwire-github-go/actions/setup_go"
+    "github.com/lex00/wetwire-github-go/actions/cache"
+)
+
+var BuildSteps = []workflow.Step{
+    checkout.Checkout{}.ToStep(),
+    setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+    cache.Cache{
+        Path: "~/go/pkg/mod",
+        Key:  "go-mod-${{ hashFiles('**/go.sum') }}",
+    }.ToStep(),
+    {Run: "go build ./..."},
+    {Run: "go test ./..."},
+}
+```
+
 ## Next Steps
 
 - See [CLI Reference](CLI.md) for all commands
