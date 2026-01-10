@@ -95,6 +95,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `reviewdog/action-setup@v1` - Setup reviewdog for inline code review comments
   - `super-linter/super-linter@v7` - GitHub Super-Linter for comprehensive code linting
   - `github/codeql-action/upload-sarif@v3` - Upload SARIF results to GitHub Security
+- **Additional Action Wrappers** - 3 typed wrappers for supply chain security and automation (#179)
+  - `sigstore/cosign-installer@v3` - Cosign for signing and verifying container images
+  - `actions-rs/cargo@v1` - Cargo command runner for Rust CI/CD
+  - `EndBug/add-and-commit@v9` - Git automation for automatic commits
+- **Issue Automation Example** - Example demonstrating issue and PR automation triggers (#180)
+  - Issues trigger with auto-labeling patterns
+  - IssueComment trigger for issue management
+  - PullRequestReview trigger for review automation
+- **Expression Contexts Guide** - Comprehensive documentation for GitHub expression contexts (#181)
+  - Secrets, GitHub, Matrix, Env, Needs, Steps contexts
+  - Condition builders and string functions
+  - Security considerations with WAG017/WAG018 integration
 - **Performance Benchmarks** - Benchmarks for key operations (#157)
   - `internal/discover` - AST discovery benchmarks
   - `internal/serialize` - YAML serialization benchmarks
