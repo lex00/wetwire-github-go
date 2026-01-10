@@ -155,6 +155,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Additional Action Wrappers** - 2 typed wrappers for cross-workflow artifacts and tagging (#193)
   - `dawidd6/action-download-artifact@v6` - Download artifacts from other workflow runs
   - `anothrNick/github-tag-action@v1` - Automated semantic version tagging
+- **Advanced Trigger Pattern Examples** - 2 examples for workflow_run and repository_dispatch triggers (#195)
+  - `examples/workflow-run-example` - Trigger workflows on completion of other workflows
+  - `examples/repository-dispatch-example` - API-triggered workflows with event type filtering
+  - Demonstrates conditional job execution based on event types (deploy, deploy-staging, deploy-production)
+- **CLI Integration Tests** - Comprehensive test suite for CLI commands (#196)
+  - 34+ tests for build, lint, and list commands
+  - Tests cover valid workflows, invalid syntax, missing directories, and flag combinations
+  - Uses exec.Command to test the actual compiled binary behavior
+- **Hugo Action Wrapper** - Typed wrapper for static site generation (#197)
+  - `peaceiris/actions-hugo@v3` - Setup Hugo static site generator with version control
+  - 100% test coverage with comprehensive input handling
 - **Additional Example Workflows** - 3 new workflow examples (#148)
   - `examples/docker-workflow` - Docker build and push to GHCR with multi-stage CI
   - `examples/release-workflow` - Automated GitHub releases on version tags
