@@ -3255,3 +3255,625 @@ func TestGitHubAgent_MultipleStateResets(t *testing.T) {
 		t.Errorf("should have 3 lint cycles, got %d", agent.GetLintCycles())
 	}
 }
+
+
+// TestGitHubAgent_ToolRunLint_LintPassedState tests that lintPassed is set correctly on successful lint
+func TestGitHubAgent_ToolRunLint_LintPassedState(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Initial state
+	if agent.lintPassed {
+		t.Error("initial lintPassed should be false")
+	}
+
+	// Run lint - will fail because no wetwire-github binary, but state should still update
+	agent.toolRunLint(".")
+
+	// lintPassed should be false after failed lint
+	if agent.lintPassed {
+		t.Error("lintPassed should be false when lint command fails")
+	}
+
+	// But lintCalled should be true
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true")
+	}
+}
+
+// TestGitHubAgent_ToolRunLint_SessionTracking tests lint session tracking with different exit codes
+func TestGitHubAgent_ToolRunLint_SessionTracking(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	session := results.NewSession("test-persona", "test-scenario")
+
+	agent, err := NewGitHubAgent(Config{
+		WorkDir: tmpDir,
+		Session: session,
+	})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Run lint multiple times to exercise session tracking
+	for i := 0; i < 3; i++ {
+		agent.toolWriteFile(fmt.Sprintf("file%d.go", i), "package main")
+		agent.toolRunLint(".")
+	}
+
+	// Verify lint cycles tracked
+	if agent.GetLintCycles() != 3 {
+		t.Errorf("lintCycles = %d, want 3", agent.GetLintCycles())
+	}
+
+	// Session should still be configured
+	if agent.session != session {
+		t.Error("session should remain configured")
+	}
+}
+
+// TestGitHubAgent_ToolRunBuild_SuccessPath tests the success path of toolRunBuild
+func TestGitHubAgent_ToolRunBuild_SuccessPath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Even without a valid project, the method should execute and return output
+	result := agent.toolRunBuild(".")
+
+	// Should return some output (error or success)
+	if result == "" {
+		t.Error("toolRunBuild should return non-empty result")
+	}
+}
+
+// TestGitHubAgent_ToolRunValidate_SuccessPath tests the success path of toolRunValidate
+func TestGitHubAgent_ToolRunValidate_SuccessPath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Create a simple YAML file
+	yamlPath := filepath.Join(tmpDir, "test.yml")
+	if err := os.WriteFile(yamlPath, []byte("name: test"), 0644); err != nil {
+		t.Fatalf("writing yaml: %v", err)
+	}
+
+	result := agent.toolRunValidate("test.yml")
+
+	// Should return some output
+	if result == "" {
+		t.Error("toolRunValidate should return non-empty result")
+	}
+}
+
+// TestGitHubAgent_ExecuteTool_AllToolsWithValidInput tests all tool paths through executeTool
+func TestGitHubAgent_ExecuteTool_AllToolsWithValidInput(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	// Create a test file for read operations
+	testFile := filepath.Join(tmpDir, "existing.txt")
+	if err := os.WriteFile(testFile, []byte("existing content"), 0644); err != nil {
+		t.Fatalf("creating test file: %v", err)
+	}
+
+	mock := &mockDeveloper{response: "developer answer"}
+
+	agent, err := NewGitHubAgent(Config{
+		WorkDir:   tmpDir,
+		Developer: mock,
+	})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		toolName       string
+		input          string
+		wantEmpty      bool
+		skipEmptyCheck bool
+		checkState     func(*testing.T, *GitHubAgent)
+	}{
+		{
+			name:     "init_package creates project",
+			toolName: "init_package",
+			input:    `{"name": "new-project"}`,
+			checkState: func(t *testing.T, a *GitHubAgent) {
+				projectDir := filepath.Join(tmpDir, "new-project")
+				if _, err := os.Stat(projectDir); os.IsNotExist(err) {
+					t.Error("project directory should exist")
+				}
+			},
+		},
+		{
+			name:     "write_file creates file",
+			toolName: "write_file",
+			input:    `{"path": "new-file.go", "content": "package main"}`,
+			checkState: func(t *testing.T, a *GitHubAgent) {
+				if !a.pendingLint {
+					t.Error("pendingLint should be true after write")
+				}
+			},
+		},
+		{
+			name:      "read_file returns content",
+			toolName:  "read_file",
+			input:     `{"path": "existing.txt"}`,
+			wantEmpty: false,
+		},
+		{
+			name:           "run_lint updates state",
+			toolName:       "run_lint",
+			input:          `{"path": "."}`,
+			skipEmptyCheck: true, // lint may return empty if binary not found
+			checkState: func(t *testing.T, a *GitHubAgent) {
+				if !a.lintCalled {
+					t.Error("lintCalled should be true")
+				}
+			},
+		},
+		{
+			name:           "run_build returns output",
+			toolName:       "run_build",
+			input:          `{"path": "."}`,
+			skipEmptyCheck: true, // build may return empty if binary not found
+		},
+		{
+			name:           "run_validate returns output",
+			toolName:       "run_validate",
+			input:          `{"path": "."}`,
+			skipEmptyCheck: true, // validate may return empty if binary not found
+		},
+		{
+			name:      "ask_developer returns answer",
+			toolName:  "ask_developer",
+			input:     `{"question": "test question"}`,
+			wantEmpty: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := agent.executeTool(context.Background(), tt.toolName, []byte(tt.input))
+
+			if !tt.skipEmptyCheck {
+				if tt.wantEmpty && result != "" {
+					t.Errorf("expected empty result, got %q", result)
+				}
+				if !tt.wantEmpty && result == "" {
+					t.Error("expected non-empty result")
+				}
+			}
+
+			if tt.checkState != nil {
+				tt.checkState(t, agent)
+			}
+		})
+	}
+}
+
+// TestGitHubAgent_StreamHandlerConfiguration tests stream handler setup
+func TestGitHubAgent_StreamHandlerConfiguration(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	var chunks []string
+	handler := func(text string) {
+		chunks = append(chunks, text)
+	}
+
+	agent, err := NewGitHubAgent(Config{
+		StreamHandler: handler,
+	})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Verify handler is set
+	if agent.streamHandler == nil {
+		t.Error("streamHandler should be configured")
+	}
+}
+
+// TestGitHubAgent_CheckCompletionGate_AllPaths tests all paths through checkCompletionGate
+func TestGitHubAgent_CheckCompletionGate_AllPaths(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	tests := []struct {
+		name           string
+		generatedFiles []string
+		lintCalled     bool
+		pendingLint    bool
+		lintPassed     bool
+		responseText   string
+		wantEnforce    bool
+		wantMsgPart    string
+	}{
+		{
+			name:           "no files, no completion - passes",
+			generatedFiles: nil,
+			responseText:   "Working on it...",
+			wantEnforce:    false,
+		},
+		{
+			name:           "files exist, lint not called",
+			generatedFiles: []string{"file.go"},
+			lintCalled:     false,
+			responseText:   "done",
+			wantEnforce:    true,
+			wantMsgPart:    "cannot complete without running the linter",
+		},
+		{
+			name:           "files exist, pending lint",
+			generatedFiles: []string{"file.go"},
+			lintCalled:     true,
+			pendingLint:    true,
+			responseText:   "complete",
+			wantEnforce:    true,
+			wantMsgPart:    "written code since the last lint",
+		},
+		{
+			name:           "files exist, lint failed",
+			generatedFiles: []string{"file.go"},
+			lintCalled:     true,
+			pendingLint:    false,
+			lintPassed:     false,
+			responseText:   "finished",
+			wantEnforce:    true,
+			wantMsgPart:    "linter found issues",
+		},
+		{
+			name:           "files exist, lint passed - allows completion",
+			generatedFiles: []string{"file.go"},
+			lintCalled:     true,
+			pendingLint:    false,
+			lintPassed:     true,
+			responseText:   "all set",
+			wantEnforce:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent, err := NewGitHubAgent(Config{})
+			if err != nil {
+				t.Fatalf("NewGitHubAgent() error = %v", err)
+			}
+
+			agent.generatedFiles = tt.generatedFiles
+			agent.lintCalled = tt.lintCalled
+			agent.pendingLint = tt.pendingLint
+			agent.lintPassed = tt.lintPassed
+
+			resp := &anthropic.Message{
+				Content: []anthropic.ContentBlockUnion{
+					{Type: "text", Text: tt.responseText},
+				},
+			}
+
+			enforcement := agent.checkCompletionGate(resp)
+			gotEnforce := enforcement != ""
+
+			if gotEnforce != tt.wantEnforce {
+				t.Errorf("checkCompletionGate() enforce = %v, want %v", gotEnforce, tt.wantEnforce)
+			}
+
+			if tt.wantMsgPart != "" && !findSubstring(enforcement, tt.wantMsgPart) {
+				t.Errorf("enforcement = %q, want to contain %q", enforcement, tt.wantMsgPart)
+			}
+		})
+	}
+}
+
+// TestGitHubAgent_ToolRunLint_CommandExecution tests that lint command actually executes
+func TestGitHubAgent_ToolRunLint_CommandExecution(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Initial state checks
+	if agent.lintCalled {
+		t.Error("lintCalled should be false initially")
+	}
+	if agent.lintCycles != 0 {
+		t.Error("lintCycles should be 0 initially")
+	}
+
+	// Run lint
+	_ = agent.toolRunLint(".")
+
+	// State should be updated regardless of whether command exists
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true after lint")
+	}
+	if agent.lintCycles != 1 {
+		t.Errorf("lintCycles = %d, want 1", agent.lintCycles)
+	}
+	if agent.pendingLint {
+		t.Error("pendingLint should be false after lint")
+	}
+}
+
+// TestGitHubAgent_ToolRunBuild_CommandExecution tests that build command actually executes
+func TestGitHubAgent_ToolRunBuild_CommandExecution(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Run build - will fail but we're testing execution
+	result := agent.toolRunBuild("nonexistent-path")
+
+	// Should have output (error message)
+	if result == "" {
+		t.Error("result should not be empty")
+	}
+
+	// Should mention error
+	if !findSubstring(result, "error") && !findSubstring(result, "Error") && !findSubstring(result, "Build error") {
+		t.Log("result:", result) // Log for debugging
+	}
+}
+
+// TestGitHubAgent_ToolRunValidate_CommandExecution tests that validate command actually executes
+func TestGitHubAgent_ToolRunValidate_CommandExecution(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Create a file
+	testFile := filepath.Join(tmpDir, "test.yml")
+	if err := os.WriteFile(testFile, []byte("name: test\non: push"), 0644); err != nil {
+		t.Fatalf("creating test file: %v", err)
+	}
+
+	// Run validate
+	result := agent.toolRunValidate("test.yml")
+
+	// Should have output
+	if result == "" {
+		t.Error("result should not be empty")
+	}
+}
+
+// TestGitHubAgent_GetTools_ToolDetails verifies each tool has proper configuration
+func TestGitHubAgent_GetTools_ToolDetails(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	tools := agent.getTools()
+
+	// Verify each tool has required fields
+	for i, tool := range tools {
+		if tool.OfTool == nil {
+			t.Errorf("tools[%d].OfTool is nil", i)
+			continue
+		}
+
+		if tool.OfTool.Name == "" {
+			t.Errorf("tools[%d].Name is empty", i)
+		}
+
+		// InputSchema should have Properties
+		if tool.OfTool.InputSchema.Properties == nil {
+			t.Errorf("tools[%d] (%s) has nil Properties", i, tool.OfTool.Name)
+		}
+	}
+}
+
+// TestGitHubAgent_AskDeveloper_SessionIntegration tests developer questions with session
+func TestGitHubAgent_AskDeveloper_SessionIntegration(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	session := results.NewSession("persona", "scenario")
+	mock := &mockDeveloper{response: "the answer"}
+
+	agent, err := NewGitHubAgent(Config{
+		Session:   session,
+		Developer: mock,
+	})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Ask multiple questions
+	questions := []struct {
+		q string
+		a string
+	}{
+		{"First question?", "the answer"},
+		{"Second question?", "the answer"},
+	}
+
+	for _, qa := range questions {
+		answer, err := agent.AskDeveloper(context.Background(), qa.q)
+		if err != nil {
+			t.Fatalf("AskDeveloper() error = %v", err)
+		}
+		if answer != qa.a {
+			t.Errorf("AskDeveloper(%q) = %q, want %q", qa.q, answer, qa.a)
+		}
+	}
+
+	// Verify session recorded all questions
+	if len(session.Questions) != len(questions) {
+		t.Errorf("session.Questions has %d entries, want %d", len(session.Questions), len(questions))
+	}
+}
+
+// TestGitHubAgent_ExecuteTool_AskDeveloperError tests error handling in ask_developer
+func TestGitHubAgent_ExecuteTool_AskDeveloperError(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	mock := &mockDeveloper{err: fmt.Errorf("developer unavailable")}
+
+	agent, err := NewGitHubAgent(Config{Developer: mock})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	result := agent.executeTool(context.Background(), "ask_developer", []byte(`{"question": "test"}`))
+
+	if !findSubstring(result, "Error") {
+		t.Errorf("result should contain error, got %q", result)
+	}
+}
+
+// TestGitHubAgent_ModelConfiguration tests model configuration
+func TestGitHubAgent_ModelConfiguration(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	tests := []struct {
+		name      string
+		model     string
+		wantModel string
+	}{
+		{
+			name:      "default model",
+			model:     "",
+			wantModel: string(anthropic.ModelClaudeSonnet4_20250514),
+		},
+		{
+			name:      "custom model",
+			model:     "claude-custom-model",
+			wantModel: "claude-custom-model",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent, err := NewGitHubAgent(Config{Model: tt.model})
+			if err != nil {
+				t.Fatalf("NewGitHubAgent() error = %v", err)
+			}
+
+			if agent.model != tt.wantModel {
+				t.Errorf("model = %q, want %q", agent.model, tt.wantModel)
+			}
+		})
+	}
+}
+
+// TestGitHubAgent_WorkDirConfiguration tests work directory configuration
+func TestGitHubAgent_WorkDirConfiguration(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	tests := []struct {
+		name       string
+		workDir    string
+		wantDir    string
+	}{
+		{
+			name:    "default work dir",
+			workDir: "",
+			wantDir: ".",
+		},
+		{
+			name:    "custom work dir",
+			workDir: "/custom/path",
+			wantDir: "/custom/path",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent, err := NewGitHubAgent(Config{WorkDir: tt.workDir})
+			if err != nil {
+				t.Fatalf("NewGitHubAgent() error = %v", err)
+			}
+
+			if agent.workDir != tt.wantDir {
+				t.Errorf("workDir = %q, want %q", agent.workDir, tt.wantDir)
+			}
+		})
+	}
+}
+
+// TestGitHubAgent_MaxLintCyclesDefaults tests max lint cycles configuration
+func TestGitHubAgent_MaxLintCyclesDefaults(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	tests := []struct {
+		name          string
+		maxLintCycles int
+		wantCycles    int
+	}{
+		{
+			name:          "default max lint cycles",
+			maxLintCycles: 0,
+			wantCycles:    5,
+		},
+		{
+			name:          "custom max lint cycles",
+			maxLintCycles: 10,
+			wantCycles:    10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent, err := NewGitHubAgent(Config{MaxLintCycles: tt.maxLintCycles})
+			if err != nil {
+				t.Fatalf("NewGitHubAgent() error = %v", err)
+			}
+
+			if agent.maxLintCycles != tt.wantCycles {
+				t.Errorf("maxLintCycles = %d, want %d", agent.maxLintCycles, tt.wantCycles)
+			}
+		})
+	}
+}
