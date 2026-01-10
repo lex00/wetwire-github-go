@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
+- **Security Scanning Action Wrappers** - 4 typed wrappers for security scanning (#120)
+  - `github/codeql-action/init@v3` - Initialize CodeQL for code scanning
+  - `github/codeql-action/analyze@v3` - Run CodeQL analysis and upload results
+  - `aquasecurity/trivy-action@0.28.0` - Vulnerability scanning for containers and filesystems
+  - `ossf/scorecard-action@v2.4.0` - OpenSSF Scorecard security assessment
 - **Golangci-lint Action Wrapper** - Typed wrapper for golangci-lint-action@v6 (#119)
   - Run golangci-lint for Go code linting
   - Supports: `version`, `working-directory`, `args`, `only-new-issues`, cache options
