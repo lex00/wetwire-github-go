@@ -1387,3 +1387,1046 @@ func TestGitHubAgent_ExecuteTool_AllTools(t *testing.T) {
 		})
 	}
 }
+
+func TestGitHubAgent_ToolRunLint_Success(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Test that toolRunLint updates state correctly (even if command fails)
+	initialCycles := agent.lintCycles
+	agent.pendingLint = true
+
+	_ = agent.toolRunLint(".")
+
+	// Verify state changes
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true after toolRunLint")
+	}
+	if agent.pendingLint {
+		t.Error("pendingLint should be false after toolRunLint")
+	}
+	if agent.lintCycles != initialCycles+1 {
+		t.Errorf("lintCycles = %d, want %d", agent.lintCycles, initialCycles+1)
+	}
+}
+
+func TestGitHubAgent_ToolRunLint_WithSession(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	session := results.NewSession("persona", "scenario")
+
+	agent, err := NewGitHubAgent(Config{
+		WorkDir: tmpDir,
+		Session: session,
+	})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	_ = agent.toolRunLint(".")
+
+	// Verify lint state was updated
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true")
+	}
+
+	// Session will be updated only if command succeeds or fails with exit code 2
+	// Just verify the session is still configured
+	if agent.session != session {
+		t.Error("session should remain configured")
+	}
+}
+
+func TestGitHubAgent_ToolRunLint_MultipleCycles(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Run lint multiple times
+	for i := 0; i < 3; i++ {
+		agent.toolWriteFile("test.go", "package main")
+		agent.toolRunLint(".")
+	}
+
+	if agent.lintCycles != 3 {
+		t.Errorf("lintCycles = %d, want 3", agent.lintCycles)
+	}
+}
+
+func TestGitHubAgent_ToolRunBuild(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	result := agent.toolRunBuild(".")
+
+	// Result will contain error since we don't have a valid project,
+	// but we're testing the function executes
+	if result == "" {
+		t.Error("toolRunBuild should return a result")
+	}
+}
+
+func TestGitHubAgent_ToolRunValidate(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	result := agent.toolRunValidate(".")
+
+	// Result will contain error/validation info
+	if result == "" {
+		t.Error("toolRunValidate should return a result")
+	}
+}
+
+func TestGitHubAgent_ExecuteTool_LintBuildValidateRouting(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	tests := []struct {
+		name       string
+		toolName   string
+		input      string
+		checkState func(*testing.T, *GitHubAgent)
+	}{
+		{
+			name:     "run_lint routing",
+			toolName: "run_lint",
+			input:    `{"path": "."}`,
+			checkState: func(t *testing.T, a *GitHubAgent) {
+				if !a.lintCalled {
+					t.Error("lintCalled should be true after run_lint")
+				}
+			},
+		},
+		{
+			name:     "run_build routing",
+			toolName: "run_build",
+			input:    `{"path": "."}`,
+			checkState: func(t *testing.T, a *GitHubAgent) {
+				// Build doesn't modify state, just verify it executed
+			},
+		},
+		{
+			name:     "run_validate routing",
+			toolName: "run_validate",
+			input:    `{"path": "."}`,
+			checkState: func(t *testing.T, a *GitHubAgent) {
+				// Validate doesn't modify state, just verify it executed
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset agent state for each test
+			agent.lintCalled = false
+
+			_ = agent.executeTool(context.Background(), tt.toolName, []byte(tt.input))
+
+			// Verify using state checks instead of output
+			tt.checkState(t, agent)
+		})
+	}
+}
+
+func TestGitHubAgent_ToolRunLint_StateReset(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Set up initial state
+	agent.pendingLint = true
+	agent.lintCalled = false
+	agent.lintPassed = false
+
+	// Run lint
+	agent.toolRunLint(".")
+
+	// Verify state is updated correctly
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true")
+	}
+	if agent.pendingLint {
+		t.Error("pendingLint should be false")
+	}
+}
+
+func TestGitHubAgent_ToolInitPackage_InvalidPath(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	// Use a path that we can't write to
+	agent, err := NewGitHubAgent(Config{WorkDir: "/nonexistent/invalid/path"})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	result := agent.toolInitPackage("test")
+
+	// Should return error message
+	if !findSubstring(result, "Error") {
+		t.Errorf("toolInitPackage with invalid path should return error, got %q", result)
+	}
+}
+
+func TestGitHubAgent_ToolWriteFile_InvalidPath(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	// Use a path that we can't write to
+	agent, err := NewGitHubAgent(Config{WorkDir: "/nonexistent/invalid/path"})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	result := agent.toolWriteFile("test.go", "package main")
+
+	// Should return error message
+	if !findSubstring(result, "Error") {
+		t.Errorf("toolWriteFile with invalid path should return error, got %q", result)
+	}
+}
+
+func TestGitHubAgent_ToolRunLint_PathHandling(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Test with subdirectory path
+	_ = agent.toolRunLint("subdir")
+
+	// Verify state was updated (this is what matters)
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true after toolRunLint")
+	}
+}
+
+func TestGitHubAgent_ToolRunBuild_PathHandling(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Test with specific path
+	result := agent.toolRunBuild("subdir")
+
+	// Should execute and return result
+	if result == "" {
+		t.Error("toolRunBuild should return non-empty result")
+	}
+}
+
+func TestGitHubAgent_ToolRunValidate_PathHandling(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Test with specific file path
+	result := agent.toolRunValidate("workflow.yml")
+
+	// Should execute and return result
+	if result == "" {
+		t.Error("toolRunValidate should return non-empty result")
+	}
+}
+
+func TestGitHubAgent_ToolWriteFile_EmptyContent(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Write empty file
+	result := agent.toolWriteFile("empty.txt", "")
+
+	if !findSubstring(result, "0 bytes") {
+		t.Errorf("toolWriteFile with empty content should report 0 bytes, got %q", result)
+	}
+
+	// Verify state changes
+	if !agent.pendingLint {
+		t.Error("pendingLint should be true after write")
+	}
+	if agent.lintPassed {
+		t.Error("lintPassed should be false after write")
+	}
+}
+
+func TestGitHubAgent_ToolInitPackage_MultipleProjects(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Create multiple projects
+	result1 := agent.toolInitPackage("project1")
+	result2 := agent.toolInitPackage("project2")
+
+	if !findSubstring(result1, "project1") {
+		t.Errorf("result1 should mention project1, got %q", result1)
+	}
+	if !findSubstring(result2, "project2") {
+		t.Errorf("result2 should mention project2, got %q", result2)
+	}
+
+	// Verify both directories exist
+	dir1 := filepath.Join(tmpDir, "project1")
+	dir2 := filepath.Join(tmpDir, "project2")
+
+	if _, err := os.Stat(dir1); os.IsNotExist(err) {
+		t.Error("project1 directory should exist")
+	}
+	if _, err := os.Stat(dir2); os.IsNotExist(err) {
+		t.Error("project2 directory should exist")
+	}
+}
+
+func TestGitHubAgent_StateTransitions(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Initial state
+	if agent.lintCalled {
+		t.Error("initial lintCalled should be false")
+	}
+	if agent.lintPassed {
+		t.Error("initial lintPassed should be false")
+	}
+	if agent.pendingLint {
+		t.Error("initial pendingLint should be false")
+	}
+
+	// Write a file - should set pendingLint
+	agent.toolWriteFile("test.go", "package main")
+	if !agent.pendingLint {
+		t.Error("pendingLint should be true after write")
+	}
+	if agent.lintPassed {
+		t.Error("lintPassed should remain false after write")
+	}
+
+	// Run lint - should clear pendingLint and set lintCalled
+	agent.toolRunLint(".")
+	if agent.pendingLint {
+		t.Error("pendingLint should be false after lint")
+	}
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true after lint")
+	}
+
+	// Write another file - should reset lintPassed and set pendingLint
+	agent.lintPassed = true // Simulate successful lint
+	agent.toolWriteFile("test2.go", "package main")
+	if agent.lintPassed {
+		t.Error("lintPassed should be reset to false after new write")
+	}
+	if !agent.pendingLint {
+		t.Error("pendingLint should be true after new write")
+	}
+}
+
+func TestGitHubAgent_LintCyclesIncrement(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir, MaxLintCycles: 3})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Check maxLintCycles is set
+	if agent.maxLintCycles != 3 {
+		t.Errorf("maxLintCycles = %d, want 3", agent.maxLintCycles)
+	}
+
+	// Run lint multiple times and verify cycle count
+	for i := 1; i <= 5; i++ {
+		agent.toolRunLint(".")
+		if agent.GetLintCycles() != i {
+			t.Errorf("after %d lints, GetLintCycles() = %d, want %d", i, agent.GetLintCycles(), i)
+		}
+	}
+}
+
+func TestGitHubAgent_GetGeneratedFiles_Order(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Write files in specific order
+	files := []string{"first.go", "second.go", "third.go"}
+	for _, f := range files {
+		agent.toolWriteFile(f, "package main")
+	}
+
+	generated := agent.GetGeneratedFiles()
+
+	// Verify all files are tracked in order
+	if len(generated) != len(files) {
+		t.Fatalf("GetGeneratedFiles() returned %d files, want %d", len(generated), len(files))
+	}
+
+	for i, expected := range files {
+		if generated[i] != expected {
+			t.Errorf("GetGeneratedFiles()[%d] = %q, want %q", i, generated[i], expected)
+		}
+	}
+}
+
+func TestGitHubAgent_DefaultModelSetting(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Verify default model is set
+	if agent.model == "" {
+		t.Error("model should be set to default value")
+	}
+}
+
+func TestGitHubAgent_ToolRunBuild_ErrorHandling(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Build with invalid path should return error in result
+	result := agent.toolRunBuild("nonexistent-project")
+
+	// Should contain error info (either "Build error" or command output)
+	if result == "" {
+		t.Error("toolRunBuild should return error information")
+	}
+}
+
+func TestGitHubAgent_ToolRunValidate_ErrorHandling(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Validate with nonexistent file should return error in result
+	result := agent.toolRunValidate("nonexistent.yml")
+
+	// Should contain error/validation info
+	if result == "" {
+		t.Error("toolRunValidate should return validation information")
+	}
+}
+
+func TestGitHubAgent_ConfigValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  Config
+		wantErr bool
+	}{
+		{
+			name:    "no api key in config or env",
+			config:  Config{},
+			wantErr: true,
+		},
+		{
+			name:    "api key in config",
+			config:  Config{APIKey: "test-key"},
+			wantErr: false,
+		},
+		{
+			name: "custom work dir",
+			config: Config{
+				APIKey:  "test-key",
+				WorkDir: "/custom/path",
+			},
+			wantErr: false,
+		},
+		{
+			name: "custom model",
+			config: Config{
+				APIKey: "test-key",
+				Model:  "custom-model-id",
+			},
+			wantErr: false,
+		},
+		{
+			name: "custom max lint cycles",
+			config: Config{
+				APIKey:        "test-key",
+				MaxLintCycles: 10,
+			},
+			wantErr: false,
+		},
+	}
+
+	// Clear env var for consistent testing
+	origKey := os.Getenv("ANTHROPIC_API_KEY")
+	os.Unsetenv("ANTHROPIC_API_KEY")
+	defer func() {
+		if origKey != "" {
+			os.Setenv("ANTHROPIC_API_KEY", origKey)
+		}
+	}()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent, err := NewGitHubAgent(tt.config)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("NewGitHubAgent() should return error")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("NewGitHubAgent() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if agent == nil {
+				t.Error("NewGitHubAgent() returned nil agent")
+			}
+		})
+	}
+}
+
+func TestGitHubAgent_ToolExecutionFlow(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Simulate a complete workflow through tools
+	// 1. Init package
+	result := agent.toolInitPackage("test-workflow")
+	if !findSubstring(result, "Created project") {
+		t.Errorf("toolInitPackage failed: %s", result)
+	}
+
+	// 2. Write a workflow file
+	workflowContent := `package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+}
+`
+	result = agent.toolWriteFile("test-workflow/workflow.go", workflowContent)
+	if !findSubstring(result, "Wrote") {
+		t.Errorf("toolWriteFile failed: %s", result)
+	}
+
+	// Verify state after write
+	if !agent.pendingLint {
+		t.Error("pendingLint should be true after write")
+	}
+	if agent.lintPassed {
+		t.Error("lintPassed should be false after write")
+	}
+
+	// 3. Read it back
+	result = agent.toolReadFile("test-workflow/workflow.go")
+	if result != workflowContent {
+		t.Errorf("toolReadFile returned incorrect content")
+	}
+
+	// 4. Run lint (will fail but updates state)
+	result = agent.toolRunLint("test-workflow")
+	// State should be updated
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true after lint")
+	}
+	if agent.pendingLint {
+		t.Error("pendingLint should be false after lint")
+	}
+
+	// 5. Write another file
+	result = agent.toolWriteFile("test-workflow/jobs.go", "package main")
+	if len(agent.GetGeneratedFiles()) != 2 {
+		t.Errorf("should have 2 generated files, got %d", len(agent.GetGeneratedFiles()))
+	}
+
+	// 6. Check lint enforcement logic
+	enforcement := agent.checkLintEnforcement([]string{"write_file"})
+	if enforcement == "" {
+		t.Error("checkLintEnforcement should enforce after write without lint")
+	}
+}
+
+func TestGitHubAgent_EdgeCases(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	tests := []struct {
+		name     string
+		setup    func(*GitHubAgent)
+		test     func(*testing.T, *GitHubAgent)
+	}{
+		{
+			name: "write same file twice",
+			setup: func(a *GitHubAgent) {},
+			test: func(t *testing.T, a *GitHubAgent) {
+				a.toolWriteFile("test.go", "package main")
+				a.toolWriteFile("test.go", "package main\n// modified")
+				files := a.GetGeneratedFiles()
+				if len(files) != 2 {
+					t.Errorf("should track both writes, got %d", len(files))
+				}
+			},
+		},
+		{
+			name: "lint without any files",
+			setup: func(a *GitHubAgent) {},
+			test: func(t *testing.T, a *GitHubAgent) {
+				a.toolRunLint(".")
+				if !a.lintCalled {
+					t.Error("lintCalled should be true even with no files")
+				}
+			},
+		},
+		{
+			name: "multiple lint runs",
+			setup: func(a *GitHubAgent) {
+				a.toolWriteFile("test.go", "package main")
+			},
+			test: func(t *testing.T, a *GitHubAgent) {
+				for i := 0; i < 10; i++ {
+					a.toolRunLint(".")
+				}
+				if a.GetLintCycles() != 10 {
+					t.Errorf("lintCycles = %d, want 10", a.GetLintCycles())
+				}
+			},
+		},
+		{
+			name: "read non-existent file",
+			setup: func(a *GitHubAgent) {},
+			test: func(t *testing.T, a *GitHubAgent) {
+				result := a.toolReadFile("does-not-exist.go")
+				if !findSubstring(result, "Error") {
+					t.Errorf("should return error for non-existent file, got %q", result)
+				}
+			},
+		},
+		{
+			name: "init package with empty name",
+			setup: func(a *GitHubAgent) {},
+			test: func(t *testing.T, a *GitHubAgent) {
+				result := a.toolInitPackage("")
+				// Should still work, creates directory with empty name
+				if findSubstring(result, "Error") {
+					t.Errorf("unexpected error: %s", result)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+			if err != nil {
+				t.Fatalf("NewGitHubAgent() error = %v", err)
+			}
+			tt.setup(agent)
+			tt.test(t, agent)
+		})
+	}
+}
+
+func TestGitHubAgent_CheckCompletionGateWithFiles(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Test with files but no completion attempt
+	agent.generatedFiles = []string{"file1.go", "file2.go"}
+	agent.lintCalled = false
+
+	resp := &anthropic.Message{
+		Content: []anthropic.ContentBlockUnion{
+			{Type: "text", Text: "Here are the files I generated."},
+		},
+	}
+
+	enforcement := agent.checkCompletionGate(resp)
+
+	// Should enforce lint requirement even without completion keywords
+	// because files were generated
+	if enforcement == "" {
+		t.Error("checkCompletionGate should enforce lint check when files exist")
+	}
+}
+
+func TestGitHubAgent_CheckLintEnforcementOrder(t *testing.T) {
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Test that order doesn't matter - if both lint and write are called,
+	// no enforcement
+	enforcement := agent.checkLintEnforcement([]string{"run_lint", "write_file", "read_file"})
+	if enforcement != "" {
+		t.Error("checkLintEnforcement should not enforce when both write and lint are present")
+	}
+
+	// Test write in the middle
+	enforcement = agent.checkLintEnforcement([]string{"read_file", "write_file", "run_lint", "read_file"})
+	if enforcement != "" {
+		t.Error("checkLintEnforcement should not enforce when both write and lint are present (any order)")
+	}
+}
+
+func TestGitHubAgent_ToolInitPackageGoModFormat(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	projectName := "my-special-project"
+	agent.toolInitPackage(projectName)
+
+	// Read and verify go.mod structure
+	goModPath := filepath.Join(tmpDir, projectName, "go.mod")
+	content, err := os.ReadFile(goModPath)
+	if err != nil {
+		t.Fatalf("reading go.mod: %v", err)
+	}
+
+	goModStr := string(content)
+
+	// Check all expected parts
+	expectedParts := []string{
+		"module github.com/example/" + projectName,
+		"go 1.23",
+		"require github.com/lex00/wetwire-github-go",
+	}
+
+	for _, part := range expectedParts {
+		if !findSubstring(goModStr, part) {
+			t.Errorf("go.mod missing expected part: %q", part)
+		}
+	}
+}
+
+func TestGitHubAgent_MultipleFileOperations(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Perform a series of file operations and verify state consistency
+	operations := []struct {
+		op       string
+		path     string
+		content  string
+		checkGen int
+	}{
+		{"write", "file1.go", "package main", 1},
+		{"write", "file2.go", "package test", 2},
+		{"write", "subdir/file3.go", "package subdir", 3},
+		{"write", "deep/nested/file4.go", "package nested", 4},
+	}
+
+	for _, op := range operations {
+		agent.toolWriteFile(op.path, op.content)
+		if len(agent.GetGeneratedFiles()) != op.checkGen {
+			t.Errorf("after writing %s, got %d generated files, want %d",
+				op.path, len(agent.GetGeneratedFiles()), op.checkGen)
+		}
+	}
+
+	// Verify all files can be read back
+	for _, op := range operations {
+		result := agent.toolReadFile(op.path)
+		if result != op.content {
+			t.Errorf("toolReadFile(%s) = %q, want %q", op.path, result, op.content)
+		}
+	}
+}
+
+func TestGitHubAgent_ToolRunLintWithRealCommand(t *testing.T) {
+	// Check if wetwire-github binary exists
+	if _, err := os.Stat("/tmp/wetwire-github"); os.IsNotExist(err) {
+		t.Skip("wetwire-github binary not found at /tmp/wetwire-github")
+	}
+
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	// Add /tmp to PATH for this test
+	origPath := os.Getenv("PATH")
+	os.Setenv("PATH", "/tmp:"+origPath)
+	defer os.Setenv("PATH", origPath)
+
+	session := results.NewSession("test-persona", "test-scenario")
+
+	agent, err := NewGitHubAgent(Config{
+		WorkDir: tmpDir,
+		Session: session,
+	})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Create a valid wetwire-github project
+	agent.toolInitPackage("test-project")
+
+	// Write a valid workflow file
+	workflowContent := `package main
+
+import (
+	"github.com/lex00/wetwire-github-go/workflow"
+	"github.com/lex00/wetwire-github-go/actions/checkout"
+)
+
+var CI = workflow.Workflow{
+	Name: "CI",
+	On: workflow.Triggers{
+		Push: &workflow.PushTrigger{
+			Branches: []string{"main"},
+		},
+	},
+	Jobs: map[string]workflow.Job{
+		"build": {
+			RunsOn: "ubuntu-latest",
+			Steps: []any{
+				checkout.Checkout{},
+			},
+		},
+	},
+}
+`
+	agent.toolWriteFile("test-project/workflow.go", workflowContent)
+
+	// Run lint - should succeed or fail gracefully
+	result := agent.toolRunLint("test-project")
+
+	// Verify state was updated
+	if !agent.lintCalled {
+		t.Error("lintCalled should be true after toolRunLint")
+	}
+	if agent.pendingLint {
+		t.Error("pendingLint should be false after toolRunLint")
+	}
+	if agent.lintCycles != 1 {
+		t.Errorf("lintCycles = %d, want 1", agent.lintCycles)
+	}
+
+	// Result should have some output
+	if result == "" {
+		t.Log("Warning: lint result is empty (command may have failed)")
+	}
+}
+
+func TestGitHubAgent_ToolRunBuildWithRealCommand(t *testing.T) {
+	// Check if wetwire-github binary exists
+	if _, err := os.Stat("/tmp/wetwire-github"); os.IsNotExist(err) {
+		t.Skip("wetwire-github binary not found at /tmp/wetwire-github")
+	}
+
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	// Add /tmp to PATH for this test
+	origPath := os.Getenv("PATH")
+	os.Setenv("PATH", "/tmp:"+origPath)
+	defer os.Setenv("PATH", origPath)
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Create a valid project
+	agent.toolInitPackage("build-test")
+	workflowContent := `package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+	On: workflow.Triggers{
+		Push: &workflow.PushTrigger{Branches: []string{"main"}},
+	},
+}
+`
+	agent.toolWriteFile("build-test/workflow.go", workflowContent)
+
+	// Run build
+	result := agent.toolRunBuild("build-test")
+
+	// Should have some output
+	if result == "" {
+		t.Log("Warning: build result is empty")
+	}
+}
+
+func TestGitHubAgent_ToolRunValidateWithRealCommand(t *testing.T) {
+	// Check if wetwire-github binary exists
+	if _, err := os.Stat("/tmp/wetwire-github"); os.IsNotExist(err) {
+		t.Skip("wetwire-github binary not found at /tmp/wetwire-github")
+	}
+
+	tmpDir := t.TempDir()
+
+	os.Setenv("ANTHROPIC_API_KEY", "test-key")
+	defer os.Unsetenv("ANTHROPIC_API_KEY")
+
+	// Add /tmp to PATH for this test
+	origPath := os.Getenv("PATH")
+	os.Setenv("PATH", "/tmp:"+origPath)
+	defer os.Setenv("PATH", origPath)
+
+	agent, err := NewGitHubAgent(Config{WorkDir: tmpDir})
+	if err != nil {
+		t.Fatalf("NewGitHubAgent() error = %v", err)
+	}
+
+	// Create a YAML file to validate
+	yamlContent := `name: CI
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+`
+	yamlPath := filepath.Join(tmpDir, "workflow.yml")
+	if err := os.WriteFile(yamlPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("writing yaml file: %v", err)
+	}
+
+	// Run validate
+	result := agent.toolRunValidate("workflow.yml")
+
+	// Should have some output
+	if result == "" {
+		t.Log("Warning: validate result is empty")
+	}
+}

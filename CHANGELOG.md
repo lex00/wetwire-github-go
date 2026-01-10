@@ -37,8 +37,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - `actions/golangci_lint`: 84.0% → 100% (16+ percentage point improvement) (#140)
     - `actions/azure_login`: 85.7% → 100% (14+ percentage point improvement) (#140)
     - `actions/setup_dotnet`: 85.7% → 100% (14+ percentage point improvement) (#140)
-  - `internal/agent`: 24.7% → 41.8% (17+ percentage point improvement) (#139)
-    - Added 46 test functions covering checkCompletionGate, executeTool routing, AskDeveloper, state management
+  - `internal/agent`: 24.7% → 55.2% (30+ percentage point improvement) (#139, #155)
+    - Added 76+ test functions covering checkCompletionGate, executeTool routing, AskDeveloper, state management
+    - Functions at 100%: NewGitHubAgent, checkLintEnforcement, checkCompletionGate, getTools, executeTool, toolReadFile, AskDeveloper
   - `internal/linter`: 83.9% → 91.3% (7+ percentage point improvement) (#143, #149)
   - `codegen`: 85.2% → 89.5% (4+ percentage point improvement) (#143)
 - **Additional Lint Rules (WAG013-WAG016)** - 4 new lint rules for code quality (#149)
@@ -54,6 +55,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `JamesIves/github-pages-deploy-action@v4` - Deploy to GitHub Pages
   - `slackapi/slack-github-action@v1` - Slack workflow notifications
   - `hashicorp/setup-terraform@v3` - Terraform CLI setup
+- **Additional Action Wrappers** - 4 typed wrappers for GitHub automation (#154)
+  - `peaceiris/actions-gh-pages@v4` - GitHub Pages deployment (alternative)
+  - `actions/first-interaction@v1` - First-time contributor greeting
+  - `actions/add-to-project@v1` - Add issues/PRs to GitHub Projects
+  - `actions/create-github-app-token@v1` - GitHub App token creation
 - **Additional Example Workflows** - 3 new workflow examples (#148)
   - `examples/docker-workflow` - Docker build and push to GHCR with multi-stage CI
   - `examples/release-workflow` - Automated GitHub releases on version tags
