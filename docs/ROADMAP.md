@@ -119,6 +119,8 @@ Type-safe wrappers for popular GitHub Actions:
 | Developers | ✅ | `docs/DEVELOPERS.md` |
 | Internals | ✅ | `docs/INTERNALS.md` |
 | Examples | ✅ | `docs/EXAMPLES.md` |
+| Versioning | ✅ | `docs/VERSIONING.md` |
+| Adoption | ✅ | `docs/ADOPTION.md` |
 
 ---
 
@@ -162,9 +164,9 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] Remove .ToStep() refactor - pure struct-literal pattern (#110)
 
 ### Phase 7: Future Enhancements
-- [ ] Type-safe intrinsics for GitHub expression contexts
-- [ ] Dedicated graph package for visualization export
-- [ ] Additional documentation (VERSIONING.md, ADOPTION.md)
+- [x] Type-safe intrinsics for GitHub expression contexts (already implemented in workflow/expressions.go)
+- [x] Dedicated graph package for visualization (already implemented - DOT, Mermaid, JSON via CLI)
+- [x] Additional documentation (VERSIONING.md, ADOPTION.md) (#117)
 - [ ] Performance optimization
 
 ---
