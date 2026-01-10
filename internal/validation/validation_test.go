@@ -596,3 +596,231 @@ func TestValidationResult_WithIssues(t *testing.T) {
 		t.Errorf("Second issue message = %q, want %q", result.Issues[1].Message, "error 2")
 	}
 }
+
+// errorValidator is a mock validator that always returns an error
+type errorValidator struct {
+	err error
+}
+
+func (v *errorValidator) Validate(path string, content []byte) (*ValidationResult, error) {
+	return nil, v.err
+}
+
+// successValidator is a mock validator that always succeeds with optional issues
+type successValidator struct {
+	issues []ValidationIssue
+}
+
+func (v *successValidator) Validate(path string, content []byte) (*ValidationResult, error) {
+	return &ValidationResult{
+		Success: len(v.issues) == 0,
+		Issues:  v.issues,
+	}, nil
+}
+
+func TestValidatorPipeline_ValidatorReturnsError(t *testing.T) {
+	// Create a pipeline with a validator that returns an error
+	testErr := os.ErrPermission
+	pipeline := NewValidatorPipeline(&errorValidator{err: testErr})
+
+	result, err := pipeline.Validate("test.yml", []byte(`name: Test`))
+
+	// Pipeline should propagate the error
+	if err == nil {
+		t.Error("Pipeline.Validate() expected error to be propagated")
+	}
+
+	if err != testErr {
+		t.Errorf("Pipeline.Validate() error = %v, want %v", err, testErr)
+	}
+
+	if result != nil {
+		t.Error("Pipeline.Validate() result should be nil when error is returned")
+	}
+}
+
+func TestValidatorPipeline_FirstValidatorErrors(t *testing.T) {
+	// First validator errors, second should not be called
+	testErr := os.ErrNotExist
+	pipeline := NewValidatorPipeline(
+		&errorValidator{err: testErr},
+		&successValidator{},
+	)
+
+	result, err := pipeline.Validate("test.yml", []byte(`name: Test`))
+
+	if err != testErr {
+		t.Errorf("Pipeline.Validate() error = %v, want %v", err, testErr)
+	}
+
+	if result != nil {
+		t.Error("Pipeline.Validate() result should be nil when first validator errors")
+	}
+}
+
+func TestValidatorPipeline_SecondValidatorErrors(t *testing.T) {
+	// First validator succeeds, second errors
+	testErr := os.ErrClosed
+	pipeline := NewValidatorPipeline(
+		&successValidator{},
+		&errorValidator{err: testErr},
+	)
+
+	result, err := pipeline.Validate("test.yml", []byte(`name: Test`))
+
+	if err != testErr {
+		t.Errorf("Pipeline.Validate() error = %v, want %v", err, testErr)
+	}
+
+	if result != nil {
+		t.Error("Pipeline.Validate() result should be nil when second validator errors")
+	}
+}
+
+func TestValidatorPipeline_CombinesIssuesFromMultipleValidators(t *testing.T) {
+	issue1 := ValidationIssue{File: "test.yml", Line: 1, Message: "issue 1"}
+	issue2 := ValidationIssue{File: "test.yml", Line: 2, Message: "issue 2"}
+
+	pipeline := NewValidatorPipeline(
+		&successValidator{issues: []ValidationIssue{issue1}},
+		&successValidator{issues: []ValidationIssue{issue2}},
+	)
+
+	result, err := pipeline.Validate("test.yml", []byte(`name: Test`))
+
+	if err != nil {
+		t.Fatalf("Pipeline.Validate() unexpected error: %v", err)
+	}
+
+	if result.Success {
+		t.Error("Pipeline.Validate() Success = true, want false when validators have issues")
+	}
+
+	if len(result.Issues) != 2 {
+		t.Errorf("Pipeline.Validate() expected 2 issues, got %d", len(result.Issues))
+	}
+
+	if result.Issues[0].Message != "issue 1" || result.Issues[1].Message != "issue 2" {
+		t.Errorf("Pipeline.Validate() issues not properly combined")
+	}
+}
+
+func TestValidatorPipeline_MixedSuccessAndFailure(t *testing.T) {
+	// First validator succeeds, second has issues
+	issue := ValidationIssue{File: "test.yml", Line: 1, Message: "issue"}
+
+	pipeline := NewValidatorPipeline(
+		&successValidator{issues: nil},
+		&successValidator{issues: []ValidationIssue{issue}},
+	)
+
+	result, err := pipeline.Validate("test.yml", []byte(`name: Test`))
+
+	if err != nil {
+		t.Fatalf("Pipeline.Validate() unexpected error: %v", err)
+	}
+
+	// Should be false because second validator has issues
+	if result.Success {
+		t.Error("Pipeline.Validate() Success = true, want false")
+	}
+}
+
+func TestValidationIssue_ZeroValues(t *testing.T) {
+	// Test issue with zero/empty values
+	issue := ValidationIssue{}
+
+	if issue.File != "" {
+		t.Error("Zero-value File should be empty string")
+	}
+	if issue.Line != 0 {
+		t.Error("Zero-value Line should be 0")
+	}
+	if issue.Column != 0 {
+		t.Error("Zero-value Column should be 0")
+	}
+	if issue.Message != "" {
+		t.Error("Zero-value Message should be empty string")
+	}
+	if issue.RuleID != "" {
+		t.Error("Zero-value RuleID should be empty string")
+	}
+
+	// Severity should still work
+	if issue.Severity() != "error" {
+		t.Errorf("Severity() = %q, want %q", issue.Severity(), "error")
+	}
+}
+
+func TestActionlintValidator_ValidateFile_UnreadableFile(t *testing.T) {
+	// Create a temporary directory that we'll use for an unreadable file
+	tmpDir := t.TempDir()
+	unreadablePath := filepath.Join(tmpDir, "unreadable.yml")
+
+	// Create the file first
+	content := []byte(`name: Test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+`)
+	if err := os.WriteFile(unreadablePath, content, 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Make it unreadable (only works on Unix-like systems)
+	if err := os.Chmod(unreadablePath, 0000); err != nil {
+		t.Skip("Cannot change file permissions on this system")
+	}
+
+	// Restore permissions for cleanup
+	t.Cleanup(func() {
+		os.Chmod(unreadablePath, 0644)
+	})
+
+	v := NewActionlintValidator()
+	result, err := v.ValidateFile(unreadablePath)
+
+	// Should return an error for unreadable file
+	if err == nil {
+		// On some systems, root can read any file
+		t.Log("File was readable (possibly running as root)")
+		if !result.Success {
+			t.Log("Validation failed as expected")
+		}
+		return
+	}
+
+	// Result should be nil when error is returned
+	if result != nil {
+		t.Error("ValidateFile() result should be nil when error is returned")
+	}
+}
+
+func TestActionlintValidator_Validate_NilContent(t *testing.T) {
+	v := NewActionlintValidator()
+	result, err := v.Validate("test.yml", nil)
+
+	// Nil content should either error or fail validation
+	if err == nil && result != nil && result.Success {
+		t.Error("Validate() expected error or failed validation for nil content")
+	}
+}
+
+func TestValidatorPipeline_NilValidators(t *testing.T) {
+	// Create pipeline with nil slice
+	pipeline := &ValidatorPipeline{validators: nil}
+
+	result, err := pipeline.Validate("test.yml", []byte(`name: Test`))
+
+	if err != nil {
+		t.Fatalf("Pipeline.Validate() unexpected error: %v", err)
+	}
+
+	// Empty/nil validator list should succeed
+	if !result.Success {
+		t.Error("Pipeline.Validate() with nil validators should succeed")
+	}
+}

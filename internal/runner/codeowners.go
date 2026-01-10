@@ -165,7 +165,7 @@ func extractConfig(name string, rules []codeowners.Rule) ExtractedCodeowners {
 func main() {
 	result := CodeownersExtractionResult{
 		Configs: []ExtractedCodeowners{
-			` + strings.Join(vars, ",\n\t\t\t") + `
+			` + strings.Join(vars, ",\n\t\t\t") + `,
 		},
 	}
 
