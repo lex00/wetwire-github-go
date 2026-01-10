@@ -72,6 +72,66 @@ func TestAzureLogin_Inputs_Options(t *testing.T) {
 	}
 }
 
+func TestAzureLogin_Inputs_AllowNoSubscriptions(t *testing.T) {
+	a := AzureLogin{
+		ClientID:             "my-client-id",
+		TenantID:             "my-tenant-id",
+		AllowNoSubscriptions: true,
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["allow-no-subscriptions"] != true {
+		t.Errorf("inputs[allow-no-subscriptions] = %v, want true", inputs["allow-no-subscriptions"])
+	}
+}
+
+func TestAzureLogin_Inputs_Audience(t *testing.T) {
+	a := AzureLogin{
+		ClientID: "my-client-id",
+		TenantID: "my-tenant-id",
+		Audience: "api://AzureADTokenExchange",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["audience"] != "api://AzureADTokenExchange" {
+		t.Errorf("inputs[audience] = %v, want api://AzureADTokenExchange", inputs["audience"])
+	}
+}
+
+func TestAzureLogin_Inputs_AuthType(t *testing.T) {
+	a := AzureLogin{
+		ClientID: "my-client-id",
+		TenantID: "my-tenant-id",
+		AuthType: "SERVICE_PRINCIPAL",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["auth-type"] != "SERVICE_PRINCIPAL" {
+		t.Errorf("inputs[auth-type] = %v, want SERVICE_PRINCIPAL", inputs["auth-type"])
+	}
+}
+
+func TestAzureLogin_Inputs_BooleanFalse(t *testing.T) {
+	a := AzureLogin{
+		ClientID:             "my-client-id",
+		TenantID:             "my-tenant-id",
+		EnableAzPSSession:    false,
+		AllowNoSubscriptions: false,
+	}
+
+	inputs := a.Inputs()
+
+	if _, ok := inputs["enable-AzPSSession"]; ok {
+		t.Error("enable-AzPSSession=false should not be in inputs")
+	}
+	if _, ok := inputs["allow-no-subscriptions"]; ok {
+		t.Error("allow-no-subscriptions=false should not be in inputs")
+	}
+}
+
 func TestAzureLogin_ImplementsStepAction(t *testing.T) {
 	a := AzureLogin{}
 	var _ workflow.StepAction = a

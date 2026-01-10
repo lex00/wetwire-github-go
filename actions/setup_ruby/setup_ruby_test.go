@@ -96,6 +96,74 @@ func TestSetupRuby_Inputs_WorkingDirectory(t *testing.T) {
 	}
 }
 
+func TestSetupRuby_Inputs_RubyVersionFile(t *testing.T) {
+	a := SetupRuby{
+		RubyVersionFile: ".ruby-version",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["ruby-version-file"] != ".ruby-version" {
+		t.Errorf("ruby-version-file = %v, want %q", inputs["ruby-version-file"], ".ruby-version")
+	}
+}
+
+func TestSetupRuby_Inputs_CacheVersion(t *testing.T) {
+	a := SetupRuby{
+		RubyVersion:  "3.3",
+		CacheVersion: "v1",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["cache-version"] != "v1" {
+		t.Errorf("cache-version = %v, want %q", inputs["cache-version"], "v1")
+	}
+}
+
+func TestSetupRuby_Inputs_RubygemsPath(t *testing.T) {
+	a := SetupRuby{
+		RubyVersion:  "3.3",
+		RubygemsPath: "/custom/path",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["rubygems"] != "/custom/path" {
+		t.Errorf("rubygems = %v, want %q", inputs["rubygems"], "/custom/path")
+	}
+}
+
+func TestSetupRuby_Inputs_BundlerNoLock(t *testing.T) {
+	a := SetupRuby{
+		RubyVersion:   "3.3",
+		BundlerNoLock: true,
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["bundler-no-lock"] != true {
+		t.Errorf("bundler-no-lock = %v, want %v", inputs["bundler-no-lock"], true)
+	}
+}
+
+func TestSetupRuby_Inputs_BooleanFalse(t *testing.T) {
+	a := SetupRuby{
+		RubyVersion:   "3.3",
+		BundlerCache:  false,
+		BundlerNoLock: false,
+	}
+
+	inputs := a.Inputs()
+
+	if _, ok := inputs["bundler-cache"]; ok {
+		t.Error("bundler-cache=false should not be in inputs")
+	}
+	if _, ok := inputs["bundler-no-lock"]; ok {
+		t.Error("bundler-no-lock=false should not be in inputs")
+	}
+}
+
 func TestSetupRuby_ImplementsStepAction(t *testing.T) {
 	var _ workflow.StepAction = SetupRuby{}
 }

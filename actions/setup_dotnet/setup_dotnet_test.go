@@ -106,6 +106,62 @@ func TestSetupDotnet_Inputs_Quality(t *testing.T) {
 	}
 }
 
+func TestSetupDotnet_Inputs_Source(t *testing.T) {
+	a := SetupDotnet{
+		DotnetVersion: "8.0.x",
+		Source:        "https://pkgs.dev.azure.com/org/_packaging/feed/nuget/v3/index.json",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["source"] != "https://pkgs.dev.azure.com/org/_packaging/feed/nuget/v3/index.json" {
+		t.Errorf("inputs[source] = %v, want Azure DevOps feed URL", inputs["source"])
+	}
+}
+
+func TestSetupDotnet_Inputs_Token(t *testing.T) {
+	a := SetupDotnet{
+		DotnetVersion: "8.0.x",
+		Token:         "${{ secrets.NUGET_AUTH_TOKEN }}",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["token"] != "${{ secrets.NUGET_AUTH_TOKEN }}" {
+		t.Errorf("inputs[token] = %v, want secret reference", inputs["token"])
+	}
+}
+
+func TestSetupDotnet_Inputs_ConfigFile(t *testing.T) {
+	a := SetupDotnet{
+		DotnetVersion: "8.0.x",
+		ConfigFile:    "./nuget.config",
+	}
+
+	inputs := a.Inputs()
+
+	if inputs["config-file"] != "./nuget.config" {
+		t.Errorf("inputs[config-file] = %v, want ./nuget.config", inputs["config-file"])
+	}
+}
+
+func TestSetupDotnet_Inputs_BooleanFalse(t *testing.T) {
+	a := SetupDotnet{
+		DotnetVersion:     "8.0.x",
+		IncludePrerelease: false,
+		Cache:             false,
+	}
+
+	inputs := a.Inputs()
+
+	if _, ok := inputs["include-prerelease"]; ok {
+		t.Error("include-prerelease=false should not be in inputs")
+	}
+	if _, ok := inputs["cache"]; ok {
+		t.Error("cache=false should not be in inputs")
+	}
+}
+
 func TestSetupDotnet_ImplementsStepAction(t *testing.T) {
 	a := SetupDotnet{}
 	// Verify SetupDotnet implements StepAction interface
