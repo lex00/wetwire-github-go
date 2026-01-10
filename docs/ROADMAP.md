@@ -2,7 +2,7 @@
 
 Feature matrix and implementation status for wetwire-github-go.
 
-**Last Updated:** 2026-01-09
+**Last Updated:** 2026-01-10
 
 ---
 
@@ -98,6 +98,7 @@ Type-safe wrappers for popular GitHub Actions:
 | docker/build-push-action | `actions/docker_build_push` | ✅ |
 | docker/login-action | `actions/docker_login` | ✅ |
 | docker/setup-buildx-action | `actions/docker_setup_buildx` | ✅ |
+| docker/metadata-action | `actions/docker_metadata` | ✅ |
 | codecov/codecov-action | `actions/codecov` | ✅ |
 | aws-actions/configure-aws-credentials | `actions/aws_configure_credentials` | ✅ |
 | aws-actions/amazon-ecr-login | `actions/aws_ecr_login` | ✅ |
@@ -123,6 +124,8 @@ Type-safe wrappers for popular GitHub Actions:
 | actions/first-interaction | `actions/first_interaction` | ✅ |
 | actions/add-to-project | `actions/add_to_project` | ✅ |
 | actions/create-github-app-token | `actions/create_github_app_token` | ✅ |
+| actions/attest-build-provenance | `actions/attest_build_provenance` | ✅ |
+| mikepenz/action-junit-report | `actions/junit_report` | ✅ |
 
 ---
 
