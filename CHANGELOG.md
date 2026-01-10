@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **CODEOWNERS Import** - Import existing CODEOWNERS files to Go code (#104)
+  - Parse CODEOWNERS format (pattern + owners)
+  - Handle inline and full-line comments
+  - Generate `codeowners.Owners` declarations with Rules slice
+  - Support `--type codeowners` option in import command
 - **PR Template Import** - Import existing PULL_REQUEST_TEMPLATE.md files to Go code (#103)
   - Parse markdown PR templates
   - Generate `templates.PRTemplate` declarations

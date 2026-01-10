@@ -52,22 +52,30 @@ wetwire-github build . --type dependabot
 
 ### `wetwire-github import`
 
-Convert existing YAML to Go code.
+Convert existing configuration files to Go code.
 
 ```bash
-wetwire-github import <workflow.yml> [flags]
+wetwire-github import <file> [flags]
 ```
 
 **Flags:**
 - `-o, --output <dir>` — Output directory (default: current directory)
 - `--single-file` — Generate all code in a single file
 - `--no-scaffold` — Skip generating go.mod, README, etc.
-- `--type <type>` — Config type: `workflow`, `dependabot`, `issue-template`
+- `--type <type>` — Config type: `workflow`, `dependabot`, `issue-template`, `discussion-template`, `codeowners`
+
+**Supported Types:**
+- `workflow` — GitHub Actions YAML files (default)
+- `dependabot` — Dependabot configuration
+- `issue-template` — Issue template YAML files
+- `discussion-template` — Discussion template YAML files
+- `codeowners` — CODEOWNERS file
 
 **Example:**
 ```bash
 wetwire-github import .github/workflows/ci.yml -o my-workflows/
 wetwire-github import ci.yml --single-file
+wetwire-github import .github/CODEOWNERS --type codeowners -o my-project/
 ```
 
 See [Import Workflow](IMPORT_WORKFLOW.md) for detailed import documentation.

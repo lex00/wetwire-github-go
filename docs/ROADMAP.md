@@ -12,7 +12,7 @@ Feature matrix and implementation status for wetwire-github-go.
 |---------|--------|-------|
 | `build` | ✅ Complete | Generates .github/workflows/*.yml |
 | `lint` | ✅ Complete | Includes `--fix` for WAG001 |
-| `import` | ✅ Complete | Supports workflow, dependabot, issue-template, discussion-template |
+| `import` | ✅ Complete | Supports workflow, dependabot, issue-template, discussion-template, codeowners |
 | `validate` | ✅ Complete | Uses actionlint |
 | `list` | ✅ Complete | Lists workflows, jobs, triggers |
 | `init` | ✅ Complete | Scaffolds new projects |
@@ -51,7 +51,7 @@ Feature matrix and implementation status for wetwire-github-go.
 | Issue Templates | ✅ | ✅ | `.github/ISSUE_TEMPLATE/*.yml` |
 | Discussion Templates | ✅ | ✅ | `.github/DISCUSSION_TEMPLATE/*.yml` |
 | PR Templates | ✅ | ✅ | `.github/PULL_REQUEST_TEMPLATE.md` |
-| CODEOWNERS | ✅ | ❌ | `.github/CODEOWNERS` |
+| CODEOWNERS | ✅ | ✅ | `.github/CODEOWNERS` |
 
 ---
 
@@ -147,10 +147,10 @@ Type-safe wrappers for popular GitHub Actions:
 
 ### Phase 6: Future Enhancements
 - [x] PR Template import support (#103)
-- [ ] CODEOWNERS import support
-- [ ] AWS action wrappers (configure-aws-credentials, s3-sync)
-- [ ] Azure action wrappers (login, webapp-deploy)
-- [ ] GCP action wrappers (auth, deploy-cloudrun)
+- [x] CODEOWNERS import support (#104)
+- [ ] AWS action wrappers (configure-aws-credentials, s3-sync) (#105)
+- [ ] Azure action wrappers (login, webapp-deploy) (#106)
+- [ ] GCP action wrappers (auth, deploy-cloudrun) (#107)
 - [ ] Performance optimization
 
 ---
