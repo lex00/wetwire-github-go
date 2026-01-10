@@ -193,7 +193,8 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] Additional action wrappers (gh_pages_deploy, slack, setup_terraform) (#152)
 - [x] Additional action wrappers (gh_pages_peaceiris, first_interaction, add_to_project, create_github_app_token) (#154)
 - [x] Agent test coverage improvements (24.7% → 55.2%) (#155)
-- [ ] Performance optimization
+- [x] Performance benchmarks (discover, serialize, importer, runner, linter) (#157)
+- [x] Codegen test coverage improvements (89.5% → 95.7%) (#158)
 
 ---
 

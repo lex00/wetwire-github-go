@@ -41,7 +41,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - Added 76+ test functions covering checkCompletionGate, executeTool routing, AskDeveloper, state management
     - Functions at 100%: NewGitHubAgent, checkLintEnforcement, checkCompletionGate, getTools, executeTool, toolReadFile, AskDeveloper
   - `internal/linter`: 83.9% → 91.3% (7+ percentage point improvement) (#143, #149)
-  - `codegen`: 85.2% → 89.5% (4+ percentage point improvement) (#143)
+  - `codegen`: 85.2% → 95.7% (10+ percentage point improvement) (#143, #158)
+  - `internal/runner`: 89.9% → 90.8% (additional edge case tests) (#158)
 - **Additional Lint Rules (WAG013-WAG016)** - 4 new lint rules for code quality (#149)
   - WAG013: Detect pointer assignments (&Type{}) - wetwire uses value semantics
   - WAG014: Flag jobs without timeout-minutes setting
@@ -60,6 +61,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `actions/first-interaction@v1` - First-time contributor greeting
   - `actions/add-to-project@v1` - Add issues/PRs to GitHub Projects
   - `actions/create-github-app-token@v1` - GitHub App token creation
+- **Performance Benchmarks** - Benchmarks for key operations (#157)
+  - `internal/discover` - AST discovery benchmarks
+  - `internal/serialize` - YAML serialization benchmarks
+  - `internal/importer` - Import and code generation benchmarks
+  - `internal/runner` - Value extraction benchmarks
+  - `internal/linter` - Linting benchmarks for all 16 rules
 - **Additional Example Workflows** - 3 new workflow examples (#148)
   - `examples/docker-workflow` - Docker build and push to GHCR with multi-stage CI
   - `examples/release-workflow` - Automated GitHub releases on version tags

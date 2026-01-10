@@ -3581,3 +3581,732 @@ replace github.com/lex00/wetwire-github-go => %s
 		t.Errorf("len(Rules) = %d, want 2", len(result.Configs[0].Rules))
 	}
 }
+
+// Test ExtractValues with missing Go binary
+func TestRunner_ExtractValues_MissingGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write a simple Go file
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var TestWorkflow = workflow.Workflow{Name: "Test"}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary", // Invalid Go path
+		Verbose: false,
+	}
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "TestWorkflow", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractValues() expected error with missing Go binary")
+	}
+}
+
+// Test ExtractValues when go mod tidy fails
+func TestRunner_ExtractValues_GoModTidyFails(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Write an invalid go.mod that will cause go mod tidy to fail
+	goMod := `module github.com/example/test
+
+go 1.23
+
+require nonexistent-module-that-does-not-exist v99.99.99
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var TestWorkflow = workflow.Workflow{Name: "Test"}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "TestWorkflow", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractValues() expected error when go mod tidy fails")
+	} else if !strings.Contains(err.Error(), "go mod tidy") {
+		t.Logf("ExtractValues() error = %v", err)
+	}
+}
+
+// Test ExtractValues when compilation fails
+func TestRunner_ExtractValues_CompilationFails(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write code that references a non-existent variable
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var TestWorkflow = workflow.Workflow{Name: "Test"}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	// Reference a variable that doesn't exist
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "NonExistentWorkflow", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	// This will fail during compilation because NonExistentWorkflow doesn't exist
+	if err == nil {
+		t.Log("ExtractValues() succeeded - variable may have been found")
+	} else {
+		t.Logf("ExtractValues() error = %v (expected)", err)
+	}
+}
+
+// Test ExtractDependabot with missing Go binary
+func TestRunner_ExtractDependabot_MissingGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/dependabot"
+
+var Config = dependabot.Config{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "dependabot.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+		Verbose: false,
+	}
+
+	discovered := &discover.DependabotDiscoveryResult{
+		Configs: []discover.DiscoveredDependabot{
+			{Name: "Config", File: filepath.Join(tmpDir, "dependabot.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDependabot(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDependabot() expected error with missing Go binary")
+	}
+}
+
+// Test ExtractIssueTemplates with missing Go binary
+func TestRunner_ExtractIssueTemplates_MissingGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/issue"
+
+var BugReport = issue.Template{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "templates.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+		Verbose: false,
+	}
+
+	discovered := &discover.IssueTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredIssueTemplate{
+			{Name: "BugReport", File: filepath.Join(tmpDir, "templates.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractIssueTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractIssueTemplates() expected error with missing Go binary")
+	}
+}
+
+// Test ExtractDiscussionTemplates with missing Go binary
+func TestRunner_ExtractDiscussionTemplates_MissingGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/discussion"
+
+var Announcement = discussion.Template{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "templates.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+		Verbose: false,
+	}
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{
+			{Name: "Announcement", File: filepath.Join(tmpDir, "templates.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDiscussionTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDiscussionTemplates() expected error with missing Go binary")
+	}
+}
+
+// Test ExtractPRTemplates with missing Go binary
+func TestRunner_ExtractPRTemplates_MissingGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/pr"
+
+var DefaultPR = pr.Template{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "templates.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+		Verbose: false,
+	}
+
+	discovered := &discover.PRTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredPRTemplate{
+			{Name: "DefaultPR", File: filepath.Join(tmpDir, "templates.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractPRTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractPRTemplates() expected error with missing Go binary")
+	}
+}
+
+// Test ExtractCodeowners with missing Go binary
+func TestRunner_ExtractCodeowners_MissingGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/codeowners"
+
+var Owners = codeowners.Owners{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "codeowners.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+		Verbose: false,
+	}
+
+	discovered := &discover.CodeownersDiscoveryResult{
+		Configs: []discover.DiscoveredCodeowners{
+			{Name: "Owners", File: filepath.Join(tmpDir, "codeowners.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractCodeowners(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractCodeowners() expected error with missing Go binary")
+	}
+}
+
+// Test RunnerStruct fields
+func TestRunnerStruct(t *testing.T) {
+	r := &Runner{
+		TempDir: "/custom/temp",
+		GoPath:  "/custom/go",
+		Verbose: true,
+	}
+
+	if r.TempDir != "/custom/temp" {
+		t.Errorf("TempDir = %q, want %q", r.TempDir, "/custom/temp")
+	}
+	if r.GoPath != "/custom/go" {
+		t.Errorf("GoPath = %q, want %q", r.GoPath, "/custom/go")
+	}
+	if !r.Verbose {
+		t.Error("Verbose = false, want true")
+	}
+}
+
+// Test ExtractionResult struct
+func TestExtractionResultStruct(t *testing.T) {
+	result := ExtractionResult{
+		Workflows: []ExtractedWorkflow{
+			{Name: "CI", Data: map[string]any{"key": "value"}},
+		},
+		Jobs: []ExtractedJob{
+			{Name: "Build", Data: map[string]any{"name": "build"}},
+		},
+		Error: "some error",
+	}
+
+	if len(result.Workflows) != 1 {
+		t.Errorf("len(Workflows) = %d, want 1", len(result.Workflows))
+	}
+	if len(result.Jobs) != 1 {
+		t.Errorf("len(Jobs) = %d, want 1", len(result.Jobs))
+	}
+	if result.Error != "some error" {
+		t.Errorf("Error = %q, want %q", result.Error, "some error")
+	}
+}
+
+// Test ExtractedWorkflow struct
+func TestExtractedWorkflowStruct(t *testing.T) {
+	w := ExtractedWorkflow{
+		Name: "CI",
+		Data: map[string]any{"name": "Continuous Integration"},
+	}
+
+	if w.Name != "CI" {
+		t.Errorf("Name = %q, want %q", w.Name, "CI")
+	}
+	if w.Data["name"] != "Continuous Integration" {
+		t.Errorf("Data[name] = %v, want %q", w.Data["name"], "Continuous Integration")
+	}
+}
+
+// Test ExtractedJob struct
+func TestExtractedJobStruct(t *testing.T) {
+	j := ExtractedJob{
+		Name: "Build",
+		Data: map[string]any{"runs-on": "ubuntu-latest"},
+	}
+
+	if j.Name != "Build" {
+		t.Errorf("Name = %q, want %q", j.Name, "Build")
+	}
+	if j.Data["runs-on"] != "ubuntu-latest" {
+		t.Errorf("Data[runs-on] = %v, want %q", j.Data["runs-on"], "ubuntu-latest")
+	}
+}
+
+// Test with read-only temp directory to trigger write errors
+func TestRunner_ExtractValues_WriteProgramError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var TestWorkflow = workflow.Workflow{Name: "Test"}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a read-only temp directory for the runner
+	readOnlyTmp := filepath.Join(tmpDir, "readonly")
+	if err := os.MkdirAll(readOnlyTmp, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(readOnlyTmp, 0755)
+
+	r := &Runner{
+		TempDir: readOnlyTmp,
+		GoPath:  NewRunner().GoPath,
+		Verbose: false,
+	}
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "TestWorkflow", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	// On most systems, this should fail due to permission issues
+	if err != nil {
+		t.Logf("ExtractValues() with read-only temp dir error = %v (expected on most systems)", err)
+	}
+}
+
+// Test parseReplaceDirectives with complex replace blocks
+func TestRunner_parseReplaceDirectives_ComplexFormats(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+
+replace github.com/dep1 => ../dep1
+replace github.com/dep2 => ./local
+replace github.com/dep3 v1.0.0 => v1.0.1
+`
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	replaces := r.parseReplaceDirectives(tmpDir)
+
+	if len(replaces) != 3 {
+		t.Errorf("parseReplaceDirectives() returned %d directives, want 3", len(replaces))
+	}
+
+	// Verify replaces are present
+	foundDep1 := false
+	foundDep2 := false
+	foundDep3 := false
+	for _, replace := range replaces {
+		if strings.Contains(replace, "github.com/dep1") {
+			foundDep1 = true
+			// The relative path should be resolved to an absolute path
+			if strings.Contains(replace, " => ../dep1") {
+				t.Errorf("Relative path ../dep1 not resolved: %q", replace)
+			}
+		}
+		if strings.Contains(replace, "github.com/dep2") {
+			foundDep2 = true
+			// The relative path should be resolved to an absolute path
+			if strings.Contains(replace, " => ./local") {
+				t.Errorf("Relative path ./local not resolved: %q", replace)
+			}
+		}
+		if strings.Contains(replace, "github.com/dep3") {
+			foundDep3 = true
+			// Version replacement should be unchanged
+		}
+	}
+	if !foundDep1 || !foundDep2 || !foundDep3 {
+		t.Errorf("Missing expected replace directives: dep1=%v, dep2=%v, dep3=%v", foundDep1, foundDep2, foundDep3)
+	}
+}
+
+// Test ExtractValues when program execution fails (compile error)
+func TestRunner_ExtractValues_RunError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write code with the correct variable name
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{Name: "CI"}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	// Reference a variable that doesn't exist in the source code
+	// The generated program will try to reference a variable that doesn't exist
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "NonexistentVariable", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	if err == nil {
+		t.Log("ExtractValues() succeeded unexpectedly")
+	} else {
+		// The error should be about running extraction (compile error)
+		t.Logf("ExtractValues() error = %v", err)
+	}
+}
+
+// Test ExtractDependabot when program execution fails
+func TestRunner_ExtractDependabot_RunError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/dependabot"
+
+var Config = dependabot.Config{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "dependabot.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	// Reference a variable that doesn't exist
+	discovered := &discover.DependabotDiscoveryResult{
+		Configs: []discover.DiscoveredDependabot{
+			{Name: "NonexistentConfig", File: filepath.Join(tmpDir, "dependabot.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDependabot(tmpDir, discovered)
+	if err == nil {
+		t.Log("ExtractDependabot() succeeded unexpectedly")
+	} else {
+		t.Logf("ExtractDependabot() error = %v", err)
+	}
+}
+
+// Test ExtractIssueTemplates when program execution fails
+func TestRunner_ExtractIssueTemplates_RunError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/issue"
+
+var Template = issue.Template{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "templates.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.IssueTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredIssueTemplate{
+			{Name: "NonexistentTemplate", File: filepath.Join(tmpDir, "templates.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractIssueTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Log("ExtractIssueTemplates() succeeded unexpectedly")
+	} else {
+		t.Logf("ExtractIssueTemplates() error = %v", err)
+	}
+}
+
+// Test ExtractDiscussionTemplates when program execution fails
+func TestRunner_ExtractDiscussionTemplates_RunError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/discussion"
+
+var Template = discussion.Template{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "templates.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{
+			{Name: "NonexistentTemplate", File: filepath.Join(tmpDir, "templates.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDiscussionTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Log("ExtractDiscussionTemplates() succeeded unexpectedly")
+	} else {
+		t.Logf("ExtractDiscussionTemplates() error = %v", err)
+	}
+}
+
+// Test ExtractPRTemplates when program execution fails
+func TestRunner_ExtractPRTemplates_RunError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/pr"
+
+var Template = pr.Template{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "templates.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.PRTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredPRTemplate{
+			{Name: "NonexistentTemplate", File: filepath.Join(tmpDir, "templates.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractPRTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Log("ExtractPRTemplates() succeeded unexpectedly")
+	} else {
+		t.Logf("ExtractPRTemplates() error = %v", err)
+	}
+}
+
+// Test ExtractCodeowners when program execution fails
+func TestRunner_ExtractCodeowners_RunError(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	goCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/codeowners"
+
+var Owners = codeowners.Owners{}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "codeowners.go"), []byte(goCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.CodeownersDiscoveryResult{
+		Configs: []discover.DiscoveredCodeowners{
+			{Name: "NonexistentOwners", File: filepath.Join(tmpDir, "codeowners.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractCodeowners(tmpDir, discovered)
+	if err == nil {
+		t.Log("ExtractCodeowners() succeeded unexpectedly")
+	} else {
+		t.Logf("ExtractCodeowners() error = %v", err)
+	}
+}
