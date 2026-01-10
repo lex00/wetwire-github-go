@@ -3229,3 +3229,355 @@ var TestJob = workflow.Job{
 		t.Errorf("Job name = %q, want %q", result.Jobs[0].Name, "TestJob")
 	}
 }
+
+// Integration test - ExtractDependabot with real Go code
+func TestRunner_ExtractDependabot_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	projectRoot := wd
+	for {
+		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(projectRoot)
+		if parent == projectRoot {
+			t.Skip("Could not find project root")
+		}
+		projectRoot = parent
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := fmt.Sprintf(`module testproject
+
+go 1.23
+
+require github.com/lex00/wetwire-github-go v0.0.0
+
+replace github.com/lex00/wetwire-github-go => %s
+`, projectRoot)
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	dependabotCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/dependabot"
+
+var TestDependabot = dependabot.Dependabot{
+	Version: 2,
+}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "dependabot.go"), []byte(dependabotCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.DependabotDiscoveryResult{
+		Configs: []discover.DiscoveredDependabot{
+			{Name: "TestDependabot", File: filepath.Join(tmpDir, "dependabot.go"), Line: 5},
+		},
+	}
+
+	result, err := r.ExtractDependabot(tmpDir, discovered)
+	if err != nil {
+		t.Fatalf("ExtractDependabot() error = %v", err)
+	}
+
+	if len(result.Configs) != 1 {
+		t.Errorf("len(Configs) = %d, want 1", len(result.Configs))
+	}
+
+	if result.Configs[0].Name != "TestDependabot" {
+		t.Errorf("Config name = %q, want %q", result.Configs[0].Name, "TestDependabot")
+	}
+}
+
+// Integration test - ExtractIssueTemplates with real Go code
+func TestRunner_ExtractIssueTemplates_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	projectRoot := wd
+	for {
+		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(projectRoot)
+		if parent == projectRoot {
+			t.Skip("Could not find project root")
+		}
+		projectRoot = parent
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := fmt.Sprintf(`module testproject
+
+go 1.23
+
+require github.com/lex00/wetwire-github-go v0.0.0
+
+replace github.com/lex00/wetwire-github-go => %s
+`, projectRoot)
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	templateCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/templates"
+
+var TestIssueTemplate = templates.IssueTemplate{
+	Name:        "Bug Report",
+	Description: "Report a bug",
+}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "issue_templates.go"), []byte(templateCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.IssueTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredIssueTemplate{
+			{Name: "TestIssueTemplate", File: filepath.Join(tmpDir, "issue_templates.go"), Line: 5},
+		},
+	}
+
+	result, err := r.ExtractIssueTemplates(tmpDir, discovered)
+	if err != nil {
+		t.Fatalf("ExtractIssueTemplates() error = %v", err)
+	}
+
+	if len(result.Templates) != 1 {
+		t.Errorf("len(Templates) = %d, want 1", len(result.Templates))
+	}
+
+	if result.Templates[0].Name != "TestIssueTemplate" {
+		t.Errorf("Template name = %q, want %q", result.Templates[0].Name, "TestIssueTemplate")
+	}
+}
+
+// Integration test - ExtractDiscussionTemplates with real Go code
+func TestRunner_ExtractDiscussionTemplates_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	projectRoot := wd
+	for {
+		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(projectRoot)
+		if parent == projectRoot {
+			t.Skip("Could not find project root")
+		}
+		projectRoot = parent
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := fmt.Sprintf(`module testproject
+
+go 1.23
+
+require github.com/lex00/wetwire-github-go v0.0.0
+
+replace github.com/lex00/wetwire-github-go => %s
+`, projectRoot)
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	discussionTemplateCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/templates"
+
+var TestDiscussionTemplate = templates.DiscussionTemplate{
+	Title:       "Announcement",
+	Description: "Make an announcement",
+}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "discussion_templates.go"), []byte(discussionTemplateCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{
+			{Name: "TestDiscussionTemplate", File: filepath.Join(tmpDir, "discussion_templates.go"), Line: 5},
+		},
+	}
+
+	result, err := r.ExtractDiscussionTemplates(tmpDir, discovered)
+	if err != nil {
+		t.Fatalf("ExtractDiscussionTemplates() error = %v", err)
+	}
+
+	if len(result.Templates) != 1 {
+		t.Errorf("len(Templates) = %d, want 1", len(result.Templates))
+	}
+
+	if result.Templates[0].Name != "TestDiscussionTemplate" {
+		t.Errorf("Template name = %q, want %q", result.Templates[0].Name, "TestDiscussionTemplate")
+	}
+}
+
+// Integration test - ExtractPRTemplates with real Go code
+func TestRunner_ExtractPRTemplates_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	projectRoot := wd
+	for {
+		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(projectRoot)
+		if parent == projectRoot {
+			t.Skip("Could not find project root")
+		}
+		projectRoot = parent
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := fmt.Sprintf(`module testproject
+
+go 1.23
+
+require github.com/lex00/wetwire-github-go v0.0.0
+
+replace github.com/lex00/wetwire-github-go => %s
+`, projectRoot)
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	prTemplateCode := "package testproject\n\nimport \"github.com/lex00/wetwire-github-go/templates\"\n\nvar TestPRTemplate = templates.PRTemplate{\n\tContent: \"Description\",\n}\n"
+	if err := os.WriteFile(filepath.Join(tmpDir, "pr_templates.go"), []byte(prTemplateCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.PRTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredPRTemplate{
+			{Name: "TestPRTemplate", File: filepath.Join(tmpDir, "pr_templates.go"), Line: 5},
+		},
+	}
+
+	result, err := r.ExtractPRTemplates(tmpDir, discovered)
+	if err != nil {
+		t.Fatalf("ExtractPRTemplates() error = %v", err)
+	}
+
+	if len(result.Templates) != 1 {
+		t.Errorf("len(Templates) = %d, want 1", len(result.Templates))
+	}
+
+	if result.Templates[0].Name != "TestPRTemplate" {
+		t.Errorf("Template name = %q, want %q", result.Templates[0].Name, "TestPRTemplate")
+	}
+}
+
+// Integration test - ExtractCodeowners with real Go code
+func TestRunner_ExtractCodeowners_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	projectRoot := wd
+	for {
+		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(projectRoot)
+		if parent == projectRoot {
+			t.Skip("Could not find project root")
+		}
+		projectRoot = parent
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := fmt.Sprintf(`module testproject
+
+go 1.23
+
+require github.com/lex00/wetwire-github-go v0.0.0
+
+replace github.com/lex00/wetwire-github-go => %s
+`, projectRoot)
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	codeownersCode := "package testproject\n\nimport \"github.com/lex00/wetwire-github-go/codeowners\"\n\nvar TestCodeowners = codeowners.Owners{\n\tRules: []codeowners.Rule{\n\t\t{Pattern: \"*\", Owners: []string{\"@default-team\"}},\n\t\t{Pattern: \"*.go\", Owners: []string{\"@go-team\"}},\n\t},\n}\n"
+	if err := os.WriteFile(filepath.Join(tmpDir, "codeowners.go"), []byte(codeownersCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.CodeownersDiscoveryResult{
+		Configs: []discover.DiscoveredCodeowners{
+			{Name: "TestCodeowners", File: filepath.Join(tmpDir, "codeowners.go"), Line: 5},
+		},
+	}
+
+	result, err := r.ExtractCodeowners(tmpDir, discovered)
+	if err != nil {
+		t.Fatalf("ExtractCodeowners() error = %v", err)
+	}
+
+	if len(result.Configs) != 1 {
+		t.Errorf("len(Configs) = %d, want 1", len(result.Configs))
+	}
+
+	if result.Configs[0].Name != "TestCodeowners" {
+		t.Errorf("Config name = %q, want %q", result.Configs[0].Name, "TestCodeowners")
+	}
+
+	if len(result.Configs[0].Rules) != 2 {
+		t.Errorf("len(Rules) = %d, want 2", len(result.Configs[0].Rules))
+	}
+}

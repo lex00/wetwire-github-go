@@ -19,9 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `internal/template`: 35.7% → 90.9% (55+ percentage point improvement)
   - `internal/importer`: 37.9% → 96.0% (58+ percentage point improvement)
   - `workflow`: 43.3% → 100.0% (57+ percentage point improvement)
-  - `internal/runner`: 20.9% → 80.2% (59+ percentage point improvement) (#121, #135)
+  - `internal/runner`: 20.9% → 89.9% (69+ percentage point improvement) (#121, #135, #146)
   - `internal/serialize`: 31.7% → 92.6% (61+ percentage point improvement) (#121)
-  - `internal/validation`: 55.3% → 89.5% (34+ percentage point improvement) (#130)
+  - `internal/validation`: 55.3% → 92.1% (37+ percentage point improvement) (#130, #145)
   - `internal/discover`: 61.0% → 93.8% (33+ percentage point improvement) (#131)
   - 188 test functions in workflow package covering all expression contexts, conditions, triggers
   - Action wrapper test coverage improvements (#137, #140):
@@ -164,6 +164,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 - Documentation accuracy: project structures, CLI flags, status tables
 - Runner now resolves relative paths in replace directives for proper module extraction
+- Fixed trailing comma syntax in generated extraction programs for PR templates and Codeowners (#146)
 
 ## [0.1.0] - 2025-01-06
 

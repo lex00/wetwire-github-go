@@ -136,7 +136,7 @@ type PRTemplateExtractionResult struct {
 func main() {
 	result := PRTemplateExtractionResult{
 		Templates: []ExtractedPRTemplate{
-			` + strings.Join(vars, ",\n\t\t\t") + `
+			` + strings.Join(vars, ",\n\t\t\t") + `,
 		},
 	}
 
