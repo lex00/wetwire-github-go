@@ -1,10 +1,6 @@
 // Package github_script provides a typed wrapper for actions/github-script.
 package github_script
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // GithubScript wraps the actions/github-script@v7 action.
 // Run JavaScript in your workflows using the GitHub API and workflow contexts.
 type GithubScript struct {
@@ -38,9 +34,9 @@ func (a GithubScript) Action() string {
 	return "actions/github-script@v7"
 }
 
-// ToStep converts this action to a workflow step.
-func (a GithubScript) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a GithubScript) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Script != "" {
 		with["script"] = a.Script
@@ -67,8 +63,5 @@ func (a GithubScript) ToStep() workflow.Step {
 		with["retry-exempt-status-codes"] = a.RetryExemptStatusCodes
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

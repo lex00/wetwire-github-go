@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Remove .ToStep() Method** - Action wrappers now implement `StepAction` interface (#110)
+  - Action wrappers can be used directly in `Job.Steps` slice
+  - Changed `Job.Steps` type from `[]Step` to `[]any` to support both `Step` and action wrappers
+  - Action wrappers implement `Action() string` and `Inputs() map[string]any` methods
+  - Conversion to Step happens during serialization, not at declaration time
+  - Pure struct-literal pattern for AI-friendly, declarative code
+
 ### Added
 - **CODEOWNERS Import** - Import existing CODEOWNERS files to Go code (#104)
   - Parse CODEOWNERS format (pattern + owners)

@@ -2,6 +2,8 @@ package docker_login
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestDockerLogin_Action(t *testing.T) {
@@ -11,63 +13,67 @@ func TestDockerLogin_Action(t *testing.T) {
 	}
 }
 
-func TestDockerLogin_ToStep(t *testing.T) {
+func TestDockerLogin_Inputs(t *testing.T) {
 	d := DockerLogin{
 		Registry: "ghcr.io",
 		Username: "${{ github.actor }}",
 		Password: "${{ secrets.GITHUB_TOKEN }}",
 	}
 
-	step := d.ToStep()
+	inputs := d.Inputs()
 
-	if step.Uses != "docker/login-action@v3" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "docker/login-action@v3")
+	if d.Action() != "docker/login-action@v3" {
+		t.Errorf("Action() = %q, want %q", d.Action(), "docker/login-action@v3")
 	}
 
-	if step.With["registry"] != "ghcr.io" {
-		t.Errorf("step.With[registry] = %v, want %q", step.With["registry"], "ghcr.io")
+	if inputs["registry"] != "ghcr.io" {
+		t.Errorf("inputs[registry] = %v, want %q", inputs["registry"], "ghcr.io")
 	}
 
-	if step.With["username"] != "${{ github.actor }}" {
-		t.Errorf("step.With[username] = %v, want %q", step.With["username"], "${{ github.actor }}")
+	if inputs["username"] != "${{ github.actor }}" {
+		t.Errorf("inputs[username] = %v, want %q", inputs["username"], "${{ github.actor }}")
 	}
 
-	if step.With["password"] != "${{ secrets.GITHUB_TOKEN }}" {
-		t.Errorf("step.With[password] = %v, want %q", step.With["password"], "${{ secrets.GITHUB_TOKEN }}")
+	if inputs["password"] != "${{ secrets.GITHUB_TOKEN }}" {
+		t.Errorf("inputs[password] = %v, want %q", inputs["password"], "${{ secrets.GITHUB_TOKEN }}")
 	}
 }
 
-func TestDockerLogin_ToStep_EmptyWithMaps(t *testing.T) {
+func TestDockerLogin_Inputs_EmptyWithMaps(t *testing.T) {
 	d := DockerLogin{}
-	step := d.ToStep()
+	inputs := d.Inputs()
 
-	if len(step.With) != 0 {
-		t.Errorf("empty DockerLogin.ToStep() has %d with entries, want 0", len(step.With))
+	if len(inputs) != 0 {
+		t.Errorf("empty DockerLogin.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestDockerLogin_ToStep_ECR(t *testing.T) {
+func TestDockerLogin_Inputs_ECR(t *testing.T) {
 	d := DockerLogin{
 		Registry: "123456789012.dkr.ecr.us-east-1.amazonaws.com",
 		ECR:      "auto",
 	}
 
-	step := d.ToStep()
+	inputs := d.Inputs()
 
-	if step.With["ecr"] != "auto" {
-		t.Errorf("step.With[ecr] = %v, want %q", step.With["ecr"], "auto")
+	if inputs["ecr"] != "auto" {
+		t.Errorf("inputs[ecr] = %v, want %q", inputs["ecr"], "auto")
 	}
 }
 
-func TestDockerLogin_ToStep_Logout(t *testing.T) {
+func TestDockerLogin_Inputs_Logout(t *testing.T) {
 	d := DockerLogin{
 		Registry: "docker.io",
 		Logout:   true,
 	}
 
-	step := d.ToStep()
+	inputs := d.Inputs()
 
-	if step.With["logout"] != true {
-		t.Errorf("step.With[logout] = %v, want true", step.With["logout"])
+	if inputs["logout"] != true {
+		t.Errorf("inputs[logout] = %v, want true", inputs["logout"])
 	}
+}
+
+func TestDockerLogin_ImplementsStepAction(t *testing.T) {
+	var _ workflow.StepAction = DockerLogin{}
 }

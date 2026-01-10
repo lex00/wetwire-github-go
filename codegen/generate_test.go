@@ -58,7 +58,7 @@ func TestGenerator_GenerateActionWrapper(t *testing.T) {
 		"type Checkout struct",
 		`func (a Checkout) Action() string`,
 		`return "actions/checkout@v4"`,
-		"func (a Checkout) ToStep() workflow.Step",
+		"func (a Checkout) Inputs() map[string]any",
 		"Token string", // Required field
 		"FetchDepth int",
 	}

@@ -1,10 +1,6 @@
 // Package cache provides a typed wrapper for actions/cache.
 package cache
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // Cache wraps the actions/cache@v4 action.
 // Cache dependencies and build outputs.
 type Cache struct {
@@ -38,9 +34,9 @@ func (a Cache) Action() string {
 	return "actions/cache@v4"
 }
 
-// ToStep converts this action to a workflow step.
-func (a Cache) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a Cache) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Path != "" {
 		with["path"] = a.Path
@@ -67,8 +63,5 @@ func (a Cache) ToStep() workflow.Step {
 		with["save-always"] = a.SaveAlways
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

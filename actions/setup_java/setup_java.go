@@ -1,10 +1,6 @@
 // Package setup_java provides a typed wrapper for actions/setup-java.
 package setup_java
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // SetupJava wraps the actions/setup-java@v4 action.
 // Set up a specific version of the Java JDK and add it to PATH.
 type SetupJava struct {
@@ -73,9 +69,9 @@ func (a SetupJava) Action() string {
 	return "actions/setup-java@v4"
 }
 
-// ToStep converts this action to a workflow step.
-func (a SetupJava) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a SetupJava) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.JavaVersion != "" {
 		with["java-version"] = a.JavaVersion
@@ -135,8 +131,5 @@ func (a SetupJava) ToStep() workflow.Step {
 		with["mvn-toolchain-vendor"] = a.MvnToolchainVendor
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

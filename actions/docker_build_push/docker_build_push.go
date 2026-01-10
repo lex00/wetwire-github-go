@@ -1,10 +1,6 @@
 // Package docker_build_push provides a typed wrapper for docker/build-push-action.
 package docker_build_push
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // DockerBuildPush wraps the docker/build-push-action@v6 action.
 // Build and push Docker images with Buildx.
 type DockerBuildPush struct {
@@ -65,9 +61,9 @@ func (a DockerBuildPush) Action() string {
 	return "docker/build-push-action@v6"
 }
 
-// ToStep converts this action to a workflow step.
-func (a DockerBuildPush) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a DockerBuildPush) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Context != "" {
 		with["context"] = a.Context
@@ -121,8 +117,5 @@ func (a DockerBuildPush) ToStep() workflow.Step {
 		with["sbom"] = a.SBOM
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

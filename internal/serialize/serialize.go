@@ -149,7 +149,7 @@ func jobToMap(j *workflow.Job) (map[string]any, error) {
 	if len(j.Steps) > 0 {
 		steps := make([]any, len(j.Steps))
 		for i, step := range j.Steps {
-			stepMap, err := stepToMap(&step)
+			stepMap, err := anyStepToMap(step)
 			if err != nil {
 				return nil, fmt.Errorf("serializing step %d: %w", i, err)
 			}
@@ -167,6 +167,22 @@ func jobToMap(j *workflow.Job) (map[string]any, error) {
 	}
 
 	return m, nil
+}
+
+// anyStepToMap handles both workflow.Step and StepAction types.
+func anyStepToMap(s any) (map[string]any, error) {
+	switch v := s.(type) {
+	case workflow.Step:
+		return stepToMap(&v)
+	case *workflow.Step:
+		return stepToMap(v)
+	case workflow.StepAction:
+		// Convert action wrapper to Step and serialize
+		step := workflow.ToStep(v)
+		return stepToMap(&step)
+	default:
+		return nil, fmt.Errorf("unsupported step type: %T", s)
+	}
 }
 
 // stepToMap converts a Step to a map for YAML serialization.

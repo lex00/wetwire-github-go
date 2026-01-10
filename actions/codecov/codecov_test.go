@@ -2,6 +2,8 @@ package codecov
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestCodecov_Action(t *testing.T) {
@@ -11,42 +13,42 @@ func TestCodecov_Action(t *testing.T) {
 	}
 }
 
-func TestCodecov_ToStep(t *testing.T) {
+func TestCodecov_Inputs(t *testing.T) {
 	c := Codecov{
 		Token: "${{ secrets.CODECOV_TOKEN }}",
 		Files: "./coverage.xml",
 		Flags: "unittests",
 	}
 
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if step.Uses != "codecov/codecov-action@v5" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "codecov/codecov-action@v5")
+	if c.Action() != "codecov/codecov-action@v5" {
+		t.Errorf("Action() = %q, want %q", c.Action(), "codecov/codecov-action@v5")
 	}
 
-	if step.With["token"] != "${{ secrets.CODECOV_TOKEN }}" {
-		t.Errorf("step.With[token] = %v, want %q", step.With["token"], "${{ secrets.CODECOV_TOKEN }}")
+	if inputs["token"] != "${{ secrets.CODECOV_TOKEN }}" {
+		t.Errorf("inputs[token] = %v, want %q", inputs["token"], "${{ secrets.CODECOV_TOKEN }}")
 	}
 
-	if step.With["files"] != "./coverage.xml" {
-		t.Errorf("step.With[files] = %v, want %q", step.With["files"], "./coverage.xml")
+	if inputs["files"] != "./coverage.xml" {
+		t.Errorf("inputs[files] = %v, want %q", inputs["files"], "./coverage.xml")
 	}
 
-	if step.With["flags"] != "unittests" {
-		t.Errorf("step.With[flags] = %v, want %q", step.With["flags"], "unittests")
+	if inputs["flags"] != "unittests" {
+		t.Errorf("inputs[flags] = %v, want %q", inputs["flags"], "unittests")
 	}
 }
 
-func TestCodecov_ToStep_EmptyWithMaps(t *testing.T) {
+func TestCodecov_Inputs_EmptyWithMaps(t *testing.T) {
 	c := Codecov{}
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if len(step.With) != 0 {
-		t.Errorf("empty Codecov.ToStep() has %d with entries, want 0", len(step.With))
+	if len(inputs) != 0 {
+		t.Errorf("empty Codecov.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestCodecov_ToStep_AllFields(t *testing.T) {
+func TestCodecov_Inputs_AllFields(t *testing.T) {
 	c := Codecov{
 		Token:            "${{ secrets.CODECOV_TOKEN }}",
 		Files:            "./coverage1.xml,./coverage2.xml",
@@ -66,69 +68,73 @@ func TestCodecov_ToStep_AllFields(t *testing.T) {
 		Plugin:           "noop",
 	}
 
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if step.With["token"] != "${{ secrets.CODECOV_TOKEN }}" {
-		t.Errorf("step.With[token] = %v, want token", step.With["token"])
+	if inputs["token"] != "${{ secrets.CODECOV_TOKEN }}" {
+		t.Errorf("inputs[token] = %v, want token", inputs["token"])
 	}
 
-	if step.With["files"] != "./coverage1.xml,./coverage2.xml" {
-		t.Errorf("step.With[files] = %v, want files", step.With["files"])
+	if inputs["files"] != "./coverage1.xml,./coverage2.xml" {
+		t.Errorf("inputs[files] = %v, want files", inputs["files"])
 	}
 
-	if step.With["directory"] != "./coverage" {
-		t.Errorf("step.With[directory] = %v, want directory", step.With["directory"])
+	if inputs["directory"] != "./coverage" {
+		t.Errorf("inputs[directory] = %v, want directory", inputs["directory"])
 	}
 
-	if step.With["flags"] != "backend,frontend" {
-		t.Errorf("step.With[flags] = %v, want flags", step.With["flags"])
+	if inputs["flags"] != "backend,frontend" {
+		t.Errorf("inputs[flags] = %v, want flags", inputs["flags"])
 	}
 
-	if step.With["name"] != "codecov-umbrella" {
-		t.Errorf("step.With[name] = %v, want name", step.With["name"])
+	if inputs["name"] != "codecov-umbrella" {
+		t.Errorf("inputs[name] = %v, want name", inputs["name"])
 	}
 
-	if step.With["fail_ci_if_error"] != true {
-		t.Errorf("step.With[fail_ci_if_error] = %v, want true", step.With["fail_ci_if_error"])
+	if inputs["fail_ci_if_error"] != true {
+		t.Errorf("inputs[fail_ci_if_error] = %v, want true", inputs["fail_ci_if_error"])
 	}
 
-	if step.With["verbose"] != true {
-		t.Errorf("step.With[verbose] = %v, want true", step.With["verbose"])
+	if inputs["verbose"] != true {
+		t.Errorf("inputs[verbose] = %v, want true", inputs["verbose"])
 	}
 
-	if step.With["working-directory"] != "./src" {
-		t.Errorf("step.With[working-directory] = %v, want working-directory", step.With["working-directory"])
+	if inputs["working-directory"] != "./src" {
+		t.Errorf("inputs[working-directory] = %v, want working-directory", inputs["working-directory"])
 	}
 
-	if step.With["env_vars"] != "OS,PYTHON" {
-		t.Errorf("step.With[env_vars] = %v, want env_vars", step.With["env_vars"])
+	if inputs["env_vars"] != "OS,PYTHON" {
+		t.Errorf("inputs[env_vars] = %v, want env_vars", inputs["env_vars"])
 	}
 
-	if step.With["os"] != "linux" {
-		t.Errorf("step.With[os] = %v, want os", step.With["os"])
+	if inputs["os"] != "linux" {
+		t.Errorf("inputs[os] = %v, want os", inputs["os"])
 	}
 
-	if step.With["slug"] != "owner/repo" {
-		t.Errorf("step.With[slug] = %v, want slug", step.With["slug"])
+	if inputs["slug"] != "owner/repo" {
+		t.Errorf("inputs[slug] = %v, want slug", inputs["slug"])
 	}
 
-	if step.With["use_oidc"] != true {
-		t.Errorf("step.With[use_oidc] = %v, want true", step.With["use_oidc"])
+	if inputs["use_oidc"] != true {
+		t.Errorf("inputs[use_oidc] = %v, want true", inputs["use_oidc"])
 	}
 }
 
-func TestCodecov_ToStep_MinimalConfig(t *testing.T) {
+func TestCodecov_Inputs_MinimalConfig(t *testing.T) {
 	c := Codecov{
 		Token: "${{ secrets.CODECOV_TOKEN }}",
 	}
 
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if step.With["token"] != "${{ secrets.CODECOV_TOKEN }}" {
-		t.Errorf("step.With[token] = %v, want token", step.With["token"])
+	if inputs["token"] != "${{ secrets.CODECOV_TOKEN }}" {
+		t.Errorf("inputs[token] = %v, want token", inputs["token"])
 	}
 
-	if len(step.With) != 1 {
-		t.Errorf("minimal Codecov should have 1 with entry, got %d", len(step.With))
+	if len(inputs) != 1 {
+		t.Errorf("minimal Codecov should have 1 input entry, got %d", len(inputs))
 	}
+}
+
+func TestCodecov_ImplementsStepAction(t *testing.T) {
+	var _ workflow.StepAction = Codecov{}
 }

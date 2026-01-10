@@ -127,8 +127,8 @@ Use the wetwire-github patterns for all workflows:
     }
 
 Use typed action wrappers instead of raw uses strings:
-    checkout.Checkout{}.ToStep()
-    setup_go.SetupGo{GoVersion: "1.23"}.ToStep()
+    checkout.Checkout{}
+    setup_go.SetupGo{GoVersion: "1.23"}
 
 Available tools:
 - init_package: Create a new workflow project

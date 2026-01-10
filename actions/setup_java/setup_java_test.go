@@ -2,6 +2,8 @@ package setup_java
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestSetupJava_Action(t *testing.T) {
@@ -11,42 +13,42 @@ func TestSetupJava_Action(t *testing.T) {
 	}
 }
 
-func TestSetupJava_ToStep(t *testing.T) {
+func TestSetupJava_Inputs(t *testing.T) {
 	a := SetupJava{
 		JavaVersion:  "21",
 		Distribution: "temurin",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "actions/setup-java@v4" {
-		t.Errorf("Uses = %q, want %q", step.Uses, "actions/setup-java@v4")
+	if a.Action() != "actions/setup-java@v4" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "actions/setup-java@v4")
 	}
 
-	if step.With["java-version"] != "21" {
-		t.Errorf("With[java-version] = %v, want %q", step.With["java-version"], "21")
+	if inputs["java-version"] != "21" {
+		t.Errorf("inputs[java-version] = %v, want %q", inputs["java-version"], "21")
 	}
 
-	if step.With["distribution"] != "temurin" {
-		t.Errorf("With[distribution] = %v, want %q", step.With["distribution"], "temurin")
+	if inputs["distribution"] != "temurin" {
+		t.Errorf("inputs[distribution] = %v, want %q", inputs["distribution"], "temurin")
 	}
 }
 
-func TestSetupJava_ToStep_Empty(t *testing.T) {
+func TestSetupJava_Inputs_Empty(t *testing.T) {
 	a := SetupJava{}
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "actions/setup-java@v4" {
-		t.Errorf("Uses = %q, want %q", step.Uses, "actions/setup-java@v4")
+	if a.Action() != "actions/setup-java@v4" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "actions/setup-java@v4")
 	}
 
-	// Empty values should not be in With
-	if _, ok := step.With["java-version"]; ok {
-		t.Error("Empty java-version should not be in With")
+	// Empty values should not be in inputs
+	if _, ok := inputs["java-version"]; ok {
+		t.Error("Empty java-version should not be in inputs")
 	}
 }
 
-func TestSetupJava_ToStep_AllFields(t *testing.T) {
+func TestSetupJava_Inputs_AllFields(t *testing.T) {
 	a := SetupJava{
 		JavaVersion:       "17",
 		Distribution:      "zulu",
@@ -60,26 +62,26 @@ func TestSetupJava_ToStep_AllFields(t *testing.T) {
 		OverwriteSettings: true,
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["java-version"] != "17" {
-		t.Errorf("java-version = %v, want %q", step.With["java-version"], "17")
+	if inputs["java-version"] != "17" {
+		t.Errorf("java-version = %v, want %q", inputs["java-version"], "17")
 	}
-	if step.With["distribution"] != "zulu" {
-		t.Errorf("distribution = %v, want %q", step.With["distribution"], "zulu")
+	if inputs["distribution"] != "zulu" {
+		t.Errorf("distribution = %v, want %q", inputs["distribution"], "zulu")
 	}
-	if step.With["java-package"] != "jdk" {
-		t.Errorf("java-package = %v, want %q", step.With["java-package"], "jdk")
+	if inputs["java-package"] != "jdk" {
+		t.Errorf("java-package = %v, want %q", inputs["java-package"], "jdk")
 	}
-	if step.With["check-latest"] != true {
-		t.Errorf("check-latest = %v, want %v", step.With["check-latest"], true)
+	if inputs["check-latest"] != true {
+		t.Errorf("check-latest = %v, want %v", inputs["check-latest"], true)
 	}
-	if step.With["cache"] != "maven" {
-		t.Errorf("cache = %v, want %q", step.With["cache"], "maven")
+	if inputs["cache"] != "maven" {
+		t.Errorf("cache = %v, want %q", inputs["cache"], "maven")
 	}
 }
 
-func TestSetupJava_ToStep_Distributions(t *testing.T) {
+func TestSetupJava_Inputs_Distributions(t *testing.T) {
 	distributions := []string{"temurin", "zulu", "adopt", "liberica", "microsoft", "corretto", "semeru", "oracle"}
 
 	for _, dist := range distributions {
@@ -89,10 +91,16 @@ func TestSetupJava_ToStep_Distributions(t *testing.T) {
 				Distribution: dist,
 			}
 
-			step := a.ToStep()
-			if step.With["distribution"] != dist {
-				t.Errorf("distribution = %v, want %q", step.With["distribution"], dist)
+			inputs := a.Inputs()
+			if inputs["distribution"] != dist {
+				t.Errorf("distribution = %v, want %q", inputs["distribution"], dist)
 			}
 		})
 	}
+}
+
+func TestSetupJava_ImplementsStepAction(t *testing.T) {
+	a := SetupJava{}
+	// Verify SetupJava implements StepAction interface
+	var _ workflow.StepAction = a
 }

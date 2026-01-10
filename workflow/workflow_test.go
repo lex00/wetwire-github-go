@@ -32,10 +32,10 @@ func TestJobDeclaration(t *testing.T) {
 	job := workflow.Job{
 		Name:   "build",
 		RunsOn: "ubuntu-latest",
-		Steps: workflow.List(
+		Steps: []any{
 			workflow.Step{Run: "go build ./..."},
 			workflow.Step{Run: "go test ./..."},
-		),
+		},
 	}
 
 	if job.Name != "build" {
@@ -164,13 +164,13 @@ func TestJobWithNeeds(t *testing.T) {
 	buildJob := workflow.Job{
 		Name:   "build",
 		RunsOn: "ubuntu-latest",
-		Steps:  workflow.List(workflow.Step{Run: "go build"}),
+		Steps:  []any{workflow.Step{Run: "go build"}},
 	}
 
 	testJob := workflow.Job{
 		Name:   "test",
 		RunsOn: "ubuntu-latest",
-		Steps:  workflow.List(workflow.Step{Run: "go test"}),
+		Steps:  []any{workflow.Step{Run: "go test"}},
 	}
 
 	// In actual usage, Needs would contain the job variables
@@ -179,7 +179,7 @@ func TestJobWithNeeds(t *testing.T) {
 		Name:   "deploy",
 		RunsOn: "ubuntu-latest",
 		Needs:  []any{buildJob, testJob},
-		Steps:  workflow.List(workflow.Step{Run: "deploy.sh"}),
+		Steps:  []any{workflow.Step{Run: "deploy.sh"}},
 	}
 
 	if len(deployJob.Needs) != 2 {

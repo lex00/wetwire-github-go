@@ -1,10 +1,6 @@
 // Package download_artifact provides a typed wrapper for actions/download-artifact.
 package download_artifact
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // DownloadArtifact wraps the actions/download-artifact@v4 action.
 // Download a build artifact previously uploaded in the workflow.
 type DownloadArtifact struct {
@@ -35,9 +31,9 @@ func (a DownloadArtifact) Action() string {
 	return "actions/download-artifact@v4"
 }
 
-// ToStep converts this action to a workflow step.
-func (a DownloadArtifact) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a DownloadArtifact) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Name != "" {
 		with["name"] = a.Name
@@ -61,8 +57,5 @@ func (a DownloadArtifact) ToStep() workflow.Step {
 		with["run-id"] = a.RunID
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

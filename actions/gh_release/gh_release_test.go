@@ -2,6 +2,8 @@ package gh_release
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestGHRelease_Action(t *testing.T) {
@@ -11,92 +13,92 @@ func TestGHRelease_Action(t *testing.T) {
 	}
 }
 
-func TestGHRelease_ToStep(t *testing.T) {
+func TestGHRelease_Inputs(t *testing.T) {
 	a := GHRelease{
 		Files: "*.tar.gz",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "softprops/action-gh-release@v2" {
-		t.Errorf("Uses = %q, want %q", step.Uses, "softprops/action-gh-release@v2")
+	if a.Action() != "softprops/action-gh-release@v2" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "softprops/action-gh-release@v2")
 	}
 
-	if step.With["files"] != "*.tar.gz" {
-		t.Errorf("With[files] = %v, want %q", step.With["files"], "*.tar.gz")
+	if inputs["files"] != "*.tar.gz" {
+		t.Errorf("inputs[files] = %v, want %q", inputs["files"], "*.tar.gz")
 	}
 }
 
-func TestGHRelease_ToStep_Empty(t *testing.T) {
+func TestGHRelease_Inputs_Empty(t *testing.T) {
 	a := GHRelease{}
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "softprops/action-gh-release@v2" {
-		t.Errorf("Uses = %q, want %q", step.Uses, "softprops/action-gh-release@v2")
+	if a.Action() != "softprops/action-gh-release@v2" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "softprops/action-gh-release@v2")
 	}
 
-	if _, ok := step.With["files"]; ok {
-		t.Error("Empty files should not be in With")
+	if _, ok := inputs["files"]; ok {
+		t.Error("Empty files should not be in inputs")
 	}
 }
 
-func TestGHRelease_ToStep_WithBody(t *testing.T) {
+func TestGHRelease_Inputs_WithBody(t *testing.T) {
 	a := GHRelease{
 		Body:    "## Release Notes\n\n- Feature 1\n- Fix 1",
 		TagName: "v1.0.0",
 		Name:    "Release 1.0.0",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["body"] != "## Release Notes\n\n- Feature 1\n- Fix 1" {
-		t.Errorf("body = %v, want expected value", step.With["body"])
+	if inputs["body"] != "## Release Notes\n\n- Feature 1\n- Fix 1" {
+		t.Errorf("body = %v, want expected value", inputs["body"])
 	}
-	if step.With["tag_name"] != "v1.0.0" {
-		t.Errorf("tag_name = %v, want %q", step.With["tag_name"], "v1.0.0")
+	if inputs["tag_name"] != "v1.0.0" {
+		t.Errorf("tag_name = %v, want %q", inputs["tag_name"], "v1.0.0")
 	}
-	if step.With["name"] != "Release 1.0.0" {
-		t.Errorf("name = %v, want %q", step.With["name"], "Release 1.0.0")
+	if inputs["name"] != "Release 1.0.0" {
+		t.Errorf("name = %v, want %q", inputs["name"], "Release 1.0.0")
 	}
 }
 
-func TestGHRelease_ToStep_Draft(t *testing.T) {
+func TestGHRelease_Inputs_Draft(t *testing.T) {
 	a := GHRelease{
 		Draft: true,
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["draft"] != true {
-		t.Errorf("draft = %v, want %v", step.With["draft"], true)
+	if inputs["draft"] != true {
+		t.Errorf("draft = %v, want %v", inputs["draft"], true)
 	}
 }
 
-func TestGHRelease_ToStep_Prerelease(t *testing.T) {
+func TestGHRelease_Inputs_Prerelease(t *testing.T) {
 	a := GHRelease{
 		Prerelease: true,
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["prerelease"] != true {
-		t.Errorf("prerelease = %v, want %v", step.With["prerelease"], true)
+	if inputs["prerelease"] != true {
+		t.Errorf("prerelease = %v, want %v", inputs["prerelease"], true)
 	}
 }
 
-func TestGHRelease_ToStep_GenerateNotes(t *testing.T) {
+func TestGHRelease_Inputs_GenerateNotes(t *testing.T) {
 	a := GHRelease{
 		GenerateReleaseNotes: true,
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["generate_release_notes"] != true {
-		t.Errorf("generate_release_notes = %v, want %v", step.With["generate_release_notes"], true)
+	if inputs["generate_release_notes"] != true {
+		t.Errorf("generate_release_notes = %v, want %v", inputs["generate_release_notes"], true)
 	}
 }
 
-func TestGHRelease_ToStep_AllFields(t *testing.T) {
+func TestGHRelease_Inputs_AllFields(t *testing.T) {
 	a := GHRelease{
 		Body:                   "Release body",
 		Name:                   "v2.0.0",
@@ -114,51 +116,55 @@ func TestGHRelease_ToStep_AllFields(t *testing.T) {
 		DiscussionCategoryName: "Releases",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["body"] != "Release body" {
-		t.Errorf("body = %v, want %q", step.With["body"], "Release body")
+	if inputs["body"] != "Release body" {
+		t.Errorf("body = %v, want %q", inputs["body"], "Release body")
 	}
-	if step.With["name"] != "v2.0.0" {
-		t.Errorf("name = %v, want %q", step.With["name"], "v2.0.0")
+	if inputs["name"] != "v2.0.0" {
+		t.Errorf("name = %v, want %q", inputs["name"], "v2.0.0")
 	}
-	if step.With["tag_name"] != "v2.0.0" {
-		t.Errorf("tag_name = %v, want %q", step.With["tag_name"], "v2.0.0")
+	if inputs["tag_name"] != "v2.0.0" {
+		t.Errorf("tag_name = %v, want %q", inputs["tag_name"], "v2.0.0")
 	}
-	if step.With["target_commitish"] != "main" {
-		t.Errorf("target_commitish = %v, want %q", step.With["target_commitish"], "main")
+	if inputs["target_commitish"] != "main" {
+		t.Errorf("target_commitish = %v, want %q", inputs["target_commitish"], "main")
 	}
-	if step.With["draft"] != true {
-		t.Errorf("draft = %v, want %v", step.With["draft"], true)
+	if inputs["draft"] != true {
+		t.Errorf("draft = %v, want %v", inputs["draft"], true)
 	}
-	if step.With["prerelease"] != true {
-		t.Errorf("prerelease = %v, want %v", step.With["prerelease"], true)
+	if inputs["prerelease"] != true {
+		t.Errorf("prerelease = %v, want %v", inputs["prerelease"], true)
 	}
-	if step.With["generate_release_notes"] != true {
-		t.Errorf("generate_release_notes = %v, want %v", step.With["generate_release_notes"], true)
+	if inputs["generate_release_notes"] != true {
+		t.Errorf("generate_release_notes = %v, want %v", inputs["generate_release_notes"], true)
 	}
-	if step.With["fail_on_unmatched_files"] != true {
-		t.Errorf("fail_on_unmatched_files = %v, want %v", step.With["fail_on_unmatched_files"], true)
+	if inputs["fail_on_unmatched_files"] != true {
+		t.Errorf("fail_on_unmatched_files = %v, want %v", inputs["fail_on_unmatched_files"], true)
 	}
-	if step.With["append_body"] != true {
-		t.Errorf("append_body = %v, want %v", step.With["append_body"], true)
+	if inputs["append_body"] != true {
+		t.Errorf("append_body = %v, want %v", inputs["append_body"], true)
 	}
-	if step.With["make_latest"] != "true" {
-		t.Errorf("make_latest = %v, want %q", step.With["make_latest"], "true")
+	if inputs["make_latest"] != "true" {
+		t.Errorf("make_latest = %v, want %q", inputs["make_latest"], "true")
 	}
-	if step.With["discussion_category_name"] != "Releases" {
-		t.Errorf("discussion_category_name = %v, want %q", step.With["discussion_category_name"], "Releases")
+	if inputs["discussion_category_name"] != "Releases" {
+		t.Errorf("discussion_category_name = %v, want %q", inputs["discussion_category_name"], "Releases")
 	}
 }
 
-func TestGHRelease_ToStep_MultipleFiles(t *testing.T) {
+func TestGHRelease_Inputs_MultipleFiles(t *testing.T) {
 	a := GHRelease{
 		Files: "dist/*.tar.gz\ndist/*.zip\nbin/*",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["files"] != "dist/*.tar.gz\ndist/*.zip\nbin/*" {
-		t.Errorf("files = %v, want expected value", step.With["files"])
+	if inputs["files"] != "dist/*.tar.gz\ndist/*.zip\nbin/*" {
+		t.Errorf("files = %v, want expected value", inputs["files"])
 	}
+}
+
+func TestGHRelease_ImplementsStepAction(t *testing.T) {
+	var _ workflow.StepAction = GHRelease{}
 }

@@ -1,10 +1,6 @@
 // Package setup_rust provides a typed wrapper for dtolnay/rust-toolchain.
 package setup_rust
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // SetupRust wraps the dtolnay/rust-toolchain@stable action.
 // Install a Rust toolchain and add it to PATH.
 type SetupRust struct {
@@ -26,9 +22,9 @@ func (a SetupRust) Action() string {
 	return "dtolnay/rust-toolchain@stable"
 }
 
-// ToStep converts this action to a workflow step.
-func (a SetupRust) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a SetupRust) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Toolchain != "" {
 		with["toolchain"] = a.Toolchain
@@ -43,10 +39,7 @@ func (a SetupRust) ToStep() workflow.Step {
 		with["profile"] = a.Profile
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }
 
 // Stable returns a SetupRust configured for the stable toolchain.

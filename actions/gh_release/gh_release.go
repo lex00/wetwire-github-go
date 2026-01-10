@@ -1,10 +1,6 @@
 // Package gh_release provides a typed wrapper for softprops/action-gh-release.
 package gh_release
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // GHRelease wraps the softprops/action-gh-release@v2 action.
 // Create and upload assets to a GitHub Release.
 type GHRelease struct {
@@ -59,9 +55,9 @@ func (a GHRelease) Action() string {
 	return "softprops/action-gh-release@v2"
 }
 
-// ToStep converts this action to a workflow step.
-func (a GHRelease) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a GHRelease) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Body != "" {
 		with["body"] = a.Body
@@ -109,8 +105,5 @@ func (a GHRelease) ToStep() workflow.Step {
 		with["discussion_category_name"] = a.DiscussionCategoryName
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

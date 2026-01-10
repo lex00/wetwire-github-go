@@ -61,12 +61,12 @@ Then run `go mod tidy` before building.
 
 ### Typed Action Wrappers
 
-Instead of raw `uses:` strings, use typed wrappers:
+Instead of raw `uses:` strings, use typed wrappers directly in `[]any{}` slices:
 
 ```go
-checkout.Checkout{}.ToStep()
-setup_go.SetupGo{GoVersion: "1.24"}.ToStep()
-cache.Cache{Path: "~/go/pkg/mod", Key: "..."}.ToStep()
+checkout.Checkout{}
+setup_go.SetupGo{GoVersion: "1.24"}
+cache.Cache{Path: "~/go/pkg/mod", Key: "..."}
 ```
 
 ### Matrix Strategy

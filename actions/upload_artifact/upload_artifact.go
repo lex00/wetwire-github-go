@@ -1,10 +1,6 @@
 // Package upload_artifact provides a typed wrapper for actions/upload-artifact.
 package upload_artifact
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // UploadArtifact wraps the actions/upload-artifact@v4 action.
 // Upload a build artifact for use in subsequent jobs.
 type UploadArtifact struct {
@@ -35,9 +31,9 @@ func (a UploadArtifact) Action() string {
 	return "actions/upload-artifact@v4"
 }
 
-// ToStep converts this action to a workflow step.
-func (a UploadArtifact) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a UploadArtifact) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Name != "" {
 		with["name"] = a.Name
@@ -61,8 +57,5 @@ func (a UploadArtifact) ToStep() workflow.Step {
 		with["include-hidden-files"] = a.IncludeHiddenFiles
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

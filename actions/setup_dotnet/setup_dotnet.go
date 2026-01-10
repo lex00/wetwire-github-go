@@ -1,10 +1,6 @@
 // Package setup_dotnet provides a typed wrapper for actions/setup-dotnet.
 package setup_dotnet
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // SetupDotnet wraps the actions/setup-dotnet@v4 action.
 // Set up a specific version of the .NET SDK and add it to PATH.
 type SetupDotnet struct {
@@ -43,9 +39,9 @@ func (a SetupDotnet) Action() string {
 	return "actions/setup-dotnet@v4"
 }
 
-// ToStep converts this action to a workflow step.
-func (a SetupDotnet) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a SetupDotnet) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.DotnetVersion != "" {
 		with["dotnet-version"] = a.DotnetVersion
@@ -75,8 +71,5 @@ func (a SetupDotnet) ToStep() workflow.Step {
 		with["cache-dependency-path"] = a.CacheDependencyPath
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

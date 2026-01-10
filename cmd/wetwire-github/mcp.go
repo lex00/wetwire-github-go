@@ -151,12 +151,12 @@ var Build = workflow.Job{
 }
 
 // BuildSteps are the steps for the build job
-var BuildSteps = workflow.List(
-	checkout.Checkout{}.ToStep(),
-	setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+var BuildSteps = []any{
+	checkout.Checkout{},
+	setup_go.SetupGo{GoVersion: "1.23"},
 	workflow.Step{Name: "Build", Run: "go build ./..."},
 	workflow.Step{Name: "Test", Run: "go test ./..."},
-)
+}
 `
 	workflowsGoPath := filepath.Join(projectPath, "workflows.go")
 	if err := os.WriteFile(workflowsGoPath, []byte(workflowsGo), 0644); err != nil {

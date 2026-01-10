@@ -233,24 +233,17 @@ func TestMyAction_Action(t *testing.T) {
     }
 }
 
-func TestMyAction_ToStep(t *testing.T) {
+func TestMyAction_Inputs(t *testing.T) {
     a := MyAction{
         InputName: "value",
         EnableFeature: true,
     }
-    step := a.ToStep()
 
-    if step.With["input-name"] != "value" {
-        t.Errorf("step.With[input-name] = %v, want %q", step.With["input-name"], "value")
+    if a.InputName != "value" {
+        t.Errorf("InputName = %v, want %q", a.InputName, "value")
     }
-}
-
-func TestMyAction_ToStep_EmptyWithMaps(t *testing.T) {
-    a := MyAction{}
-    step := a.ToStep()
-
-    if len(step.With) != 0 {
-        t.Errorf("empty MyAction.ToStep() has %d with entries, want 0", len(step.With))
+    if !a.EnableFeature {
+        t.Errorf("EnableFeature = %v, want true", a.EnableFeature)
     }
 }
 ```

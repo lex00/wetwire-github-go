@@ -140,8 +140,8 @@ func (r *WAG001) Fix(fset *token.FileSet, file *ast.File, path string, src []byt
 		return nil, fmt.Errorf("unknown action: %s", actionName)
 	}
 
-	// Build the replacement expression
-	replacement := fmt.Sprintf("%s.%s{}.ToStep()", info.pkg, info.typ)
+	// Build the replacement expression (action wrappers are used directly, no ToStep needed)
+	replacement := fmt.Sprintf("%s.%s{}", info.pkg, info.typ)
 
 	// Get the source range of the workflow.Step{...}
 	startPos := fset.Position(targetLit.Pos())
@@ -634,20 +634,8 @@ func (r *WAG010) Check(fset *token.FileSet, file *ast.File, path string) []LintI
 	var issues []LintIssue
 
 	ast.Inspect(file, func(n ast.Node) bool {
-		// Look for action wrapper usage with .ToStep()
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-
-		// Check if this is a .ToStep() call
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != "ToStep" {
-			return true
-		}
-
-		// Get the receiver - should be a composite literal
-		lit, ok := sel.X.(*ast.CompositeLit)
+		// Look for action wrapper composite literals
+		lit, ok := n.(*ast.CompositeLit)
 		if !ok {
 			return true
 		}

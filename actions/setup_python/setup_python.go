@@ -1,10 +1,6 @@
 // Package setup_python provides a typed wrapper for actions/setup-python.
 package setup_python
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // SetupPython wraps the actions/setup-python@v5 action.
 // Setup a Python environment and add it to PATH.
 type SetupPython struct {
@@ -41,9 +37,9 @@ func (a SetupPython) Action() string {
 	return "actions/setup-python@v5"
 }
 
-// ToStep converts this action to a workflow step.
-func (a SetupPython) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a SetupPython) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.PythonVersion != "" {
 		with["python-version"] = a.PythonVersion
@@ -73,8 +69,5 @@ func (a SetupPython) ToStep() workflow.Step {
 		with["allow-prereleases"] = a.AllowPrereleases
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

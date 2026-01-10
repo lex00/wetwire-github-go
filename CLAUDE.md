@@ -32,12 +32,12 @@ var Build = workflow.Job{
     Steps:  BuildSteps,
 }
 
-var BuildSteps = List(
-    checkout.Checkout{}.ToStep(),
-    setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+var BuildSteps = []any{
+    checkout.Checkout{},
+    setup_go.SetupGo{GoVersion: "1.23"},
     workflow.Step{Run: "go build ./..."},
     workflow.Step{Run: "go test ./..."},
-)
+}
 ```
 
 ### Cross-References
@@ -85,12 +85,12 @@ var MatrixJob = workflow.Job{
 
 ### Action Wrappers
 
-Type-safe wrappers for popular actions:
+Type-safe wrappers for popular actions (use directly in Steps):
 
 ```go
-checkout.Checkout{FetchDepth: 0, Submodules: "recursive"}.ToStep()
-setup_go.SetupGo{GoVersion: "1.23"}.ToStep()
-cache.Cache{Path: "~/.cache/go-build", Key: "go-cache"}.ToStep()
+checkout.Checkout{FetchDepth: 0, Submodules: "recursive"}
+setup_go.SetupGo{GoVersion: "1.23"}
+cache.Cache{Path: "~/.cache/go-build", Key: "go-cache"}
 ```
 
 ## Helpers
@@ -112,7 +112,7 @@ Needs: []any{BuildJob, TestJob}
 1. **Flat variables** — Extract all nested structs into named variables
 2. **No pointers** — Never use `&` or `*` in declarations
 3. **Direct references** — Variables reference each other by name
-4. **Struct literals only** — No function calls except `.ToStep()` and helpers
+4. **Struct literals only** — No function calls, use pure struct literals
 
 ## Build
 

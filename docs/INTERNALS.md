@@ -233,7 +233,7 @@ Steps with actions use the `with` key:
 var CheckoutStep = checkout.Checkout{
     FetchDepth: 0,
     Submodules: "recursive",
-}.ToStep()
+}
 ```
 
 Becomes:
@@ -325,7 +325,7 @@ The fix transforms:
 workflow.Step{Uses: "actions/checkout@v4"}
 
 // After
-checkout.Checkout{}.ToStep()
+checkout.Checkout{}
 ```
 
 ---
@@ -392,9 +392,9 @@ Known actions are mapped to typed wrappers:
 
 | YAML Action | Go Wrapper |
 |-------------|------------|
-| `actions/checkout@v4` | `checkout.Checkout{}.ToStep()` |
-| `actions/setup-go@v5` | `setup_go.SetupGo{}.ToStep()` |
-| `docker/login-action@v3` | `docker_login.DockerLogin{}.ToStep()` |
+| `actions/checkout@v4` | `checkout.Checkout{}` |
+| `actions/setup-go@v5` | `setup_go.SetupGo{}` |
+| `docker/login-action@v3` | `docker_login.DockerLogin{}` |
 | ... | ... |
 
 ---

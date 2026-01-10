@@ -1,10 +1,6 @@
 // Package docker_login provides a typed wrapper for docker/login-action.
 package docker_login
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // DockerLogin wraps the docker/login-action@v3 action.
 // Log in to a Docker registry (Docker Hub, GitHub Container Registry, AWS ECR, etc.).
 type DockerLogin struct {
@@ -29,9 +25,9 @@ func (a DockerLogin) Action() string {
 	return "docker/login-action@v3"
 }
 
-// ToStep converts this action to a workflow step.
-func (a DockerLogin) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a DockerLogin) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Registry != "" {
 		with["registry"] = a.Registry
@@ -49,8 +45,5 @@ func (a DockerLogin) ToStep() workflow.Step {
 		with["logout"] = a.Logout
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

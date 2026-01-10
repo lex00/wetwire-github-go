@@ -1,10 +1,6 @@
 // Package codecov provides a typed wrapper for codecov/codecov-action.
 package codecov
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // Codecov wraps the codecov/codecov-action@v5 action.
 // Upload code coverage reports to Codecov.
 type Codecov struct {
@@ -62,9 +58,9 @@ func (a Codecov) Action() string {
 	return "codecov/codecov-action@v5"
 }
 
-// ToStep converts this action to a workflow step.
-func (a Codecov) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a Codecov) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Token != "" {
 		with["token"] = a.Token
@@ -115,8 +111,5 @@ func (a Codecov) ToStep() workflow.Step {
 		with["plugin"] = a.Plugin
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

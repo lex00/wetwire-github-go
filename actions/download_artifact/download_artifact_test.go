@@ -2,6 +2,8 @@ package download_artifact
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestDownloadArtifact_Action(t *testing.T) {
@@ -11,37 +13,37 @@ func TestDownloadArtifact_Action(t *testing.T) {
 	}
 }
 
-func TestDownloadArtifact_ToStep(t *testing.T) {
+func TestDownloadArtifact_Inputs(t *testing.T) {
 	a := DownloadArtifact{
 		Name: "build-artifacts",
 		Path: "dist/",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "actions/download-artifact@v4" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "actions/download-artifact@v4")
+	if a.Action() != "actions/download-artifact@v4" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "actions/download-artifact@v4")
 	}
 
-	if step.With["name"] != "build-artifacts" {
-		t.Errorf("step.With[name] = %v, want %q", step.With["name"], "build-artifacts")
+	if inputs["name"] != "build-artifacts" {
+		t.Errorf("inputs[name] = %v, want %q", inputs["name"], "build-artifacts")
 	}
 
-	if step.With["path"] != "dist/" {
-		t.Errorf("step.With[path] = %v, want %q", step.With["path"], "dist/")
+	if inputs["path"] != "dist/" {
+		t.Errorf("inputs[path] = %v, want %q", inputs["path"], "dist/")
 	}
 }
 
-func TestDownloadArtifact_ToStep_Empty(t *testing.T) {
+func TestDownloadArtifact_Inputs_Empty(t *testing.T) {
 	a := DownloadArtifact{}
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if len(step.With) != 0 {
-		t.Errorf("empty DownloadArtifact.ToStep() has %d with entries, want 0", len(step.With))
+	if len(inputs) != 0 {
+		t.Errorf("empty DownloadArtifact.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestDownloadArtifact_ToStep_AllFields(t *testing.T) {
+func TestDownloadArtifact_Inputs_AllFields(t *testing.T) {
 	a := DownloadArtifact{
 		Name:          "test-artifact",
 		Path:          "output/",
@@ -52,33 +54,37 @@ func TestDownloadArtifact_ToStep_AllFields(t *testing.T) {
 		RunID:         "12345",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["name"] != "test-artifact" {
-		t.Errorf("step.With[name] = %v, want %q", step.With["name"], "test-artifact")
+	if inputs["name"] != "test-artifact" {
+		t.Errorf("inputs[name] = %v, want %q", inputs["name"], "test-artifact")
 	}
 
-	if step.With["path"] != "output/" {
-		t.Errorf("step.With[path] = %v, want %q", step.With["path"], "output/")
+	if inputs["path"] != "output/" {
+		t.Errorf("inputs[path] = %v, want %q", inputs["path"], "output/")
 	}
 
-	if step.With["pattern"] != "*.zip" {
-		t.Errorf("step.With[pattern] = %v, want %q", step.With["pattern"], "*.zip")
+	if inputs["pattern"] != "*.zip" {
+		t.Errorf("inputs[pattern] = %v, want %q", inputs["pattern"], "*.zip")
 	}
 
-	if step.With["merge-multiple"] != true {
-		t.Errorf("step.With[merge-multiple] = %v, want true", step.With["merge-multiple"])
+	if inputs["merge-multiple"] != true {
+		t.Errorf("inputs[merge-multiple] = %v, want true", inputs["merge-multiple"])
 	}
 
-	if step.With["github-token"] != "token" {
-		t.Errorf("step.With[github-token] = %v, want %q", step.With["github-token"], "token")
+	if inputs["github-token"] != "token" {
+		t.Errorf("inputs[github-token] = %v, want %q", inputs["github-token"], "token")
 	}
 
-	if step.With["repository"] != "owner/repo" {
-		t.Errorf("step.With[repository] = %v, want %q", step.With["repository"], "owner/repo")
+	if inputs["repository"] != "owner/repo" {
+		t.Errorf("inputs[repository] = %v, want %q", inputs["repository"], "owner/repo")
 	}
 
-	if step.With["run-id"] != "12345" {
-		t.Errorf("step.With[run-id] = %v, want %q", step.With["run-id"], "12345")
+	if inputs["run-id"] != "12345" {
+		t.Errorf("inputs[run-id] = %v, want %q", inputs["run-id"], "12345")
 	}
+}
+
+func TestDownloadArtifact_ImplementsStepAction(t *testing.T) {
+	var _ workflow.StepAction = DownloadArtifact{}
 }

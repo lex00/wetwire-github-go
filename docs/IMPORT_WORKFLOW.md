@@ -73,7 +73,7 @@ Known actions are converted to typed wrappers:
 
 **Output:**
 ```go
-checkout.Checkout{FetchDepth: 0}.ToStep()
+checkout.Checkout{FetchDepth: 0}
 ```
 
 Unknown actions remain as raw `workflow.Step`:

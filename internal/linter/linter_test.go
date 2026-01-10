@@ -507,7 +507,7 @@ func TestWAG010_Check_MissingInput(t *testing.T) {
 
 import "github.com/lex00/wetwire-github-go/actions/setup_go"
 
-var Step = setup_go.SetupGo{}.ToStep()
+var Step = setup_go.SetupGo{}
 `)
 
 	l := NewLinter(&WAG010{})
@@ -536,7 +536,7 @@ func TestWAG010_Check_HasInput(t *testing.T) {
 
 import "github.com/lex00/wetwire-github-go/actions/setup_go"
 
-var Step = setup_go.SetupGo{GoVersion: "1.23"}.ToStep()
+var Step = setup_go.SetupGo{GoVersion: "1.23"}
 `)
 
 	l := NewLinter(&WAG010{})
