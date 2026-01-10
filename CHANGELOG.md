@@ -107,6 +107,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Secrets, GitHub, Matrix, Env, Needs, Steps contexts
   - Condition builders and string functions
   - Security considerations with WAG017/WAG018 integration
+- **Additional Action Wrappers** - 4 typed wrappers for security, code quality, and releases (#183)
+  - `crazy-max/ghaction-import-gpg@v6` - Import GPG keys for commit/tag signing
+  - `pre-commit/action@v3.0.1` - Run pre-commit hooks in CI
+  - `SonarSource/sonarcloud-github-action@v3` - SonarCloud code quality analysis
+  - `ncipollo/release-action@v1` - Enhanced GitHub release creation
+- **Publishing Workflow Example** - Comprehensive example for release publishing (#184)
+  - Docker image build and push to GHCR with multi-platform support
+  - GitHub release creation with auto-generated notes
+  - Multi-platform binary builds using matrix strategy
+  - Conditional steps for stable vs prerelease handling
+- **Security Patterns Guide** - Documentation for workflow security best practices (#185)
+  - Permission scoping with WAG017 integration
+  - Secrets handling with WAG003 patterns
+  - Pull request target safety with WAG018 examples
+  - Supply chain security (SLSA, cosign, dependency review)
+  - Security scanning setup (CodeQL, Trivy, Scorecard)
 - **Performance Benchmarks** - Benchmarks for key operations (#157)
   - `internal/discover` - AST discovery benchmarks
   - `internal/serialize` - YAML serialization benchmarks
