@@ -35,6 +35,10 @@ Feature matrix and implementation status for wetwire-github-go.
 | WAG006 | ✅ | Detect duplicate workflow names |
 | WAG007 | ✅ | Flag oversized files (>N jobs) |
 | WAG008 | ✅ | Avoid hardcoded expression strings |
+| WAG009 | ✅ | Validate matrix dimension values (empty matrix detection) |
+| WAG010 | ✅ | Flag missing recommended action inputs |
+| WAG011 | ✅ | Detect potential unreachable jobs (undefined dependencies) |
+| WAG012 | ✅ | Warn about deprecated action versions |
 
 ---
 
@@ -46,6 +50,8 @@ Feature matrix and implementation status for wetwire-github-go.
 | Dependabot | ✅ | ✅ | `.github/dependabot.yml` |
 | Issue Templates | ✅ | ✅ | `.github/ISSUE_TEMPLATE/*.yml` |
 | Discussion Templates | ✅ | ✅ | `.github/DISCUSSION_TEMPLATE/*.yml` |
+| PR Templates | ✅ | ❌ | `.github/PULL_REQUEST_TEMPLATE.md` |
+| CODEOWNERS | ✅ | ❌ | `.github/CODEOWNERS` |
 
 ---
 
@@ -74,9 +80,18 @@ Type-safe wrappers for popular GitHub Actions:
 | actions/setup-go | `actions/setup_go` | ✅ |
 | actions/setup-node | `actions/setup_node` | ✅ |
 | actions/setup-python | `actions/setup_python` | ✅ |
+| actions/setup-java | `actions/setup_java` | ✅ |
+| actions/setup-dotnet | `actions/setup_dotnet` | ✅ |
+| actions/setup-ruby | `actions/setup_ruby` | ✅ |
+| dtolnay/rust-toolchain | `actions/setup_rust` | ✅ |
 | actions/cache | `actions/cache` | ✅ |
 | actions/upload-artifact | `actions/upload_artifact` | ✅ |
 | actions/download-artifact | `actions/download_artifact` | ✅ |
+| softprops/action-gh-release | `actions/gh_release` | ✅ |
+| actions/github-script | `actions/github_script` | ✅ |
+| docker/build-push-action | `actions/docker_build_push` | ❌ |
+| docker/login-action | `actions/docker_login` | ❌ |
+| codecov/codecov-action | `actions/codecov` | ❌ |
 
 ---
 
@@ -92,6 +107,9 @@ Type-safe wrappers for popular GitHub Actions:
 | Import Workflow | ✅ | `docs/IMPORT_WORKFLOW.md` |
 | FAQ | ✅ | `docs/FAQ.md` |
 | Roadmap | ✅ | `docs/ROADMAP.md` |
+| Developers | ❌ | `docs/DEVELOPERS.md` |
+| Internals | ❌ | `docs/INTERNALS.md` |
+| Examples | ❌ | `docs/EXAMPLES.md` |
 
 ---
 
@@ -119,7 +137,12 @@ Type-safe wrappers for popular GitHub Actions:
 
 ### Phase 5: Polish
 - [x] Lint --fix implementation (#65)
-- [ ] Additional action wrappers
+- [x] Additional action wrappers (setup_java, setup_dotnet, setup_ruby, setup_rust, gh_release)
+- [x] Additional lint rules (WAG009-WAG012)
+- [x] CODEOWNERS support (#84)
+- [x] PR Templates support (#83)
+- [ ] More action wrappers (github-script, docker actions, codecov)
+- [ ] Documentation expansion (DEVELOPERS.md, INTERNALS.md, EXAMPLES.md)
 - [ ] Performance optimization
 
 ---
