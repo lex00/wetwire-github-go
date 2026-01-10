@@ -136,14 +136,21 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] Test command personas (#67)
 - [x] MCP server support (#68)
 
-### Phase 5: Polish
+### Phase 5: Polish ✅
 - [x] Lint --fix implementation (#65)
 - [x] Additional action wrappers (setup_java, setup_dotnet, setup_ruby, setup_rust, gh_release)
 - [x] Additional lint rules (WAG009-WAG012)
 - [x] CODEOWNERS support (#84)
 - [x] PR Templates support (#83)
-- [ ] More action wrappers (github-script, docker actions, codecov)
-- [ ] Documentation expansion (DEVELOPERS.md, INTERNALS.md, EXAMPLES.md)
+- [x] More action wrappers (github-script #91, docker actions #92, codecov #93)
+- [x] Documentation expansion (DEVELOPERS.md #94, INTERNALS.md #95, EXAMPLES.md #96)
+
+### Phase 6: Future Enhancements
+- [ ] PR Template import support
+- [ ] CODEOWNERS import support
+- [ ] AWS action wrappers (configure-aws-credentials, s3-sync)
+- [ ] Azure action wrappers (login, webapp-deploy)
+- [ ] GCP action wrappers (auth, deploy-cloudrun)
 - [ ] Performance optimization
 
 ---
