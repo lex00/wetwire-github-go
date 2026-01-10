@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Additional Action Wrappers** - 5 new typed wrappers for popular GitHub Actions (#85)
+  - `actions/setup_java` - Set up Java JDK with distribution selection
+  - `actions/setup_dotnet` - Set up .NET SDK
+  - `actions/setup_ruby` - Set up Ruby with Bundler support
+  - `actions/setup_rust` - Set up Rust toolchain (dtolnay/rust-toolchain)
+  - `actions/gh_release` - Create GitHub releases (softprops/action-gh-release)
 - **CODEOWNERS** - Full support for GitHub CODEOWNERS files (#84)
   - `codeowners.Owners` type with Rules (Pattern, Owners, Comment)
   - AST-based discovery of Owners declarations
