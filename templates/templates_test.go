@@ -387,3 +387,73 @@ func TestIssueTemplate_ComplexBody(t *testing.T) {
 		t.Errorf("Body[4].ElementType() = %q, want %q", it.Body[4].ElementType(), "checkboxes")
 	}
 }
+
+func TestPRTemplate_ResourceType(t *testing.T) {
+	pr := PRTemplate{}
+	if got := pr.ResourceType(); got != "pr-template" {
+		t.Errorf("ResourceType() = %q, want %q", got, "pr-template")
+	}
+}
+
+func TestPRTemplate_Filename_Default(t *testing.T) {
+	tests := []struct {
+		name     string
+		template PRTemplate
+		want     string
+	}{
+		{
+			name:     "empty name",
+			template: PRTemplate{},
+			want:     "PULL_REQUEST_TEMPLATE.md",
+		},
+		{
+			name:     "default name",
+			template: PRTemplate{Name: "default"},
+			want:     "PULL_REQUEST_TEMPLATE.md",
+		},
+		{
+			name:     "named template",
+			template: PRTemplate{Name: "feature"},
+			want:     "PULL_REQUEST_TEMPLATE/feature.md",
+		},
+		{
+			name:     "named template with spaces",
+			template: PRTemplate{Name: "bug-fix"},
+			want:     "PULL_REQUEST_TEMPLATE/bug-fix.md",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.template.Filename(); got != tt.want {
+				t.Errorf("Filename() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPRTemplate_Content(t *testing.T) {
+	pr := PRTemplate{
+		Name: "feature",
+		Content: `## Description
+
+Please include a summary of the change.
+
+## Test Plan
+
+How was this tested?
+`,
+	}
+
+	if pr.Name != "feature" {
+		t.Errorf("Name = %q, want %q", pr.Name, "feature")
+	}
+
+	if pr.Content == "" {
+		t.Error("Content should not be empty")
+	}
+
+	if len(pr.Content) < 50 {
+		t.Errorf("Content too short: %d chars", len(pr.Content))
+	}
+}
