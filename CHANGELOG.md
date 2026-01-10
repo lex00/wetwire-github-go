@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
-- **Improved Test Coverage** - Major test coverage improvements across core packages (#125, #126, #127, #130, #131, #135)
+- **Improved Test Coverage** - Major test coverage improvements across core packages (#125, #126, #127, #130, #131, #135, #137)
   - `internal/template`: 35.7% → 90.9% (55+ percentage point improvement)
   - `internal/importer`: 37.9% → 96.0% (58+ percentage point improvement)
   - `workflow`: 43.3% → 100.0% (57+ percentage point improvement)
@@ -24,6 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `internal/validation`: 55.3% → 89.5% (34+ percentage point improvement) (#130)
   - `internal/discover`: 61.0% → 93.8% (33+ percentage point improvement) (#131)
   - 188 test functions in workflow package covering all expression contexts, conditions, triggers
+  - Action wrapper test coverage improvements (#137):
+    - `actions/checkout`: 70.7% → 100% (29+ percentage point improvement)
+    - `actions/gcp_auth`: 69.7% → 100% (30+ percentage point improvement)
+    - `actions/gcp_deploy_cloudrun`: 74.4% → 100% (26+ percentage point improvement)
+    - `actions/aws_configure_credentials`: 75.6% → 100% (24+ percentage point improvement)
+    - `actions/codeql_init`: 76.2% → 100% (24+ percentage point improvement)
+    - `actions/setup_go`: 76.5% → 100% (24+ percentage point improvement)
+    - `actions/setup_java`: 78.0% → 100% (22+ percentage point improvement)
 - **Documentation** - Additional contributor guides (#133, #134)
   - `docs/CODEGEN.md` - Action wrapper code generation guide
   - `CONTRIBUTING.md` - Contribution guidelines with development setup, PR process, testing requirements
