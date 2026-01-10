@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **EXAMPLES.md** - Workflow examples catalog (#96)
+  - Basic CI workflow
+  - Multi-language matrix builds
+  - Docker build and push to GHCR
+  - Release workflow with changelog
+  - Monorepo with path filters
+  - Scheduled maintenance tasks
+  - PR labeling with github-script
+  - Multi-environment deployments
 - **INTERNALS.md** - Architecture documentation (#95)
   - AST discovery system with Mermaid diagram
   - Template generation and multi-artifact output
