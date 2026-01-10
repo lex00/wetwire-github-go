@@ -147,6 +147,7 @@ Type-safe wrappers for popular GitHub Actions:
 | azure/k8s-set-context | `actions/k8s_set_context` | ✅ |
 | dawidd6/action-download-artifact | `actions/dawidd6_download_artifact` | ✅ |
 | anothrNick/github-tag-action | `actions/github_tag_action` | ✅ |
+| peaceiris/actions-hugo | `actions/hugo` | ✅ |
 
 ---
 
@@ -222,6 +223,9 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] Performance benchmarks (discover, serialize, importer, runner, linter) (#157)
 - [x] Codegen test coverage improvements (89.5% → 95.7%) (#158)
 - [x] Reusable workflow example with workflow_call trigger (#176)
+- [x] Advanced trigger pattern examples (workflow_run, repository_dispatch) (#195)
+- [x] CLI integration tests for build, lint, list commands (#196)
+- [x] Hugo action wrapper (#197)
 
 ---
 
