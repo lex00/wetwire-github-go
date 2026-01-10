@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
+- **Improved Test Coverage** - Significantly improved test coverage for internal packages (#121)
+  - `internal/runner`: 20.9% → 72.3% (75 test functions, 51+ percentage point improvement)
+  - `internal/serialize`: 31.7% → 92.6% (57 test functions, 61+ percentage point improvement)
+  - Tests cover: all extraction types, program generation, path handling, YAML serialization, config types
 - **Security Scanning Action Wrappers** - 4 typed wrappers for security scanning (#120)
   - `github/codeql-action/init@v3` - Initialize CodeQL for code scanning
   - `github/codeql-action/analyze@v3` - Run CodeQL analysis and upload results
