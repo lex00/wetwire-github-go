@@ -114,6 +114,9 @@ Type-safe wrappers for popular GitHub Actions:
 | actions/stale | `actions/stale` | ✅ |
 | peter-evans/create-pull-request | `actions/create_pull_request` | ✅ |
 | actions/dependency-review-action | `actions/dependency_review` | ✅ |
+| JamesIves/github-pages-deploy-action | `actions/gh_pages_deploy` | ✅ |
+| slackapi/slack-github-action | `actions/slack` | ✅ |
+| hashicorp/setup-terraform | `actions/setup_terraform` | ✅ |
 
 ---
 
@@ -182,6 +185,8 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] Additional documentation (VERSIONING.md, ADOPTION.md) (#117)
 - [x] Additional lint rules (WAG013-WAG016) (#149)
 - [x] Additional example workflows (docker, release, matrix) (#148)
+- [x] Reference example testing with round-trip tests (#151)
+- [x] Additional action wrappers (gh_pages_deploy, slack, setup_terraform) (#152)
 - [ ] Performance optimization
 
 ---

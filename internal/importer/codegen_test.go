@@ -354,8 +354,11 @@ func TestCodeGenerator_GenerateSteps(t *testing.T) {
 
 	code := gen.generateSteps("TestSteps", steps)
 
-	if !strings.Contains(code, "var TestSteps = []workflow.Step{") {
+	if !strings.Contains(code, "var TestSteps = []any{") {
 		t.Error("Missing steps variable")
+	}
+	if !strings.Contains(code, "workflow.Step{") {
+		t.Error("Missing workflow.Step type")
 	}
 	if !strings.Contains(code, `ID: "checkout"`) {
 		t.Error("Missing step ID")
@@ -508,10 +511,10 @@ func TestCodeGenerator_GenerateStepsFile(t *testing.T) {
 	if !strings.Contains(code, "package workflows") {
 		t.Error("Missing package declaration")
 	}
-	if !strings.Contains(code, "var BuildSteps = []workflow.Step{") {
+	if !strings.Contains(code, "var BuildSteps = []any{") {
 		t.Error("Missing BuildSteps")
 	}
-	if !strings.Contains(code, "var TestSteps = []workflow.Step{") {
+	if !strings.Contains(code, "var TestSteps = []any{") {
 		t.Error("Missing TestSteps")
 	}
 }

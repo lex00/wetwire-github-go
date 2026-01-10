@@ -46,6 +46,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - WAG014: Flag jobs without timeout-minutes setting
   - WAG015: Suggest caching for setup-go/node/python actions
   - WAG016: Validate concurrency settings (cancel-in-progress without group)
+- **Reference Example Testing** - Round-trip testing with GitHub starter workflows (#151)
+  - `testdata/reference/` directory with 4 official GitHub starter workflows
+  - Round-trip tests: import YAML → generate Go → compile → execute → export YAML → compare
+  - Tests for go.yml, nodejs.yml, docker-publish.yml, codeql.yml
+- **Additional Action Wrappers** - 3 typed wrappers for deployment and notifications (#152)
+  - `JamesIves/github-pages-deploy-action@v4` - Deploy to GitHub Pages
+  - `slackapi/slack-github-action@v1` - Slack workflow notifications
+  - `hashicorp/setup-terraform@v3` - Terraform CLI setup
 - **Additional Example Workflows** - 3 new workflow examples (#148)
   - `examples/docker-workflow` - Docker build and push to GHCR with multi-stage CI
   - `examples/release-workflow` - Automated GitHub releases on version tags
