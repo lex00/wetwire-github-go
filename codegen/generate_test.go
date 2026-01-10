@@ -596,3 +596,263 @@ func TestGenerator_GenerateActionWrapper_SpecialCharsInDesc(t *testing.T) {
 		t.Error("Generated code is empty")
 	}
 }
+
+func TestGenerator_GenerateActionWrapper_AllRequiredFields(t *testing.T) {
+	// Test with all required fields (no optional fields)
+	spec := &ActionSpec{
+		Name:        "AllRequired",
+		Description: "Action with all required fields",
+		Inputs: map[string]ActionInput{
+			"alpha": {
+				Description: "First required field",
+				Required:    true,
+			},
+			"beta": {
+				Description: "Second required field",
+				Required:    true,
+			},
+			"gamma": {
+				Description: "Third required field",
+				Required:    true,
+			},
+		},
+	}
+
+	gen := NewGenerator()
+	code, err := gen.GenerateActionWrapper(ActionWrapperConfig{
+		ActionRef:   "test/all-required@v1",
+		PackageName: "all_required",
+		TypeName:    "AllRequired",
+		Spec:        spec,
+	})
+	if err != nil {
+		t.Fatalf("GenerateActionWrapper() error = %v", err)
+	}
+
+	codeStr := string(code.Code)
+
+	// Verify all fields are present and alphabetically sorted
+	alphaIdx := strings.Index(codeStr, "Alpha string")
+	betaIdx := strings.Index(codeStr, "Beta string")
+	gammaIdx := strings.Index(codeStr, "Gamma string")
+
+	if alphaIdx == -1 || betaIdx == -1 || gammaIdx == -1 {
+		t.Error("Generated code missing expected fields")
+	}
+
+	// Since all are required, they should be alphabetically sorted
+	if alphaIdx > betaIdx || betaIdx > gammaIdx {
+		t.Error("Required fields should be alphabetically sorted")
+	}
+}
+
+func TestGenerator_GenerateActionWrapper_NoRequiredFields(t *testing.T) {
+	// Test with no required fields (all optional)
+	spec := &ActionSpec{
+		Name:        "NoRequired",
+		Description: "Action with no required fields",
+		Inputs: map[string]ActionInput{
+			"zebra": {
+				Description: "Optional field z",
+				Required:    false,
+			},
+			"alpha": {
+				Description: "Optional field a",
+				Required:    false,
+			},
+		},
+	}
+
+	gen := NewGenerator()
+	code, err := gen.GenerateActionWrapper(ActionWrapperConfig{
+		ActionRef:   "test/no-required@v1",
+		PackageName: "no_required",
+		TypeName:    "NoRequired",
+		Spec:        spec,
+	})
+	if err != nil {
+		t.Fatalf("GenerateActionWrapper() error = %v", err)
+	}
+
+	codeStr := string(code.Code)
+
+	// Verify fields are alphabetically sorted (since all are optional)
+	alphaIdx := strings.Index(codeStr, "Alpha string")
+	zebraIdx := strings.Index(codeStr, "Zebra string")
+
+	if alphaIdx == -1 || zebraIdx == -1 {
+		t.Error("Generated code missing expected fields")
+	}
+
+	if alphaIdx > zebraIdx {
+		t.Error("Optional fields should be alphabetically sorted")
+	}
+}
+
+func TestSanitizeDescription_WithSpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "with backticks",
+			input: "Use `command` for execution",
+			want:  "Use `command` for execution",
+		},
+		{
+			name:  "with quotes",
+			input: `Say "hello" world`,
+			want:  `Say "hello" world`,
+		},
+		{
+			name:  "with angle brackets",
+			input: "Use <input> tag",
+			want:  "Use <input> tag",
+		},
+		{
+			name:  "mixed special chars",
+			input: "Path: /usr/bin/*",
+			want:  "Path: /usr/bin/*",
+		},
+		{
+			name:  "empty string",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "only whitespace",
+			input: "   \t\n   ",
+			want:  "",
+		},
+		{
+			name:  "unicode characters",
+			input: "Hello \u00e9\u00e8\u00ea world",
+			want:  "Hello \u00e9\u00e8\u00ea world",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sanitizeDescription(tt.input)
+			if got != tt.want {
+				t.Errorf("sanitizeDescription() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestInferGoType_AdditionalCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		input ActionInput
+		want  string
+	}{
+		{
+			name:  "numeric string 123",
+			input: ActionInput{Default: "123"},
+			want:  "int",
+		},
+		{
+			name:  "numeric string 0",
+			input: ActionInput{Default: "0"},
+			want:  "int",
+		},
+		{
+			name:  "float string 1.5",
+			input: ActionInput{Default: "1.5"},
+			want:  "string", // floats treated as strings
+		},
+		{
+			name:  "negative number",
+			input: ActionInput{Default: "-5"},
+			want:  "string", // negative numbers treated as strings
+		},
+		{
+			name:  "mixed alphanumeric",
+			input: ActionInput{Default: "v1.2.3"},
+			want:  "string",
+		},
+		{
+			name:  "empty default with number description",
+			input: ActionInput{Description: "The retry count value"},
+			want:  "int",
+		},
+		{
+			name:  "empty default with timeout description",
+			input: ActionInput{Description: "timeout value in ms"},
+			want:  "int",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := inferGoType(tt.input)
+			if got != tt.want {
+				t.Errorf("inferGoType() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGenerator_GenerateActionWrapper_MixedRequiredOptional(t *testing.T) {
+	// Test with mix of required and optional fields
+	spec := &ActionSpec{
+		Name: "MixedFields",
+		Inputs: map[string]ActionInput{
+			"z-optional-2": {
+				Description: "Last optional",
+				Required:    false,
+			},
+			"a-optional-1": {
+				Description: "First optional",
+				Required:    false,
+			},
+			"z-required-2": {
+				Description: "Last required",
+				Required:    true,
+			},
+			"a-required-1": {
+				Description: "First required",
+				Required:    true,
+			},
+		},
+	}
+
+	gen := NewGenerator()
+	code, err := gen.GenerateActionWrapper(ActionWrapperConfig{
+		ActionRef:   "test/mixed@v1",
+		PackageName: "mixed",
+		TypeName:    "MixedFields",
+		Spec:        spec,
+	})
+	if err != nil {
+		t.Fatalf("GenerateActionWrapper() error = %v", err)
+	}
+
+	codeStr := string(code.Code)
+
+	// Get positions of all fields
+	aReq1 := strings.Index(codeStr, "ARequired1 string")
+	zReq2 := strings.Index(codeStr, "ZRequired2 string")
+	aOpt1 := strings.Index(codeStr, "AOptional1 string")
+	zOpt2 := strings.Index(codeStr, "ZOptional2 string")
+
+	// Required fields should come before optional
+	if aReq1 > aOpt1 || aReq1 > zOpt2 {
+		t.Error("Required field ARequired1 should come before optional fields")
+	}
+	if zReq2 > aOpt1 || zReq2 > zOpt2 {
+		t.Error("Required field ZRequired2 should come before optional fields")
+	}
+
+	// Within required, alphabetically sorted
+	if aReq1 > zReq2 {
+		t.Error("Required fields should be alphabetically sorted")
+	}
+
+	// Within optional, alphabetically sorted
+	if aOpt1 > zOpt2 {
+		t.Error("Optional fields should be alphabetically sorted")
+	}
+}
