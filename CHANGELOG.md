@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
+- **AWS Action Wrappers** - 2 typed wrappers for AWS GitHub Actions (#105)
+  - `aws-actions/configure-aws-credentials@v4` - Configure AWS credentials with OIDC or access keys
+  - `aws-actions/amazon-ecr-login@v2` - Authenticate to Amazon ECR Private or Public registries
 - **CODEOWNERS Import** - Import existing CODEOWNERS files to Go code (#104)
   - Parse CODEOWNERS format (pattern + owners)
   - Handle inline and full-line comments
