@@ -159,9 +159,12 @@ func (r *Runner) generateGoMod(modulePath, dir string) string {
 	return sb.String()
 }
 
-// parseReplaceDirectives extracts replace directives from go.mod.
+// parseReplaceDirectives extracts replace directives from go.mod,
+// resolving relative paths to absolute paths.
 func (r *Runner) parseReplaceDirectives(dir string) []string {
 	var replaces []string
+
+	absDir, _ := filepath.Abs(dir)
 
 	goModPath := filepath.Join(dir, "go.mod")
 	content, err := os.ReadFile(goModPath)
@@ -172,11 +175,32 @@ func (r *Runner) parseReplaceDirectives(dir string) []string {
 	for _, line := range strings.Split(string(content), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "replace ") {
-			replaces = append(replaces, line)
+			// Resolve relative paths in replace directives
+			replaces = append(replaces, r.resolveReplaceDirective(line, absDir))
 		}
 	}
 
 	return replaces
+}
+
+// resolveReplaceDirective converts relative paths in a replace directive to absolute paths.
+func (r *Runner) resolveReplaceDirective(line, baseDir string) string {
+	// Format: replace module/path => ./relative/path or replace module/path => /absolute/path
+	parts := strings.Split(line, " => ")
+	if len(parts) != 2 {
+		return line
+	}
+
+	targetPath := strings.TrimSpace(parts[1])
+
+	// Check if it's a relative path (starts with . or ..)
+	if strings.HasPrefix(targetPath, ".") {
+		absPath := filepath.Join(baseDir, targetPath)
+		absPath, _ = filepath.Abs(absPath)
+		return parts[0] + " => " + absPath
+	}
+
+	return line
 }
 
 // generateProgram creates the extraction program source code.

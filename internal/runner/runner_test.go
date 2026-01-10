@@ -198,3 +198,77 @@ func TestFindGoBinary(t *testing.T) {
 		t.Error("FindGoBinary() returned empty path")
 	}
 }
+
+func TestRunner_resolveReplaceDirective(t *testing.T) {
+	r := NewRunner()
+
+	tests := []struct {
+		name    string
+		line    string
+		baseDir string
+		want    string
+	}{
+		{
+			name:    "relative path with ../",
+			line:    "replace github.com/example/dep => ../dep",
+			baseDir: "/project/subdir",
+			want:    "replace github.com/example/dep => /project/dep",
+		},
+		{
+			name:    "relative path with .",
+			line:    "replace github.com/example/dep => ./local",
+			baseDir: "/project",
+			want:    "replace github.com/example/dep => /project/local",
+		},
+		{
+			name:    "absolute path unchanged",
+			line:    "replace github.com/example/dep => /absolute/path",
+			baseDir: "/project",
+			want:    "replace github.com/example/dep => /absolute/path",
+		},
+		{
+			name:    "version replacement unchanged",
+			line:    "replace github.com/example/dep v1.0.0 => v1.0.1",
+			baseDir: "/project",
+			want:    "replace github.com/example/dep v1.0.0 => v1.0.1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := r.resolveReplaceDirective(tt.line, tt.baseDir)
+			if got != tt.want {
+				t.Errorf("resolveReplaceDirective() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRunner_parseReplaceDirectives_ResolvesRelativePaths(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a go.mod with a relative replace directive
+	goMod := `module github.com/example/test
+
+go 1.23
+
+require github.com/other/dep v1.0.0
+
+replace github.com/other/dep => ../dep
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	replaces := r.parseReplaceDirectives(tmpDir)
+
+	if len(replaces) != 1 {
+		t.Fatalf("parseReplaceDirectives() returned %d directives, want 1", len(replaces))
+	}
+
+	// The relative path should be resolved to an absolute path
+	if strings.Contains(replaces[0], "..") {
+		t.Errorf("parseReplaceDirectives() should resolve relative paths, got %q", replaces[0])
+	}
+}

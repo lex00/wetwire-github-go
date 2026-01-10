@@ -10,9 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `docs/ROADMAP.md` - Feature matrix and implementation status
 - `lint --fix` - Automatic fixing for WAG001 (raw uses: strings → typed action wrappers)
 - Documentation examples for all 7 action wrapper packages in QUICK_START.md
+- `examples/ci-workflow` - Complete CI workflow example with matrix strategy and typed action wrappers
 
 ### Fixed
 - Documentation accuracy: project structures, CLI flags, status tables
+- Runner now resolves relative paths in replace directives for proper module extraction
 
 ## [0.1.0] - 2025-01-06
 
