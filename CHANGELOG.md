@@ -15,10 +15,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
-- **Improved Test Coverage** - Significantly improved test coverage for internal packages (#121)
-  - `internal/runner`: 20.9% → 72.3% (75 test functions, 51+ percentage point improvement)
-  - `internal/serialize`: 31.7% → 92.6% (57 test functions, 61+ percentage point improvement)
-  - Tests cover: all extraction types, program generation, path handling, YAML serialization, config types
+- **Improved Test Coverage** - Major test coverage improvements across core packages (#125, #126, #127)
+  - `internal/template`: 35.7% → 90.9% (55+ percentage point improvement)
+  - `internal/importer`: 37.9% → 96.0% (58+ percentage point improvement)
+  - `workflow`: 43.3% → 100.0% (57+ percentage point improvement)
+  - `internal/runner`: 20.9% → 72.3% (51+ percentage point improvement) (#121)
+  - `internal/serialize`: 31.7% → 92.6% (61+ percentage point improvement) (#121)
+  - 188 test functions in workflow package covering all expression contexts, conditions, triggers
+- **Additional Action Wrappers** - 4 new typed wrappers for popular GitHub Actions (#128)
+  - `actions/labeler@v5` - Automatically label PRs based on file paths
+  - `actions/stale@v9` - Mark and close stale issues/PRs
+  - `peter-evans/create-pull-request@v6` - Create pull requests programmatically
+  - `actions/dependency-review-action@v4` - Dependency vulnerability scanning
 - **Security Scanning Action Wrappers** - 4 typed wrappers for security scanning (#120)
   - `github/codeql-action/init@v3` - Initialize CodeQL for code scanning
   - `github/codeql-action/analyze@v3` - Run CodeQL analysis and upload results
