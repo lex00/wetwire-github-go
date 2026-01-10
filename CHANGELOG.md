@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
+- **Azure Action Wrappers** - 3 typed wrappers for Azure GitHub Actions (#106)
+  - `azure/login@v2` - Login to Azure with service principal or OIDC
+  - `azure/webapps-deploy@v3` - Deploy to Azure Web Apps or Web App for Containers
+  - `azure/docker-login@v2` - Login to Azure Container Registry
 - **AWS Action Wrappers** - 2 typed wrappers for AWS GitHub Actions (#105)
   - `aws-actions/configure-aws-credentials@v4` - Configure AWS credentials with OIDC or access keys
   - `aws-actions/amazon-ecr-login@v2` - Authenticate to Amazon ECR Private or Public registries
