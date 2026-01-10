@@ -79,10 +79,29 @@ func (g *CodeGenerator) generateSingleFile(workflow *IRWorkflow, workflowName st
 	sb.WriteString(g.generateTriggers(workflow, varName))
 	sb.WriteString("\n")
 
+	// Sort job IDs for deterministic output
+	jobIDs := make([]string, 0, len(workflow.Jobs))
+	for id := range workflow.Jobs {
+		jobIDs = append(jobIDs, id)
+	}
+	sort.Strings(jobIDs)
+
 	// Generate jobs
-	for jobID, job := range workflow.Jobs {
+	for _, jobID := range jobIDs {
+		job := workflow.Jobs[jobID]
 		sb.WriteString(g.generateJob(jobID, job))
 		sb.WriteString("\n")
+	}
+
+	// Generate steps for each job
+	for _, jobID := range jobIDs {
+		job := workflow.Jobs[jobID]
+		if len(job.Steps) > 0 {
+			jobVarName := toVarName(jobID)
+			stepsVarName := jobVarName + "Steps"
+			sb.WriteString(g.generateSteps(stepsVarName, job.Steps))
+			sb.WriteString("\n")
+		}
 	}
 
 	return sb.String()
@@ -403,10 +422,10 @@ func (g *CodeGenerator) generateJob(jobID string, job *IRJob) string {
 func (g *CodeGenerator) generateSteps(varName string, steps []IRStep) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("var %s = []workflow.Step{\n", varName))
+	sb.WriteString(fmt.Sprintf("var %s = []any{\n", varName))
 
 	for _, step := range steps {
-		sb.WriteString("\t{\n")
+		sb.WriteString("\tworkflow.Step{\n")
 
 		if step.ID != "" {
 			sb.WriteString(fmt.Sprintf("\t\tID: %q,\n", step.ID))
