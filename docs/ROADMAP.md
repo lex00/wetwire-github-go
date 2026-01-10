@@ -138,6 +138,10 @@ Type-safe wrappers for popular GitHub Actions:
 | sigstore/cosign-installer | `actions/cosign_installer` | ✅ |
 | actions-rs/cargo | `actions/cargo` | ✅ |
 | EndBug/add-and-commit | `actions/add_and_commit` | ✅ |
+| crazy-max/ghaction-import-gpg | `actions/import_gpg` | ✅ |
+| pre-commit/action | `actions/pre_commit` | ✅ |
+| SonarSource/sonarcloud-github-action | `actions/sonarcloud` | ✅ |
+| ncipollo/release-action | `actions/ncipollo_release` | ✅ |
 
 ---
 
