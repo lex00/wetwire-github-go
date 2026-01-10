@@ -18,7 +18,7 @@ Feature matrix and implementation status for wetwire-github-go.
 | `init` | ✅ Complete | Scaffolds new projects |
 | `graph` | ✅ Complete | Mermaid and DOT output |
 | `design` | ✅ Complete | AI-assisted workflow generation via wetwire-core-go |
-| `test` | ⚠️ Partial | Basic structural tests only, needs personas (#67) |
+| `test` | ✅ Complete | Structural tests + 5 personas + 5-dimension scoring |
 | `mcp` | ❌ Missing | MCP server for IDE integration (#68) |
 
 ---
@@ -59,10 +59,8 @@ Feature matrix and implementation status for wetwire-github-go.
 | Streaming support | ✅ | `--stream` flag for token streaming |
 | Lint enforcement | ✅ | Automatic lint after file writes |
 | ConsoleDeveloper | ✅ | Interactive question/answer |
-| Persona testing | ❌ | 5 standard personas (#67) |
-| 5-dimension scoring | ❌ | Completeness, Lint, Code, Output, Questions |
-
-See issues #67 for persona testing implementation.
+| Persona testing | ✅ | 5 standard personas (beginner, intermediate, expert, terse, verbose) |
+| 5-dimension scoring | ✅ | Completeness, Lint, Code, Output, Questions |
 
 ---
 
@@ -116,7 +114,7 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] wetwire-core-go dependency
 - [x] Tool definitions (7 tools)
 - [x] Design command implementation (#66)
-- [ ] Test command personas (#67)
+- [x] Test command personas (#67)
 - [ ] MCP server support (#68)
 
 ### Phase 5: Polish

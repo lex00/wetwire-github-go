@@ -16,6 +16,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Streaming output support (`--stream`)
   - Lint enforcement with configurable max cycles (`--max-lint-cycles`)
   - 7 agent tools: init_package, write_file, read_file, run_lint, run_build, run_validate, ask_developer
+- `test` command enhanced with persona-based testing and scoring (#67)
+  - 5 developer personas: beginner, intermediate, expert, terse, verbose
+  - 5-dimension scoring system (0-3 each, max 15): Completeness, Lint Quality, Code Quality, Output Validity, Question Efficiency
+  - Thresholds: 0-5 Failure, 6-9 Partial, 10-12 Success, 13-15 Excellent
+  - `--persona` flag to run specific persona
+  - `--score` flag to show scoring breakdown
+  - `--list` flag to list available personas and scenarios
 
 ### Fixed
 - Documentation accuracy: project structures, CLI flags, status tables

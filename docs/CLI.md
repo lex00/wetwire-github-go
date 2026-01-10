@@ -157,15 +157,42 @@ wetwire-github design [flags]
 
 ### `wetwire-github test`
 
-Persona-based testing (requires wetwire-core-go).
+Run persona-based tests against workflow declarations.
 
 ```bash
-wetwire-github test [flags]
+wetwire-github test <path> [flags]
 ```
 
 **Flags:**
-- `--persona <name>` — Persona to use
-- `--scenario <name>` — Scenario to run
+- `--format <format>` — Output format: `text` or `json` (default: `text`)
+- `--persona <name>` — Run specific persona: `beginner`, `intermediate`, `expert`, `terse`, `verbose`
+- `--scenario <name>` — Run specific scenario: `ci-workflow`, `deployment`, `release`, `matrix`
+- `--score` — Show scoring breakdown
+- `--list` — List available personas and scenarios
+
+**Developer Personas:**
+- `beginner` — New to GitHub Actions, needs guidance
+- `intermediate` — Some experience, knows basics but misses details
+- `expert` — Deep CI/CD knowledge, precise requirements
+- `terse` — Minimal words, expects system to infer
+- `verbose` — Over-explains, buries requirements in prose
+
+**Scoring Dimensions (0-3 each):**
+- Completeness — Were all required workflows generated?
+- Lint Quality — Did the code pass linting?
+- Code Quality — Does the code follow idiomatic patterns?
+- Output Validity — Is the generated YAML valid?
+- Question Efficiency — Appropriate number of clarifying questions?
+
+**Thresholds:** 0-5 Failure, 6-9 Partial, 10-12 Success, 13-15 Excellent
+
+**Example:**
+```bash
+wetwire-github test .
+wetwire-github test . --persona beginner --score
+wetwire-github test . --scenario ci-workflow --format json
+wetwire-github test --list
+```
 
 ### `wetwire-github version`
 
