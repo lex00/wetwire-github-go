@@ -132,6 +132,9 @@ Type-safe wrappers for popular GitHub Actions:
 | actions/configure-pages | `actions/configure_pages` | ✅ |
 | actions/deploy-pages | `actions/deploy_pages` | ✅ |
 | actions/upload-pages-artifact | `actions/upload_pages_artifact` | ✅ |
+| reviewdog/action-setup | `actions/reviewdog` | ✅ |
+| super-linter/super-linter | `actions/super_linter` | ✅ |
+| github/codeql-action/upload-sarif | `actions/upload_sarif` | ✅ |
 
 ---
 
@@ -206,6 +209,7 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] Agent test coverage improvements (24.7% → 55.2%) (#155)
 - [x] Performance benchmarks (discover, serialize, importer, runner, linter) (#157)
 - [x] Codegen test coverage improvements (89.5% → 95.7%) (#158)
+- [x] Reusable workflow example with workflow_call trigger (#176)
 
 ---
 

@@ -87,6 +87,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Schedule trigger with cron patterns
   - Workflow dispatch with typed inputs (choice, boolean, string)
   - Conditional job execution based on event type
+- **Reusable Workflow Example** - Example demonstrating workflow_call trigger (#176)
+  - Reusable workflow with typed inputs, outputs, and secrets
+  - Caller workflow showing how to invoke reusable workflows
+  - Job outputs mapping to workflow outputs
+- **Additional Action Wrappers** - 3 typed wrappers for code quality tools (#177)
+  - `reviewdog/action-setup@v1` - Setup reviewdog for inline code review comments
+  - `super-linter/super-linter@v7` - GitHub Super-Linter for comprehensive code linting
+  - `github/codeql-action/upload-sarif@v3` - Upload SARIF results to GitHub Security
 - **Performance Benchmarks** - Benchmarks for key operations (#157)
   - `internal/discover` - AST discovery benchmarks
   - `internal/serialize` - YAML serialization benchmarks
