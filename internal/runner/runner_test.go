@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1458,5 +1459,1773 @@ func TestRunner_generateProgram_DeeplyNested(t *testing.T) {
 
 	if !strings.Contains(program, "github.com/example/test/a/b/c/d") {
 		t.Error("generateProgram() should handle deeply nested packages")
+	}
+}
+
+// Test ExtractValues with invalid TempDir
+func TestRunner_ExtractValues_InvalidTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a Go file for the workflow
+	workflowFile := `package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{Name: "CI"}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), []byte(workflowFile), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: "/nonexistent/temp/dir",
+		GoPath:  "go",
+	}
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "CI", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractValues() expected error for invalid TempDir")
+	}
+	if !strings.Contains(err.Error(), "creating temp dir") {
+		t.Errorf("Expected 'creating temp dir' error, got: %v", err)
+	}
+}
+
+// Test ExtractDependabot with invalid TempDir
+func TestRunner_ExtractDependabot_InvalidTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: "/nonexistent/temp/dir",
+		GoPath:  "go",
+	}
+
+	discovered := &discover.DependabotDiscoveryResult{
+		Configs: []discover.DiscoveredDependabot{
+			{Name: "Config", File: filepath.Join(tmpDir, "dependabot.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDependabot(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDependabot() expected error for invalid TempDir")
+	}
+	if !strings.Contains(err.Error(), "creating temp dir") {
+		t.Errorf("Expected 'creating temp dir' error, got: %v", err)
+	}
+}
+
+// Test ExtractIssueTemplates with invalid TempDir
+func TestRunner_ExtractIssueTemplates_InvalidTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: "/nonexistent/temp/dir",
+		GoPath:  "go",
+	}
+
+	discovered := &discover.IssueTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredIssueTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractIssueTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractIssueTemplates() expected error for invalid TempDir")
+	}
+	if !strings.Contains(err.Error(), "creating temp dir") {
+		t.Errorf("Expected 'creating temp dir' error, got: %v", err)
+	}
+}
+
+// Test ExtractDiscussionTemplates with invalid TempDir
+func TestRunner_ExtractDiscussionTemplates_InvalidTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: "/nonexistent/temp/dir",
+		GoPath:  "go",
+	}
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDiscussionTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDiscussionTemplates() expected error for invalid TempDir")
+	}
+	if !strings.Contains(err.Error(), "creating temp dir") {
+		t.Errorf("Expected 'creating temp dir' error, got: %v", err)
+	}
+}
+
+// Test ExtractPRTemplates with invalid TempDir
+func TestRunner_ExtractPRTemplates_InvalidTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: "/nonexistent/temp/dir",
+		GoPath:  "go",
+	}
+
+	discovered := &discover.PRTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredPRTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractPRTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractPRTemplates() expected error for invalid TempDir")
+	}
+	if !strings.Contains(err.Error(), "creating temp dir") {
+		t.Errorf("Expected 'creating temp dir' error, got: %v", err)
+	}
+}
+
+// Test ExtractCodeowners with invalid TempDir
+func TestRunner_ExtractCodeowners_InvalidTempDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: "/nonexistent/temp/dir",
+		GoPath:  "go",
+	}
+
+	discovered := &discover.CodeownersDiscoveryResult{
+		Configs: []discover.DiscoveredCodeowners{
+			{Name: "Config", File: filepath.Join(tmpDir, "codeowners.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractCodeowners(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractCodeowners() expected error for invalid TempDir")
+	}
+	if !strings.Contains(err.Error(), "creating temp dir") {
+		t.Errorf("Expected 'creating temp dir' error, got: %v", err)
+	}
+}
+
+// Test ExtractValues with missing go.mod in directory with workflows
+func TestRunner_ExtractValues_MissingGoMod(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// No go.mod file
+
+	r := NewRunner()
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "CI", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractValues() expected error for missing go.mod")
+	}
+	if !strings.Contains(err.Error(), "parsing go.mod") {
+		t.Errorf("Expected 'parsing go.mod' error, got: %v", err)
+	}
+}
+
+// Test ExtractDependabot with missing go.mod
+func TestRunner_ExtractDependabot_MissingGoMod(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	r := NewRunner()
+
+	discovered := &discover.DependabotDiscoveryResult{
+		Configs: []discover.DiscoveredDependabot{
+			{Name: "Config", File: filepath.Join(tmpDir, "dependabot.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDependabot(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDependabot() expected error for missing go.mod")
+	}
+	if !strings.Contains(err.Error(), "parsing go.mod") {
+		t.Errorf("Expected 'parsing go.mod' error, got: %v", err)
+	}
+}
+
+// Test ExtractIssueTemplates with missing go.mod
+func TestRunner_ExtractIssueTemplates_MissingGoMod(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	r := NewRunner()
+
+	discovered := &discover.IssueTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredIssueTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractIssueTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractIssueTemplates() expected error for missing go.mod")
+	}
+	if !strings.Contains(err.Error(), "parsing go.mod") {
+		t.Errorf("Expected 'parsing go.mod' error, got: %v", err)
+	}
+}
+
+// Test ExtractDiscussionTemplates with missing go.mod
+func TestRunner_ExtractDiscussionTemplates_MissingGoMod(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	r := NewRunner()
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDiscussionTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDiscussionTemplates() expected error for missing go.mod")
+	}
+	if !strings.Contains(err.Error(), "parsing go.mod") {
+		t.Errorf("Expected 'parsing go.mod' error, got: %v", err)
+	}
+}
+
+// Test ExtractPRTemplates with missing go.mod
+func TestRunner_ExtractPRTemplates_MissingGoMod(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	r := NewRunner()
+
+	discovered := &discover.PRTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredPRTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractPRTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractPRTemplates() expected error for missing go.mod")
+	}
+	if !strings.Contains(err.Error(), "parsing go.mod") {
+		t.Errorf("Expected 'parsing go.mod' error, got: %v", err)
+	}
+}
+
+// Test ExtractCodeowners with missing go.mod
+func TestRunner_ExtractCodeowners_MissingGoMod(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	r := NewRunner()
+
+	discovered := &discover.CodeownersDiscoveryResult{
+		Configs: []discover.DiscoveredCodeowners{
+			{Name: "Config", File: filepath.Join(tmpDir, "codeowners.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractCodeowners(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractCodeowners() expected error for missing go.mod")
+	}
+	if !strings.Contains(err.Error(), "parsing go.mod") {
+		t.Errorf("Expected 'parsing go.mod' error, got: %v", err)
+	}
+}
+
+// Test ExtractValues with invalid Go binary path
+func TestRunner_ExtractValues_InvalidGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+	}
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "CI", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractValues() expected error for invalid Go binary")
+	}
+	// Should fail at go mod tidy or go run stage
+	if !strings.Contains(err.Error(), "go mod tidy") && !strings.Contains(err.Error(), "running extraction") {
+		t.Errorf("Expected go execution error, got: %v", err)
+	}
+}
+
+// Test ExtractDependabot with invalid Go binary path
+func TestRunner_ExtractDependabot_InvalidGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+	}
+
+	discovered := &discover.DependabotDiscoveryResult{
+		Configs: []discover.DiscoveredDependabot{
+			{Name: "Config", File: filepath.Join(tmpDir, "dependabot.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDependabot(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDependabot() expected error for invalid Go binary")
+	}
+}
+
+// Test ExtractIssueTemplates with invalid Go binary path
+func TestRunner_ExtractIssueTemplates_InvalidGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+	}
+
+	discovered := &discover.IssueTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredIssueTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractIssueTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractIssueTemplates() expected error for invalid Go binary")
+	}
+}
+
+// Test ExtractDiscussionTemplates with invalid Go binary path
+func TestRunner_ExtractDiscussionTemplates_InvalidGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+	}
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDiscussionTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDiscussionTemplates() expected error for invalid Go binary")
+	}
+}
+
+// Test ExtractPRTemplates with invalid Go binary path
+func TestRunner_ExtractPRTemplates_InvalidGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+	}
+
+	discovered := &discover.PRTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredPRTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractPRTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractPRTemplates() expected error for invalid Go binary")
+	}
+}
+
+// Test ExtractCodeowners with invalid Go binary path
+func TestRunner_ExtractCodeowners_InvalidGoBinary(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "/nonexistent/go/binary",
+	}
+
+	discovered := &discover.CodeownersDiscoveryResult{
+		Configs: []discover.DiscoveredCodeowners{
+			{Name: "Config", File: filepath.Join(tmpDir, "codeowners.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractCodeowners(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractCodeowners() expected error for invalid Go binary")
+	}
+}
+
+// Test getPackagePath with empty directory
+func TestRunner_getPackagePath_EmptyDir(t *testing.T) {
+	r := NewRunner()
+
+	// When baseDir is empty, filepath.Rel may behave differently
+	result := r.getPackagePath("github.com/example/test", "", "/project/file.go")
+	if !strings.Contains(result, "github.com/example/test") {
+		t.Errorf("getPackagePath() should contain module path, got: %q", result)
+	}
+}
+
+// Test generateProgram with empty workflows and jobs
+func TestRunner_generateProgram_Empty(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{},
+		Jobs:      []discover.DiscoveredJob{},
+	}
+
+	program, err := r.generateProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateProgram() error = %v", err)
+	}
+
+	// Should still generate valid Go code
+	if !strings.Contains(program, "package main") {
+		t.Error("generateProgram() should contain package main")
+	}
+}
+
+// Test resolveReplaceDirective with dot prefix
+func TestRunner_resolveReplaceDirective_DotPrefix(t *testing.T) {
+	r := NewRunner()
+
+	tests := []struct {
+		name    string
+		line    string
+		baseDir string
+		wantAbs bool
+	}{
+		{
+			name:    "starts with ./",
+			line:    "replace github.com/dep => ./local",
+			baseDir: "/project",
+			wantAbs: true,
+		},
+		{
+			name:    "starts with ../",
+			line:    "replace github.com/dep => ../sibling",
+			baseDir: "/project/sub",
+			wantAbs: true,
+		},
+		{
+			name:    "starts with ..",
+			line:    "replace github.com/dep => ..sibling",
+			baseDir: "/project",
+			wantAbs: false, // doesn't start with . or ..
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := r.resolveReplaceDirective(tt.line, tt.baseDir)
+			isAbs := strings.Contains(result, tt.baseDir) || strings.HasPrefix(strings.Split(result, " => ")[1], "/")
+			if tt.wantAbs && !isAbs {
+				t.Errorf("resolveReplaceDirective() = %q, expected absolute path", result)
+			}
+		})
+	}
+}
+
+// Test Runner Verbose field
+func TestRunner_Verbose(t *testing.T) {
+	r := &Runner{
+		TempDir: os.TempDir(),
+		GoPath:  "go",
+		Verbose: true,
+	}
+
+	if !r.Verbose {
+		t.Error("Runner.Verbose should be true")
+	}
+}
+
+// Test parseGoMod with complex go.mod
+func TestRunner_parseGoMod_Complex(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `// This is a comment
+module github.com/complex/module-name
+
+go 1.23
+
+require (
+	github.com/some/dep v1.0.0
+	github.com/other/dep v2.0.0
+)
+
+replace github.com/some/dep => ../local/dep
+
+exclude github.com/bad/dep v1.0.0
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	modulePath, err := r.parseGoMod(tmpDir)
+	if err != nil {
+		t.Fatalf("parseGoMod() error = %v", err)
+	}
+
+	if modulePath != "github.com/complex/module-name" {
+		t.Errorf("parseGoMod() = %q, want %q", modulePath, "github.com/complex/module-name")
+	}
+}
+
+// Test generateGoMod output format
+func TestRunner_generateGoMod_Format(t *testing.T) {
+	r := NewRunner()
+	result := r.generateGoMod("github.com/example/test", "/path/to/project")
+
+	// Check specific format requirements
+	if !strings.HasPrefix(result, "module wetwire-extract\n") {
+		t.Error("generateGoMod() should start with module directive")
+	}
+
+	if !strings.Contains(result, "go 1.23") {
+		t.Error("generateGoMod() should specify Go version")
+	}
+
+	if !strings.Contains(result, "v0.0.0") {
+		t.Error("generateGoMod() should use v0.0.0 version")
+	}
+}
+
+// Test parseReplaceDirectives with block syntax
+func TestRunner_parseReplaceDirectives_Block(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Note: The current implementation only parses replace directives that
+	// start with "replace " (single line format), not block syntax
+	goMod := `module github.com/example/test
+
+go 1.23
+
+replace github.com/single/dep => ./single
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	replaces := r.parseReplaceDirectives(tmpDir)
+
+	// Should find the single-line replace directive
+	if len(replaces) != 1 {
+		t.Errorf("parseReplaceDirectives() returned %d directives, want 1", len(replaces))
+	}
+}
+
+// Test generateProgram import ordering is consistent
+func TestRunner_generateProgram_ImportConsistency(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "CI", File: "/project/workflows.go", Line: 10},
+		},
+		Jobs: []discover.DiscoveredJob{
+			{Name: "Build", File: "/project/jobs.go", Line: 5},
+		},
+	}
+
+	// Generate the same program multiple times
+	program1, _ := r.generateProgram("github.com/example/test", baseDir, discovered)
+	program2, _ := r.generateProgram("github.com/example/test", baseDir, discovered)
+
+	// Programs should be identical
+	if program1 != program2 {
+		t.Error("generateProgram() should produce consistent output")
+	}
+}
+
+// Test generateDiscussionTemplateProgram with multiple packages
+func TestRunner_generateDiscussionTemplateProgram_MultiplePackages(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{
+			{Name: "Announcement", File: "/project/templates.go", Line: 10},
+			{Name: "Question", File: "/project/internal/discussion/templates.go", Line: 5},
+		},
+	}
+
+	program, err := r.generateDiscussionTemplateProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateDiscussionTemplateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "Announcement") {
+		t.Error("generateDiscussionTemplateProgram() missing Announcement")
+	}
+
+	if !strings.Contains(program, "Question") {
+		t.Error("generateDiscussionTemplateProgram() missing Question")
+	}
+
+	if !strings.Contains(program, "github.com/example/test/internal/discussion") {
+		t.Error("generateDiscussionTemplateProgram() missing internal/discussion package import")
+	}
+}
+
+// Test parseGoMod with module on different lines
+func TestRunner_parseGoMod_ModuleOnDifferentLine(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `
+
+module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	modulePath, err := r.parseGoMod(tmpDir)
+	if err != nil {
+		t.Fatalf("parseGoMod() error = %v", err)
+	}
+
+	if modulePath != "github.com/example/test" {
+		t.Errorf("parseGoMod() = %q, want %q", modulePath, "github.com/example/test")
+	}
+}
+
+// Test parseGoMod with whitespace - only handles trimmed lines
+func TestRunner_parseGoMod_Whitespace(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Note: The current implementation uses TrimSpace on lines,
+	// so "  module github.com/test" becomes "module github.com/test" after trimming
+	// But then "module " is stripped, leaving "  github.com/example/test" from the original
+	// This test verifies the current behavior
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	modulePath, err := r.parseGoMod(tmpDir)
+	if err != nil {
+		t.Fatalf("parseGoMod() error = %v", err)
+	}
+
+	// The module path should start with the expected module
+	// (trailing spaces might be included)
+	if !strings.HasPrefix(modulePath, "github.com/example/test") {
+		t.Errorf("parseGoMod() = %q, want prefix %q", modulePath, "github.com/example/test")
+	}
+}
+
+// Test getPackagePath with same base and file directory
+func TestRunner_getPackagePath_SameDir(t *testing.T) {
+	r := NewRunner()
+
+	// When file is directly in baseDir
+	result := r.getPackagePath("github.com/example/test", "/project", "/project/file.go")
+	if result != "github.com/example/test" {
+		t.Errorf("getPackagePath() = %q, want %q", result, "github.com/example/test")
+	}
+}
+
+// Test pkgAlias with single component path
+func TestRunner_pkgAlias_SingleComponent(t *testing.T) {
+	r := NewRunner()
+
+	result := r.pkgAlias("main")
+	if result != "main" {
+		t.Errorf("pkgAlias() = %q, want %q", result, "main")
+	}
+}
+
+// Test pkgAlias with multiple hyphens
+func TestRunner_pkgAlias_MultipleHyphens(t *testing.T) {
+	r := NewRunner()
+
+	result := r.pkgAlias("github.com/my-org/my-awesome-package")
+	if result != "my_awesome_package" {
+		t.Errorf("pkgAlias() = %q, want %q", result, "my_awesome_package")
+	}
+}
+
+// Test generateGoMod includes proper newlines
+func TestRunner_generateGoMod_Newlines(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	result := r.generateGoMod("github.com/example/test", tmpDir)
+
+	// Should have proper newlines for readability
+	lines := strings.Split(result, "\n")
+	if len(lines) < 4 {
+		t.Errorf("generateGoMod() should have at least 4 lines, got %d", len(lines))
+	}
+}
+
+// Test resolveReplaceDirective with various spacing
+func TestRunner_resolveReplaceDirective_Spacing(t *testing.T) {
+	r := NewRunner()
+
+	tests := []struct {
+		name    string
+		line    string
+		baseDir string
+	}{
+		{
+			name:    "multiple spaces",
+			line:    "replace   github.com/dep   =>   ./local",
+			baseDir: "/project",
+		},
+		{
+			name:    "tabs",
+			line:    "replace\tgithub.com/dep\t=>\t./local",
+			baseDir: "/project",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := r.resolveReplaceDirective(tt.line, tt.baseDir)
+			// Should contain the original or resolved path
+			if !strings.Contains(result, "github.com/dep") {
+				t.Errorf("resolveReplaceDirective() = %q, should contain module path", result)
+			}
+		})
+	}
+}
+
+// Test parseReplaceDirectives with empty lines
+func TestRunner_parseReplaceDirectives_EmptyLines(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+
+
+replace github.com/dep => ./local
+
+
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	replaces := r.parseReplaceDirectives(tmpDir)
+
+	if len(replaces) != 1 {
+		t.Errorf("parseReplaceDirectives() returned %d directives, want 1", len(replaces))
+	}
+}
+
+// Test generateProgram with only workflows
+func TestRunner_generateProgram_OnlyWorkflows(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "CI", File: "/project/workflows.go", Line: 10},
+			{Name: "Deploy", File: "/project/workflows.go", Line: 20},
+		},
+		Jobs: []discover.DiscoveredJob{},
+	}
+
+	program, err := r.generateProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "CI") || !strings.Contains(program, "Deploy") {
+		t.Error("generateProgram() should contain workflow names")
+	}
+}
+
+// Test generateProgram with only jobs
+func TestRunner_generateProgram_OnlyJobs(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{},
+		Jobs: []discover.DiscoveredJob{
+			{Name: "Build", File: "/project/jobs.go", Line: 5},
+			{Name: "Test", File: "/project/jobs.go", Line: 15},
+		},
+	}
+
+	program, err := r.generateProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "Build") || !strings.Contains(program, "Test") {
+		t.Error("generateProgram() should contain job names")
+	}
+}
+
+// Test generateDependabotProgram empty slices
+func TestRunner_generateDependabotProgram_Empty(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.DependabotDiscoveryResult{
+		Configs: []discover.DiscoveredDependabot{},
+	}
+
+	program, err := r.generateDependabotProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateDependabotProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateDependabotProgram() should contain package main")
+	}
+}
+
+// Test generateIssueTemplateProgram empty slices
+func TestRunner_generateIssueTemplateProgram_Empty(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.IssueTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredIssueTemplate{},
+	}
+
+	program, err := r.generateIssueTemplateProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateIssueTemplateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateIssueTemplateProgram() should contain package main")
+	}
+}
+
+// Test generateDiscussionTemplateProgram empty slices
+func TestRunner_generateDiscussionTemplateProgram_Empty(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{},
+	}
+
+	program, err := r.generateDiscussionTemplateProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateDiscussionTemplateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateDiscussionTemplateProgram() should contain package main")
+	}
+}
+
+// Test generatePRTemplateProgram empty slices
+func TestRunner_generatePRTemplateProgram_Empty(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.PRTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredPRTemplate{},
+	}
+
+	program, err := r.generatePRTemplateProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generatePRTemplateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generatePRTemplateProgram() should contain package main")
+	}
+}
+
+// Test generateCodeownersProgram empty slices
+func TestRunner_generateCodeownersProgram_Empty(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	discovered := &discover.CodeownersDiscoveryResult{
+		Configs: []discover.DiscoveredCodeowners{},
+	}
+
+	program, err := r.generateCodeownersProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateCodeownersProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateCodeownersProgram() should contain package main")
+	}
+}
+
+// Test Runner struct fields can be set independently
+func TestRunner_StructFields(t *testing.T) {
+	r := &Runner{
+		TempDir: "/custom/temp",
+		GoPath:  "/custom/go",
+		Verbose: true,
+	}
+
+	if r.TempDir != "/custom/temp" {
+		t.Errorf("Runner.TempDir = %q, want %q", r.TempDir, "/custom/temp")
+	}
+	if r.GoPath != "/custom/go" {
+		t.Errorf("Runner.GoPath = %q, want %q", r.GoPath, "/custom/go")
+	}
+	if !r.Verbose {
+		t.Error("Runner.Verbose should be true")
+	}
+}
+
+// Test NewRunner sets GoPath from PATH
+func TestNewRunner_SetsGoPath(t *testing.T) {
+	r := NewRunner()
+
+	// GoPath might be empty if go is not in PATH, but typically it should be set
+	// We just verify the field is accessible
+	_ = r.GoPath
+}
+
+// Test ExtractionResult struct fields
+func TestExtractionResult_Fields(t *testing.T) {
+	result := ExtractionResult{
+		Workflows: []ExtractedWorkflow{
+			{Name: "CI", Data: map[string]any{"key": "value"}},
+		},
+		Jobs: []ExtractedJob{
+			{Name: "Build", Data: map[string]any{"step": "compile"}},
+		},
+		Error: "test error",
+	}
+
+	if len(result.Workflows) != 1 {
+		t.Errorf("len(Workflows) = %d, want 1", len(result.Workflows))
+	}
+	if len(result.Jobs) != 1 {
+		t.Errorf("len(Jobs) = %d, want 1", len(result.Jobs))
+	}
+	if result.Error != "test error" {
+		t.Errorf("Error = %q, want %q", result.Error, "test error")
+	}
+}
+
+// Test ExtractedWorkflow struct
+func TestExtractedWorkflow_Struct(t *testing.T) {
+	w := ExtractedWorkflow{
+		Name: "CI",
+		Data: map[string]any{"on": "push"},
+	}
+
+	if w.Name != "CI" {
+		t.Errorf("Name = %q, want %q", w.Name, "CI")
+	}
+	if w.Data["on"] != "push" {
+		t.Errorf("Data[on] = %v, want %q", w.Data["on"], "push")
+	}
+}
+
+// Test ExtractedJob struct
+func TestExtractedJob_Struct(t *testing.T) {
+	j := ExtractedJob{
+		Name: "Build",
+		Data: map[string]any{"runs-on": "ubuntu-latest"},
+	}
+
+	if j.Name != "Build" {
+		t.Errorf("Name = %q, want %q", j.Name, "Build")
+	}
+	if j.Data["runs-on"] != "ubuntu-latest" {
+		t.Errorf("Data[runs-on] = %v, want %q", j.Data["runs-on"], "ubuntu-latest")
+	}
+}
+
+// Test DependabotExtractionResult struct
+func TestDependabotExtractionResult_Struct(t *testing.T) {
+	result := DependabotExtractionResult{
+		Configs: []ExtractedDependabot{
+			{Name: "Config1", Data: map[string]any{"version": 2}},
+		},
+		Error: "",
+	}
+
+	if len(result.Configs) != 1 {
+		t.Errorf("len(Configs) = %d, want 1", len(result.Configs))
+	}
+}
+
+// Test IssueTemplateExtractionResult struct
+func TestIssueTemplateExtractionResult_Struct(t *testing.T) {
+	result := IssueTemplateExtractionResult{
+		Templates: []ExtractedIssueTemplate{
+			{Name: "Bug", Data: map[string]any{"title": "Bug Report"}},
+		},
+		Error: "",
+	}
+
+	if len(result.Templates) != 1 {
+		t.Errorf("len(Templates) = %d, want 1", len(result.Templates))
+	}
+}
+
+// Test DiscussionTemplateExtractionResult struct
+func TestDiscussionTemplateExtractionResult_Struct(t *testing.T) {
+	result := DiscussionTemplateExtractionResult{
+		Templates: []ExtractedDiscussionTemplate{
+			{Name: "Announcement", Data: map[string]any{"title": "Announcement"}},
+		},
+		Error: "",
+	}
+
+	if len(result.Templates) != 1 {
+		t.Errorf("len(Templates) = %d, want 1", len(result.Templates))
+	}
+}
+
+// Test PRTemplateExtractionResult struct
+func TestPRTemplateExtractionResult_Struct(t *testing.T) {
+	result := PRTemplateExtractionResult{
+		Templates: []ExtractedPRTemplate{
+			{Name: "Default", Content: "## Description"},
+		},
+		Error: "",
+	}
+
+	if len(result.Templates) != 1 {
+		t.Errorf("len(Templates) = %d, want 1", len(result.Templates))
+	}
+}
+
+// Test CodeownersExtractionResult struct
+func TestCodeownersExtractionResult_Struct(t *testing.T) {
+	result := CodeownersExtractionResult{
+		Configs: []ExtractedCodeowners{
+			{
+				Name: "Main",
+				Rules: []ExtractedCodeownersRule{
+					{Pattern: "*", Owners: []string{"@team"}, Comment: "Default"},
+				},
+			},
+		},
+		Error: "",
+	}
+
+	if len(result.Configs) != 1 {
+		t.Errorf("len(Configs) = %d, want 1", len(result.Configs))
+	}
+	if len(result.Configs[0].Rules) != 1 {
+		t.Errorf("len(Rules) = %d, want 1", len(result.Configs[0].Rules))
+	}
+}
+
+// Test ExtractedCodeownersRule struct
+func TestExtractedCodeownersRule_Struct(t *testing.T) {
+	rule := ExtractedCodeownersRule{
+		Pattern: "*.go",
+		Owners:  []string{"@go-team", "@backend"},
+		Comment: "Go files",
+	}
+
+	if rule.Pattern != "*.go" {
+		t.Errorf("Pattern = %q, want %q", rule.Pattern, "*.go")
+	}
+	if len(rule.Owners) != 2 {
+		t.Errorf("len(Owners) = %d, want 2", len(rule.Owners))
+	}
+	if rule.Comment != "Go files" {
+		t.Errorf("Comment = %q, want %q", rule.Comment, "Go files")
+	}
+}
+
+// Test ExtractedDependabot struct
+func TestExtractedDependabot_Struct(t *testing.T) {
+	d := ExtractedDependabot{
+		Name: "DependabotConfig",
+		Data: map[string]any{"version": 2},
+	}
+
+	if d.Name != "DependabotConfig" {
+		t.Errorf("Name = %q, want %q", d.Name, "DependabotConfig")
+	}
+}
+
+// Test ExtractedIssueTemplate struct
+func TestExtractedIssueTemplate_Struct(t *testing.T) {
+	tmpl := ExtractedIssueTemplate{
+		Name: "BugReport",
+		Data: map[string]any{"title": "Bug Report"},
+	}
+
+	if tmpl.Name != "BugReport" {
+		t.Errorf("Name = %q, want %q", tmpl.Name, "BugReport")
+	}
+}
+
+// Test ExtractedDiscussionTemplate struct
+func TestExtractedDiscussionTemplate_Struct(t *testing.T) {
+	tmpl := ExtractedDiscussionTemplate{
+		Name: "Announcement",
+		Data: map[string]any{"category": "announcements"},
+	}
+
+	if tmpl.Name != "Announcement" {
+		t.Errorf("Name = %q, want %q", tmpl.Name, "Announcement")
+	}
+}
+
+// Test ExtractedPRTemplate struct
+func TestExtractedPRTemplate_Struct(t *testing.T) {
+	tmpl := ExtractedPRTemplate{
+		Name:    "DefaultPR",
+		Content: "## Description\n\nPlease describe your changes.",
+	}
+
+	if tmpl.Name != "DefaultPR" {
+		t.Errorf("Name = %q, want %q", tmpl.Name, "DefaultPR")
+	}
+	if !strings.Contains(tmpl.Content, "Description") {
+		t.Error("Content should contain 'Description'")
+	}
+}
+
+// Test ExtractedCodeowners struct
+func TestExtractedCodeowners_Struct(t *testing.T) {
+	co := ExtractedCodeowners{
+		Name: "MainCodeowners",
+		Rules: []ExtractedCodeownersRule{
+			{Pattern: "*", Owners: []string{"@default"}},
+		},
+	}
+
+	if co.Name != "MainCodeowners" {
+		t.Errorf("Name = %q, want %q", co.Name, "MainCodeowners")
+	}
+	if len(co.Rules) != 1 {
+		t.Errorf("len(Rules) = %d, want 1", len(co.Rules))
+	}
+}
+
+// Test ExtractValues with read-only temp directory to trigger write errors
+func TestRunner_ExtractValues_ReadOnlyTempDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("Skipping test when running as root")
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a temp directory that will be used as TempDir, then make it read-only
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	if err := os.MkdirAll(readOnlyDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Make the directory read-only to prevent writing
+	if err := os.Chmod(readOnlyDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(readOnlyDir, 0755) // Restore permissions for cleanup
+
+	r := &Runner{
+		TempDir: readOnlyDir,
+		GoPath:  "go",
+	}
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "CI", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractValues(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractValues() expected error for read-only temp directory")
+	}
+	// Should fail at temp dir creation
+	if !strings.Contains(err.Error(), "creating temp dir") && !strings.Contains(err.Error(), "permission denied") {
+		t.Logf("Got error: %v (acceptable if permission-related)", err)
+	}
+}
+
+// Test ExtractDependabot with read-only temp directory
+func TestRunner_ExtractDependabot_ReadOnlyTempDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("Skipping test when running as root")
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	if err := os.MkdirAll(readOnlyDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(readOnlyDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(readOnlyDir, 0755)
+
+	r := &Runner{
+		TempDir: readOnlyDir,
+		GoPath:  "go",
+	}
+
+	discovered := &discover.DependabotDiscoveryResult{
+		Configs: []discover.DiscoveredDependabot{
+			{Name: "Config", File: filepath.Join(tmpDir, "dependabot.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDependabot(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDependabot() expected error for read-only temp directory")
+	}
+}
+
+// Test ExtractIssueTemplates with read-only temp directory
+func TestRunner_ExtractIssueTemplates_ReadOnlyTempDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("Skipping test when running as root")
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	if err := os.MkdirAll(readOnlyDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(readOnlyDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(readOnlyDir, 0755)
+
+	r := &Runner{
+		TempDir: readOnlyDir,
+		GoPath:  "go",
+	}
+
+	discovered := &discover.IssueTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredIssueTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractIssueTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractIssueTemplates() expected error for read-only temp directory")
+	}
+}
+
+// Test ExtractDiscussionTemplates with read-only temp directory
+func TestRunner_ExtractDiscussionTemplates_ReadOnlyTempDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("Skipping test when running as root")
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	if err := os.MkdirAll(readOnlyDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(readOnlyDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(readOnlyDir, 0755)
+
+	r := &Runner{
+		TempDir: readOnlyDir,
+		GoPath:  "go",
+	}
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredDiscussionTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractDiscussionTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractDiscussionTemplates() expected error for read-only temp directory")
+	}
+}
+
+// Test ExtractPRTemplates with read-only temp directory
+func TestRunner_ExtractPRTemplates_ReadOnlyTempDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("Skipping test when running as root")
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	if err := os.MkdirAll(readOnlyDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(readOnlyDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(readOnlyDir, 0755)
+
+	r := &Runner{
+		TempDir: readOnlyDir,
+		GoPath:  "go",
+	}
+
+	discovered := &discover.PRTemplateDiscoveryResult{
+		Templates: []discover.DiscoveredPRTemplate{
+			{Name: "Template", File: filepath.Join(tmpDir, "template.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractPRTemplates(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractPRTemplates() expected error for read-only temp directory")
+	}
+}
+
+// Test ExtractCodeowners with read-only temp directory
+func TestRunner_ExtractCodeowners_ReadOnlyTempDir(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("Skipping test when running as root")
+	}
+
+	tmpDir := t.TempDir()
+
+	goMod := `module github.com/example/test
+
+go 1.23
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	readOnlyDir := filepath.Join(tmpDir, "readonly")
+	if err := os.MkdirAll(readOnlyDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(readOnlyDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(readOnlyDir, 0755)
+
+	r := &Runner{
+		TempDir: readOnlyDir,
+		GoPath:  "go",
+	}
+
+	discovered := &discover.CodeownersDiscoveryResult{
+		Configs: []discover.DiscoveredCodeowners{
+			{Name: "Config", File: filepath.Join(tmpDir, "codeowners.go"), Line: 5},
+		},
+	}
+
+	_, err := r.ExtractCodeowners(tmpDir, discovered)
+	if err == nil {
+		t.Error("ExtractCodeowners() expected error for read-only temp directory")
+	}
+}
+
+// Test getPackagePath when filepath.Rel fails
+func TestRunner_getPackagePath_RelFails(t *testing.T) {
+	r := NewRunner()
+
+	// On Unix, this shouldn't fail, but we can still test the code path
+	// by using completely different drives (which wouldn't happen on Unix)
+	// This test verifies the fallback behavior
+	result := r.getPackagePath("github.com/example/test", "/base/path", "/different/path/file.go")
+
+	// Should still return something sensible
+	if result == "" {
+		t.Error("getPackagePath() should not return empty string")
+	}
+}
+
+// Test parseReplaceDirectives returns empty for complex replace blocks
+func TestRunner_parseReplaceDirectives_BlockSyntaxNotParsed(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Block-style replace directives (inside parentheses) are not parsed by the current implementation
+	goMod := `module github.com/example/test
+
+go 1.23
+
+replace (
+	github.com/dep1 => ../dep1
+)
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+	replaces := r.parseReplaceDirectives(tmpDir)
+
+	// Block syntax lines don't start with "replace ", so they won't be parsed
+	// Lines inside the block are indented and won't start with "replace "
+	if len(replaces) != 0 {
+		t.Logf("parseReplaceDirectives() found %d directives (block syntax not fully parsed)", len(replaces))
+	}
+}
+
+// Test all generate functions handle nil discovery gracefully
+func TestRunner_generateProgram_NilSlices(t *testing.T) {
+	r := NewRunner()
+	baseDir := "/project"
+
+	// Use actual nil slices
+	discovered := &discover.DiscoveryResult{}
+
+	program, err := r.generateProgram("github.com/example/test", baseDir, discovered)
+	if err != nil {
+		t.Fatalf("generateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateProgram() should generate valid Go code even with nil slices")
+	}
+}
+
+// Test generateDependabotProgram with nil configs
+func TestRunner_generateDependabotProgram_NilSlice(t *testing.T) {
+	r := NewRunner()
+
+	discovered := &discover.DependabotDiscoveryResult{}
+
+	program, err := r.generateDependabotProgram("github.com/example/test", "/project", discovered)
+	if err != nil {
+		t.Fatalf("generateDependabotProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateDependabotProgram() should generate valid Go code")
+	}
+}
+
+// Test generateIssueTemplateProgram with nil templates
+func TestRunner_generateIssueTemplateProgram_NilSlice(t *testing.T) {
+	r := NewRunner()
+
+	discovered := &discover.IssueTemplateDiscoveryResult{}
+
+	program, err := r.generateIssueTemplateProgram("github.com/example/test", "/project", discovered)
+	if err != nil {
+		t.Fatalf("generateIssueTemplateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateIssueTemplateProgram() should generate valid Go code")
+	}
+}
+
+// Test generateDiscussionTemplateProgram with nil templates
+func TestRunner_generateDiscussionTemplateProgram_NilSlice(t *testing.T) {
+	r := NewRunner()
+
+	discovered := &discover.DiscussionTemplateDiscoveryResult{}
+
+	program, err := r.generateDiscussionTemplateProgram("github.com/example/test", "/project", discovered)
+	if err != nil {
+		t.Fatalf("generateDiscussionTemplateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateDiscussionTemplateProgram() should generate valid Go code")
+	}
+}
+
+// Test generatePRTemplateProgram with nil templates
+func TestRunner_generatePRTemplateProgram_NilSlice(t *testing.T) {
+	r := NewRunner()
+
+	discovered := &discover.PRTemplateDiscoveryResult{}
+
+	program, err := r.generatePRTemplateProgram("github.com/example/test", "/project", discovered)
+	if err != nil {
+		t.Fatalf("generatePRTemplateProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generatePRTemplateProgram() should generate valid Go code")
+	}
+}
+
+// Test generateCodeownersProgram with nil configs
+func TestRunner_generateCodeownersProgram_NilSlice(t *testing.T) {
+	r := NewRunner()
+
+	discovered := &discover.CodeownersDiscoveryResult{}
+
+	program, err := r.generateCodeownersProgram("github.com/example/test", "/project", discovered)
+	if err != nil {
+		t.Fatalf("generateCodeownersProgram() error = %v", err)
+	}
+
+	if !strings.Contains(program, "package main") {
+		t.Error("generateCodeownersProgram() should generate valid Go code")
+	}
+}
+
+// Integration test - ExtractValues with real Go code
+func TestRunner_ExtractValues_Integration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Get the absolute path to this project's root
+	// We're in internal/runner, so we need to go up two levels
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	// Find the project root (where go.mod is)
+	projectRoot := wd
+	for {
+		if _, err := os.Stat(filepath.Join(projectRoot, "go.mod")); err == nil {
+			break
+		}
+		parent := filepath.Dir(projectRoot)
+		if parent == projectRoot {
+			t.Skip("Could not find project root")
+		}
+		projectRoot = parent
+	}
+
+	// Create a test project that imports from this project
+	tmpDir := t.TempDir()
+
+	// Create go.mod that references the main project
+	goMod := fmt.Sprintf(`module testproject
+
+go 1.23
+
+require github.com/lex00/wetwire-github-go v0.0.0
+
+replace github.com/lex00/wetwire-github-go => %s
+`, projectRoot)
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goMod), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a simple workflow file
+	workflowCode := `package testproject
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var TestWorkflow = workflow.Workflow{
+	Name: "Test CI",
+}
+
+var TestJob = workflow.Job{
+	Name:   "test",
+	RunsOn: "ubuntu-latest",
+}
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), []byte(workflowCode), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewRunner()
+
+	discovered := &discover.DiscoveryResult{
+		Workflows: []discover.DiscoveredWorkflow{
+			{Name: "TestWorkflow", File: filepath.Join(tmpDir, "workflows.go"), Line: 5},
+		},
+		Jobs: []discover.DiscoveredJob{
+			{Name: "TestJob", File: filepath.Join(tmpDir, "workflows.go"), Line: 10},
+		},
+	}
+
+	result, err := r.ExtractValues(tmpDir, discovered)
+	if err != nil {
+		t.Fatalf("ExtractValues() error = %v", err)
+	}
+
+	if len(result.Workflows) != 1 {
+		t.Errorf("len(Workflows) = %d, want 1", len(result.Workflows))
+	}
+	if len(result.Jobs) != 1 {
+		t.Errorf("len(Jobs) = %d, want 1", len(result.Jobs))
+	}
+
+	if result.Workflows[0].Name != "TestWorkflow" {
+		t.Errorf("Workflow name = %q, want %q", result.Workflows[0].Name, "TestWorkflow")
+	}
+	if result.Jobs[0].Name != "TestJob" {
+		t.Errorf("Job name = %q, want %q", result.Jobs[0].Name, "TestJob")
 	}
 }

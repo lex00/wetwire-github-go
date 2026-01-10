@@ -15,15 +15,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Pure struct-literal pattern for AI-friendly, declarative code
 
 ### Added
-- **Improved Test Coverage** - Major test coverage improvements across core packages (#125, #126, #127, #130, #131)
+- **Improved Test Coverage** - Major test coverage improvements across core packages (#125, #126, #127, #130, #131, #135)
   - `internal/template`: 35.7% → 90.9% (55+ percentage point improvement)
   - `internal/importer`: 37.9% → 96.0% (58+ percentage point improvement)
   - `workflow`: 43.3% → 100.0% (57+ percentage point improvement)
-  - `internal/runner`: 20.9% → 72.3% (51+ percentage point improvement) (#121)
+  - `internal/runner`: 20.9% → 80.2% (59+ percentage point improvement) (#121, #135)
   - `internal/serialize`: 31.7% → 92.6% (61+ percentage point improvement) (#121)
   - `internal/validation`: 55.3% → 89.5% (34+ percentage point improvement) (#130)
   - `internal/discover`: 61.0% → 93.8% (33+ percentage point improvement) (#131)
   - 188 test functions in workflow package covering all expression contexts, conditions, triggers
+- **Documentation** - Additional contributor guides (#133, #134)
+  - `docs/CODEGEN.md` - Action wrapper code generation guide
+  - `CONTRIBUTING.md` - Contribution guidelines with development setup, PR process, testing requirements
 - **Additional Action Wrappers** - 4 new typed wrappers for popular GitHub Actions (#128)
   - `actions/labeler@v5` - Automatically label PRs based on file paths
   - `actions/stale@v9` - Mark and close stale issues/PRs
