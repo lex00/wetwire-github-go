@@ -90,6 +90,7 @@ Type-safe wrappers for popular GitHub Actions:
 | actions/setup-dotnet | `actions/setup_dotnet` | ✅ |
 | actions/setup-ruby | `actions/setup_ruby` | ✅ |
 | dtolnay/rust-toolchain | `actions/setup_rust` | ✅ |
+| actions-rs/toolchain | `actions/actions_rs_toolchain` | ✅ |
 | actions/cache | `actions/cache` | ✅ |
 | actions/upload-artifact | `actions/upload_artifact` | ✅ |
 | actions/download-artifact | `actions/download_artifact` | ✅ |
@@ -126,6 +127,8 @@ Type-safe wrappers for popular GitHub Actions:
 | actions/create-github-app-token | `actions/create_github_app_token` | ✅ |
 | actions/attest-build-provenance | `actions/attest_build_provenance` | ✅ |
 | mikepenz/action-junit-report | `actions/junit_report` | ✅ |
+| actions/create-release | `actions/create_release` | ✅ |
+| actions/upload-release-asset | `actions/upload_release_asset` | ✅ |
 
 ---
 
