@@ -268,3 +268,172 @@ func invalid syntax {
 		t.Error("LintContent() expected error for invalid syntax")
 	}
 }
+
+func TestFixer_Interface(t *testing.T) {
+	// Test that Fixer interface works
+	var rule Rule = &WAG001{}
+	_, isFixer := rule.(Fixer)
+	// WAG001 is fixable - it should implement Fixer
+	if !isFixer {
+		t.Error("WAG001 should implement Fixer interface")
+	}
+}
+
+func TestLinter_Fix_WAG001(t *testing.T) {
+	// Test WAG001 fix: raw uses: string -> typed action wrapper
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CheckoutStep = workflow.Step{Uses: "actions/checkout@v4"}
+`)
+
+	l := NewLinter(&WAG001{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Fatal("Expected WAG001 issue to be detected")
+	}
+
+	// Apply fix
+	fixResult, err := l.Fix("test.go", content)
+	if err != nil {
+		t.Fatalf("Fix() error = %v", err)
+	}
+
+	if fixResult.FixedCount == 0 {
+		t.Error("Expected at least one fix to be applied")
+	}
+
+	// Verify the fixed content imports checkout package
+	if !containsString(string(fixResult.Content), "checkout.Checkout") {
+		t.Error("Fixed content should use checkout.Checkout wrapper")
+	}
+
+	// Lint again to verify fix worked
+	result2, err := l.LintContent("test.go", fixResult.Content)
+	if err != nil {
+		t.Fatalf("LintContent() after fix error = %v", err)
+	}
+
+	for _, issue := range result2.Issues {
+		if issue.Rule == "WAG001" {
+			t.Error("WAG001 issue should be fixed after applying fix")
+		}
+	}
+}
+
+func TestLinter_FixFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "workflows.go")
+
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CheckoutStep = workflow.Step{Uses: "actions/checkout@v4"}
+`)
+
+	if err := os.WriteFile(testFile, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	l := NewLinter(&WAG001{})
+	fixResult, err := l.FixFile(testFile)
+	if err != nil {
+		t.Fatalf("FixFile() error = %v", err)
+	}
+
+	if fixResult.FixedCount == 0 {
+		t.Error("Expected at least one fix to be applied")
+	}
+
+	// Read back the file and verify
+	fixed, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !containsString(string(fixed), "checkout.Checkout") {
+		t.Error("Fixed file should use checkout.Checkout wrapper")
+	}
+}
+
+func TestLinter_FixDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CheckoutStep = workflow.Step{Uses: "actions/checkout@v4"}
+`)
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "workflows.go"), content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	l := NewLinter(&WAG001{})
+	fixResult, err := l.FixDir(tmpDir)
+	if err != nil {
+		t.Fatalf("FixDir() error = %v", err)
+	}
+
+	if fixResult.TotalFixed == 0 {
+		t.Error("Expected at least one fix to be applied")
+	}
+
+	if len(fixResult.Files) == 0 {
+		t.Error("Expected at least one file to be fixed")
+	}
+}
+
+func containsString(haystack, needle string) bool {
+	return len(haystack) > 0 && len(needle) > 0 &&
+		(haystack == needle || len(haystack) > len(needle) &&
+		(haystack[:len(needle)] == needle || containsString(haystack[1:], needle)))
+}
+
+func TestFixer_WAG001_KnownActions(t *testing.T) {
+	// Test that WAG001 can fix known actions
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    `workflow.Step{Uses: "actions/checkout@v4"}`,
+			expected: "checkout.Checkout",
+		},
+		{
+			input:    `workflow.Step{Uses: "actions/setup-go@v5"}`,
+			expected: "setup_go.SetupGo",
+		},
+		{
+			input:    `workflow.Step{Uses: "actions/cache@v4"}`,
+			expected: "cache.Cache",
+		},
+	}
+
+	for _, tc := range testCases {
+		content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = ` + tc.input + `
+`)
+
+		l := NewLinter(&WAG001{})
+		fixResult, err := l.Fix("test.go", content)
+		if err != nil {
+			t.Fatalf("Fix() error = %v for input %s", err, tc.input)
+		}
+
+		if !containsString(string(fixResult.Content), tc.expected) {
+			t.Errorf("Fixed content should contain %q for input %s\nGot: %s",
+				tc.expected, tc.input, string(fixResult.Content))
+		}
+	}
+}
