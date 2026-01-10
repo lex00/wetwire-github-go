@@ -166,6 +166,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Hugo Action Wrapper** - Typed wrapper for static site generation (#197)
   - `peaceiris/actions-hugo@v3` - Setup Hugo static site generator with version control
   - 100% test coverage with comprehensive input handling
+- **Additional Action Wrappers** - 4 typed wrappers for Kubernetes and IaC tools (#199)
+  - `helm/chart-releaser-action@v1` - Release Helm charts to GitHub Pages
+  - `azure/setup-helm@v4` - Install Helm CLI on runners
+  - `stefanprodan/kustomize-action@master` - Kustomize build and apply for GitOps
+  - `pulumi/actions@v6` - Infrastructure deployment with Pulumi
+  - All wrappers have 100% test coverage
+- **CLI Integration Tests** - Extended test coverage for CLI commands (#200)
+  - `validate_test.go` - 8 tests for workflow validation command
+  - `test_test.go` - 9 tests for project testing command
+  - `version_test.go` - 3 tests for version command
+  - Extended init, graph, import tests (82+ CLI tests total)
+  - All tests use exec.Command pattern for integration testing
+- **Agent Test Coverage** - Improved coverage for internal/agent package (#173)
+  - `agent_coverage_test.go` - 171 tests (58.8% coverage)
+  - `agent_streaming_test.go` - Streaming integration tests
+  - Tests cover tool routing, state management, completion gate logic
+  - Note: Full 80% blocked by methods requiring real API calls
+- **Environment Workflow Examples** - 2 examples for deployment environments (#201)
+  - `examples/approval-gates-workflow` - Environment approval gates pattern
+  - `examples/environment-promotion-workflow` - Dev/staging/prod promotion
+  - Demonstrates workflow.Environment with name and URL
 - **Additional Example Workflows** - 3 new workflow examples (#148)
   - `examples/docker-workflow` - Docker build and push to GHCR with multi-stage CI
   - `examples/release-workflow` - Automated GitHub releases on version tags

@@ -1,0 +1,115 @@
+jobs:
+  Deploy to Dev:
+    name: Deploy to Dev
+    outputs:
+      version: ${{ steps.build.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - id: build
+        name: Build binary
+        run: |-
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          go build -ldflags="-X main.version=$VERSION" -o app ./...
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Run tests
+        run: go test -v ./...
+      - env:
+          API_URL: https://api-dev.example.com
+          DEPLOY_TOKEN: secrets.DEV_DEPLOY_TOKEN
+          ENVIRONMENT: dev
+        name: Deploy to dev
+        run: |-
+          echo "Deploying to dev environment..."
+          echo "Using deploy token: ${DEPLOY_TOKEN:0:4}..."
+          echo "Deployment target: $ENVIRONMENT"
+          echo "API URL: $API_URL"
+          # Add your dev deployment commands here
+          # e.g., kubectl apply -f k8s/dev/
+      - name: Verify dev deployment
+        run: |-
+          echo "Running smoke tests on dev..."
+          # Add your dev verification commands here
+          # e.g., curl -f https://dev.example.com/health
+  Promote to Production:
+    name: Promote to Production
+    needs:
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:map[Name:staging URL:https://staging.example.com] If:<nil> Name:Promote to Staging Needs:[map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:map[Name:dev URL:https://dev.example.com] If:<nil> Name:Deploy to Dev Needs:<nil> Outputs:map[version:${{ steps.build.outputs.version }}] Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[Architecture: Cache:false CacheDependencyPath: CheckLatest:false GoVersion:1.24 GoVersionFile: Token:] map[ContinueOnError:false Env:<nil> ID:build If:<nil> Name:Build binary Run:VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+        go build -ldflags="-X main.version=$VERSION" -o app ./...
+        echo "version=$VERSION" >> $GITHUB_OUTPUT Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Run tests Run:go test -v ./... Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:map[API_URL:https://api-dev.example.com DEPLOY_TOKEN:secrets.DEV_DEPLOY_TOKEN ENVIRONMENT:dev] ID: If:<nil> Name:Deploy to dev Run:echo "Deploying to dev environment..."
+        echo "Using deploy token: ${DEPLOY_TOKEN:0:4}..."
+        echo "Deployment target: $ENVIRONMENT"
+        echo "API URL: $API_URL"
+        # Add your dev deployment commands here
+        # e.g., kubectl apply -f k8s/dev/ Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Verify dev deployment Run:echo "Running smoke tests on dev..."
+        # Add your dev verification commands here
+        # e.g., curl -f https://dev.example.com/health Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:]] Strategy:<nil> TimeoutMinutes:0]] Outputs:<nil> Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[ContinueOnError:false Env:map[API_URL:https://api-staging.example.com DEPLOY_TOKEN:secrets.STAGING_DEPLOY_TOKEN ENVIRONMENT:staging] ID: If:<nil> Name:Promote to staging Run:echo "Promoting to staging environment..."
+        echo "Using deploy token: ${DEPLOY_TOKEN:0:4}..."
+        echo "Deployment target: $ENVIRONMENT"
+        echo "API URL: $API_URL"
+        # Add your staging deployment commands here
+        # e.g., kubectl apply -f k8s/staging/ Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Verify staging deployment Run:echo "Running smoke tests on staging..."
+        # Add your staging verification commands here
+        # e.g., curl -f https://staging.example.com/health Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:]] Strategy:<nil> TimeoutMinutes:0]
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - env:
+          API_URL: https://api.example.com
+          DEPLOY_TOKEN: secrets.PRODUCTION_DEPLOY_TOKEN
+          ENVIRONMENT: production
+        name: Promote to production
+        run: |-
+          echo "Promoting to production environment..."
+          echo "Using deploy token: ${DEPLOY_TOKEN:0:4}..."
+          echo "Deployment target: $ENVIRONMENT"
+          echo "API URL: $API_URL"
+          # Add your production deployment commands here
+          # e.g., kubectl apply -f k8s/production/
+      - name: Verify production deployment
+        run: |-
+          echo "Running smoke tests on production..."
+          # Add your production verification commands here
+          # e.g., curl -f https://example.com/health
+  Promote to Staging:
+    name: Promote to Staging
+    needs:
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:map[Name:dev URL:https://dev.example.com] If:<nil> Name:Deploy to Dev Needs:<nil> Outputs:map[version:${{ steps.build.outputs.version }}] Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[Architecture: Cache:false CacheDependencyPath: CheckLatest:false GoVersion:1.24 GoVersionFile: Token:] map[ContinueOnError:false Env:<nil> ID:build If:<nil> Name:Build binary Run:VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+        go build -ldflags="-X main.version=$VERSION" -o app ./...
+        echo "version=$VERSION" >> $GITHUB_OUTPUT Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Run tests Run:go test -v ./... Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:map[API_URL:https://api-dev.example.com DEPLOY_TOKEN:secrets.DEV_DEPLOY_TOKEN ENVIRONMENT:dev] ID: If:<nil> Name:Deploy to dev Run:echo "Deploying to dev environment..."
+        echo "Using deploy token: ${DEPLOY_TOKEN:0:4}..."
+        echo "Deployment target: $ENVIRONMENT"
+        echo "API URL: $API_URL"
+        # Add your dev deployment commands here
+        # e.g., kubectl apply -f k8s/dev/ Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Verify dev deployment Run:echo "Running smoke tests on dev..."
+        # Add your dev verification commands here
+        # e.g., curl -f https://dev.example.com/health Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:]] Strategy:<nil> TimeoutMinutes:0]
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - env:
+          API_URL: https://api-staging.example.com
+          DEPLOY_TOKEN: secrets.STAGING_DEPLOY_TOKEN
+          ENVIRONMENT: staging
+        name: Promote to staging
+        run: |-
+          echo "Promoting to staging environment..."
+          echo "Using deploy token: ${DEPLOY_TOKEN:0:4}..."
+          echo "Deployment target: $ENVIRONMENT"
+          echo "API URL: $API_URL"
+          # Add your staging deployment commands here
+          # e.g., kubectl apply -f k8s/staging/
+      - name: Verify staging deployment
+        run: |-
+          echo "Running smoke tests on staging..."
+          # Add your staging verification commands here
+          # e.g., curl -f https://staging.example.com/health
+name: Environment Promotion
+"on":
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
