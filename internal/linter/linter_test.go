@@ -22,8 +22,8 @@ func TestDefaultLinter(t *testing.T) {
 	if l == nil {
 		t.Error("DefaultLinter() returned nil")
 	}
-	if len(l.Rules()) != 16 {
-		t.Errorf("len(Rules()) = %d, want 16", len(l.Rules()))
+	if len(l.Rules()) != 18 {
+		t.Errorf("len(Rules()) = %d, want 18", len(l.Rules()))
 	}
 }
 
@@ -237,6 +237,7 @@ func TestRuleIDs(t *testing.T) {
 		&WAG014{},
 		&WAG015{},
 		&WAG016{},
+		&WAG017{},
 	}
 
 	expectedIDs := []string{
@@ -244,6 +245,7 @@ func TestRuleIDs(t *testing.T) {
 		"WAG005", "WAG006", "WAG007", "WAG008",
 		"WAG009", "WAG010", "WAG011", "WAG012",
 		"WAG013", "WAG014", "WAG015", "WAG016",
+		"WAG017",
 	}
 
 	for i, rule := range rules {
@@ -1653,5 +1655,65 @@ var CI = workflow.Workflow{
 
 	if !result.Success {
 		t.Error("WAG016 should not flag when only group is defined")
+	}
+}
+
+// WAG017 Tests - Suggest workflow permissions scope
+
+func TestWAG017_Check_MissingPermissions(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+	On:   workflow.Triggers{},
+}
+`)
+
+	l := NewLinter(&WAG017{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG017 should have flagged missing Permissions")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG017" {
+			found = true
+			if issue.Severity != "info" {
+				t.Error("WAG017 issues should be severity 'info'")
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG017 issue not found")
+	}
+}
+
+func TestWAG017_Check_HasPermissions(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name:        "CI",
+	On:          workflow.Triggers{},
+	Permissions: workflow.Permissions{Contents: "read"},
+}
+`)
+
+	l := NewLinter(&WAG017{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG017 should not flag when Permissions is set")
 	}
 }

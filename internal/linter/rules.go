@@ -1156,3 +1156,268 @@ func (r *WAG016) Check(fset *token.FileSet, file *ast.File, path string) []LintI
 
 	return issues
 }
+
+// WAG017 suggests adding explicit permissions scope to workflows.
+type WAG017 struct{}
+
+func (r *WAG017) ID() string          { return "WAG017" }
+func (r *WAG017) Description() string { return "Suggest adding explicit permissions scope for security" }
+
+func (r *WAG017) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		lit, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		typeName := getTypeName(lit.Type)
+		if typeName != "workflow.Workflow" && typeName != "Workflow" {
+			return true
+		}
+
+		// Check if Permissions field is set
+		hasPermissions := false
+		for _, elt := range lit.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kv.Key.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if key.Name == "Permissions" {
+				hasPermissions = true
+				break
+			}
+		}
+
+		if !hasPermissions {
+			pos := fset.Position(lit.Pos())
+			issues = append(issues, LintIssue{
+				File:     path,
+				Line:     pos.Line,
+				Column:   pos.Column,
+				Severity: "info",
+				Message:  "Consider adding explicit Permissions field for security best practices",
+				Rule:     r.ID(),
+				Fixable:  false,
+			})
+		}
+
+		return true
+	})
+
+	return issues
+}
+
+// WAG018 detects dangerous pull_request_target patterns.
+type WAG018 struct{}
+
+func (r *WAG018) ID() string { return "WAG018" }
+func (r *WAG018) Description() string {
+	return "Detect dangerous pull_request_target patterns with checkout actions"
+}
+
+func (r *WAG018) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	// Track Triggers variables with pull_request_target
+	triggersWithPRTarget := make(map[string]bool)
+
+	// First pass: find Triggers with pull_request_target
+	ast.Inspect(file, func(n ast.Node) bool {
+		genDecl, ok := n.(*ast.GenDecl)
+		if !ok {
+			return true
+		}
+
+		for _, spec := range genDecl.Specs {
+			valueSpec, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+
+			for i, name := range valueSpec.Names {
+				if len(valueSpec.Values) <= i {
+					continue
+				}
+
+				lit, ok := valueSpec.Values[i].(*ast.CompositeLit)
+				if !ok {
+					continue
+				}
+
+				typeName := getTypeName(lit.Type)
+				if typeName == "workflow.Triggers" || typeName == "Triggers" {
+					// Check if this Triggers has PullRequestTarget field
+					if checkTriggersForPRTarget(lit) {
+						triggersWithPRTarget[name.Name] = true
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	// Second pass: find workflows and check them
+	ast.Inspect(file, func(n ast.Node) bool {
+		genDecl, ok := n.(*ast.GenDecl)
+		if !ok {
+			return true
+		}
+
+		for _, spec := range genDecl.Specs {
+			valueSpec, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+
+			for i := range valueSpec.Names {
+				if len(valueSpec.Values) <= i {
+					continue
+				}
+
+				lit, ok := valueSpec.Values[i].(*ast.CompositeLit)
+				if !ok {
+					continue
+				}
+
+				typeName := getTypeName(lit.Type)
+				if typeName != "workflow.Workflow" && typeName != "Workflow" {
+					continue
+				}
+
+				// Check if this workflow has pull_request_target trigger
+				hasPRTarget := hasPullRequestTargetWithTracking(lit, triggersWithPRTarget)
+				if !hasPRTarget {
+					continue
+				}
+
+				// Check if workflow has checkout action
+				if hasCheckoutAction(lit) {
+					pos := fset.Position(lit.Pos())
+					issues = append(issues, LintIssue{
+						File:     path,
+						Line:     pos.Line,
+						Column:   pos.Column,
+						Severity: "warning",
+						Message:  "Workflow uses pull_request_target with checkout action - potential security risk. Consider using pull_request trigger or reviewing security implications.",
+						Rule:     r.ID(),
+						Fixable:  false,
+					})
+				}
+			}
+		}
+		return true
+	})
+
+	return issues
+}
+
+// hasPullRequestTargetWithTracking checks if a workflow has pull_request_target trigger.
+func hasPullRequestTargetWithTracking(workflowLit *ast.CompositeLit, triggersWithPRTarget map[string]bool) bool {
+	for _, elt := range workflowLit.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		key, ok := kv.Key.(*ast.Ident)
+		if !ok || key.Name != "On" {
+			continue
+		}
+
+		// Check if On field has PullRequestTarget
+		switch v := kv.Value.(type) {
+		case *ast.Ident:
+			// Reference to a Triggers variable
+			return triggersWithPRTarget[v.Name]
+		case *ast.CompositeLit:
+			// Inline Triggers
+			return checkTriggersForPRTarget(v)
+		}
+	}
+	return false
+}
+
+// checkTriggersForPRTarget checks if triggers contain pull_request_target.
+func checkTriggersForPRTarget(expr ast.Expr) bool {
+	switch v := expr.(type) {
+	case *ast.Ident:
+		// Reference to a variable - we'll catch it in first pass
+		return false
+	case *ast.CompositeLit:
+		// Inline Triggers struct
+		typeName := getTypeName(v.Type)
+		if typeName != "workflow.Triggers" && typeName != "Triggers" {
+			return false
+		}
+
+		for _, elt := range v.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kv.Key.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if key.Name == "PullRequestTarget" {
+				// Check if it's not nil
+				if _, ok := kv.Value.(*ast.Ident); ok {
+					return true
+				}
+				if unary, ok := kv.Value.(*ast.UnaryExpr); ok && unary.Op == token.AND {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// hasCheckoutAction checks if a workflow contains checkout action.
+func hasCheckoutAction(workflowLit *ast.CompositeLit) bool {
+	hasCheckout := false
+
+	ast.Inspect(workflowLit, func(n ast.Node) bool {
+		lit, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		typeName := getTypeName(lit.Type)
+		if typeName == "checkout.Checkout" || typeName == "Checkout" {
+			hasCheckout = true
+			return false
+		}
+
+		// Also check for raw Uses field with checkout
+		if typeName == "workflow.Step" || typeName == "Step" {
+			for _, elt := range lit.Elts {
+				kv, ok := elt.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				key, ok := kv.Key.(*ast.Ident)
+				if !ok || key.Name != "Uses" {
+					continue
+				}
+				if bl, ok := kv.Value.(*ast.BasicLit); ok {
+					usesVal := strings.Trim(bl.Value, `"'`)
+					actionName := parseActionRef(usesVal)
+					if actionName == "actions/checkout" {
+						hasCheckout = true
+						return false
+					}
+				}
+			}
+		}
+
+		return true
+	})
+
+	return hasCheckout
+}
