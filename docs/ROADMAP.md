@@ -39,6 +39,10 @@ Feature matrix and implementation status for wetwire-github-go.
 | WAG010 | ✅ | Flag missing recommended action inputs |
 | WAG011 | ✅ | Detect potential unreachable jobs (undefined dependencies) |
 | WAG012 | ✅ | Warn about deprecated action versions |
+| WAG013 | ✅ | Detect pointer assignments (&Type{}) - use value semantics |
+| WAG014 | ✅ | Flag jobs without timeout-minutes setting |
+| WAG015 | ✅ | Suggest caching for setup-go/node/python actions |
+| WAG016 | ✅ | Validate concurrency settings |
 
 ---
 
@@ -176,6 +180,8 @@ Type-safe wrappers for popular GitHub Actions:
 - [x] Type-safe intrinsics for GitHub expression contexts (already implemented in workflow/expressions.go)
 - [x] Dedicated graph package for visualization (already implemented - DOT, Mermaid, JSON via CLI)
 - [x] Additional documentation (VERSIONING.md, ADOPTION.md) (#117)
+- [x] Additional lint rules (WAG013-WAG016) (#149)
+- [x] Additional example workflows (docker, release, matrix) (#148)
 - [ ] Performance optimization
 
 ---
