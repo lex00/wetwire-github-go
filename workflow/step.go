@@ -64,8 +64,19 @@ func (o OutputRef) Expression() Expression {
 	return Steps.Get(o.StepID, o.Output)
 }
 
-// StepAction is implemented by action wrappers to convert to Step.
+// StepAction is implemented by action wrappers for serialization.
+// Action wrappers implement this interface to be used directly in Steps.
 type StepAction interface {
-	// ToStep converts the action to a workflow Step.
-	ToStep() Step
+	// Action returns the action reference (e.g., "actions/checkout@v4").
+	Action() string
+	// Inputs returns the action inputs as a map.
+	Inputs() map[string]any
+}
+
+// ToStep converts a StepAction to a Step (internal helper for backward compatibility).
+func ToStep(a StepAction) Step {
+	return Step{
+		Uses: a.Action(),
+		With: a.Inputs(),
+	}
 }

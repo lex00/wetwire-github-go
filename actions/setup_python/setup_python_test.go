@@ -2,6 +2,8 @@ package setup_python
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestSetupPython_Action(t *testing.T) {
@@ -11,32 +13,32 @@ func TestSetupPython_Action(t *testing.T) {
 	}
 }
 
-func TestSetupPython_ToStep(t *testing.T) {
+func TestSetupPython_Inputs(t *testing.T) {
 	a := SetupPython{
 		PythonVersion: "3.12",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "actions/setup-python@v5" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "actions/setup-python@v5")
+	if a.Action() != "actions/setup-python@v5" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "actions/setup-python@v5")
 	}
 
-	if step.With["python-version"] != "3.12" {
-		t.Errorf("step.With[python-version] = %v, want %q", step.With["python-version"], "3.12")
+	if inputs["python-version"] != "3.12" {
+		t.Errorf("inputs[python-version] = %v, want %q", inputs["python-version"], "3.12")
 	}
 }
 
-func TestSetupPython_ToStep_Empty(t *testing.T) {
+func TestSetupPython_Inputs_Empty(t *testing.T) {
 	a := SetupPython{}
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if len(step.With) != 0 {
-		t.Errorf("empty SetupPython.ToStep() has %d with entries, want 0", len(step.With))
+	if len(inputs) != 0 {
+		t.Errorf("empty SetupPython.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestSetupPython_ToStep_AllFields(t *testing.T) {
+func TestSetupPython_Inputs_AllFields(t *testing.T) {
 	a := SetupPython{
 		PythonVersion:       "3.11",
 		PythonVersionFile:   ".python-version",
@@ -49,41 +51,45 @@ func TestSetupPython_ToStep_AllFields(t *testing.T) {
 		AllowPrereleases:    true,
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["python-version"] != "3.11" {
-		t.Errorf("step.With[python-version] = %v, want %q", step.With["python-version"], "3.11")
+	if inputs["python-version"] != "3.11" {
+		t.Errorf("inputs[python-version] = %v, want %q", inputs["python-version"], "3.11")
 	}
 
-	if step.With["python-version-file"] != ".python-version" {
-		t.Errorf("step.With[python-version-file] = %v, want %q", step.With["python-version-file"], ".python-version")
+	if inputs["python-version-file"] != ".python-version" {
+		t.Errorf("inputs[python-version-file] = %v, want %q", inputs["python-version-file"], ".python-version")
 	}
 
-	if step.With["cache"] != "pip" {
-		t.Errorf("step.With[cache] = %v, want %q", step.With["cache"], "pip")
+	if inputs["cache"] != "pip" {
+		t.Errorf("inputs[cache] = %v, want %q", inputs["cache"], "pip")
 	}
 
-	if step.With["architecture"] != "x64" {
-		t.Errorf("step.With[architecture] = %v, want %q", step.With["architecture"], "x64")
+	if inputs["architecture"] != "x64" {
+		t.Errorf("inputs[architecture] = %v, want %q", inputs["architecture"], "x64")
 	}
 
-	if step.With["check-latest"] != true {
-		t.Errorf("step.With[check-latest] = %v, want true", step.With["check-latest"])
+	if inputs["check-latest"] != true {
+		t.Errorf("inputs[check-latest] = %v, want true", inputs["check-latest"])
 	}
 
-	if step.With["token"] != "token" {
-		t.Errorf("step.With[token] = %v, want %q", step.With["token"], "token")
+	if inputs["token"] != "token" {
+		t.Errorf("inputs[token] = %v, want %q", inputs["token"], "token")
 	}
 
-	if step.With["cache-dependency-path"] != "requirements.txt" {
-		t.Errorf("step.With[cache-dependency-path] = %v, want %q", step.With["cache-dependency-path"], "requirements.txt")
+	if inputs["cache-dependency-path"] != "requirements.txt" {
+		t.Errorf("inputs[cache-dependency-path] = %v, want %q", inputs["cache-dependency-path"], "requirements.txt")
 	}
 
-	if step.With["update-environment"] != true {
-		t.Errorf("step.With[update-environment] = %v, want true", step.With["update-environment"])
+	if inputs["update-environment"] != true {
+		t.Errorf("inputs[update-environment] = %v, want true", inputs["update-environment"])
 	}
 
-	if step.With["allow-prereleases"] != true {
-		t.Errorf("step.With[allow-prereleases] = %v, want true", step.With["allow-prereleases"])
+	if inputs["allow-prereleases"] != true {
+		t.Errorf("inputs[allow-prereleases] = %v, want true", inputs["allow-prereleases"])
 	}
+}
+
+func TestSetupPython_ImplementsStepAction(t *testing.T) {
+	var _ workflow.StepAction = SetupPython{}
 }

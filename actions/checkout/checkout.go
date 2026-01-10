@@ -1,10 +1,6 @@
 // Package checkout provides a typed wrapper for actions/checkout.
 package checkout
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // Checkout wraps the actions/checkout@v4 action.
 // Checkout a Git repository at a particular version.
 type Checkout struct {
@@ -71,9 +67,9 @@ func (a Checkout) Action() string {
 	return "actions/checkout@v4"
 }
 
-// ToStep converts this action to a workflow step.
-func (a Checkout) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a Checkout) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Repository != "" {
 		with["repository"] = a.Repository
@@ -133,8 +129,5 @@ func (a Checkout) ToStep() workflow.Step {
 		with["github-server-url"] = a.GithubServerURL
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

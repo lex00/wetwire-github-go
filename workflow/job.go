@@ -44,7 +44,8 @@ type Job struct {
 	Services map[string]Service `yaml:"services,omitempty"`
 
 	// Steps are the tasks that run in this job.
-	Steps []Step `yaml:"steps"`
+	// Steps can be workflow.Step or any type implementing StepAction (action wrappers).
+	Steps []any `yaml:"steps"`
 
 	// TimeoutMinutes sets the maximum time for this job.
 	TimeoutMinutes int `yaml:"timeout-minutes,omitempty"`

@@ -2,6 +2,8 @@ package upload_artifact
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestUploadArtifact_Action(t *testing.T) {
@@ -11,37 +13,37 @@ func TestUploadArtifact_Action(t *testing.T) {
 	}
 }
 
-func TestUploadArtifact_ToStep(t *testing.T) {
+func TestUploadArtifact_Inputs(t *testing.T) {
 	a := UploadArtifact{
 		Name: "build-artifacts",
 		Path: "dist/",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "actions/upload-artifact@v4" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "actions/upload-artifact@v4")
+	if a.Action() != "actions/upload-artifact@v4" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "actions/upload-artifact@v4")
 	}
 
-	if step.With["name"] != "build-artifacts" {
-		t.Errorf("step.With[name] = %v, want %q", step.With["name"], "build-artifacts")
+	if inputs["name"] != "build-artifacts" {
+		t.Errorf("inputs[name] = %v, want %q", inputs["name"], "build-artifacts")
 	}
 
-	if step.With["path"] != "dist/" {
-		t.Errorf("step.With[path] = %v, want %q", step.With["path"], "dist/")
+	if inputs["path"] != "dist/" {
+		t.Errorf("inputs[path] = %v, want %q", inputs["path"], "dist/")
 	}
 }
 
-func TestUploadArtifact_ToStep_Empty(t *testing.T) {
+func TestUploadArtifact_Inputs_Empty(t *testing.T) {
 	a := UploadArtifact{}
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if len(step.With) != 0 {
-		t.Errorf("empty UploadArtifact.ToStep() has %d with entries, want 0", len(step.With))
+	if len(inputs) != 0 {
+		t.Errorf("empty UploadArtifact.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestUploadArtifact_ToStep_AllFields(t *testing.T) {
+func TestUploadArtifact_Inputs_AllFields(t *testing.T) {
 	a := UploadArtifact{
 		Name:               "test-artifact",
 		Path:               "output/",
@@ -52,33 +54,37 @@ func TestUploadArtifact_ToStep_AllFields(t *testing.T) {
 		IncludeHiddenFiles: true,
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["name"] != "test-artifact" {
-		t.Errorf("step.With[name] = %v, want %q", step.With["name"], "test-artifact")
+	if inputs["name"] != "test-artifact" {
+		t.Errorf("inputs[name] = %v, want %q", inputs["name"], "test-artifact")
 	}
 
-	if step.With["path"] != "output/" {
-		t.Errorf("step.With[path] = %v, want %q", step.With["path"], "output/")
+	if inputs["path"] != "output/" {
+		t.Errorf("inputs[path] = %v, want %q", inputs["path"], "output/")
 	}
 
-	if step.With["if-no-files-found"] != "error" {
-		t.Errorf("step.With[if-no-files-found] = %v, want %q", step.With["if-no-files-found"], "error")
+	if inputs["if-no-files-found"] != "error" {
+		t.Errorf("inputs[if-no-files-found] = %v, want %q", inputs["if-no-files-found"], "error")
 	}
 
-	if step.With["retention-days"] != 7 {
-		t.Errorf("step.With[retention-days] = %v, want 7", step.With["retention-days"])
+	if inputs["retention-days"] != 7 {
+		t.Errorf("inputs[retention-days] = %v, want 7", inputs["retention-days"])
 	}
 
-	if step.With["compression-level"] != 9 {
-		t.Errorf("step.With[compression-level] = %v, want 9", step.With["compression-level"])
+	if inputs["compression-level"] != 9 {
+		t.Errorf("inputs[compression-level] = %v, want 9", inputs["compression-level"])
 	}
 
-	if step.With["overwrite"] != true {
-		t.Errorf("step.With[overwrite] = %v, want true", step.With["overwrite"])
+	if inputs["overwrite"] != true {
+		t.Errorf("inputs[overwrite] = %v, want true", inputs["overwrite"])
 	}
 
-	if step.With["include-hidden-files"] != true {
-		t.Errorf("step.With[include-hidden-files] = %v, want true", step.With["include-hidden-files"])
+	if inputs["include-hidden-files"] != true {
+		t.Errorf("inputs[include-hidden-files] = %v, want true", inputs["include-hidden-files"])
 	}
+}
+
+func TestUploadArtifact_ImplementsStepAction(t *testing.T) {
+	var _ workflow.StepAction = UploadArtifact{}
 }

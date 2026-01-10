@@ -2,6 +2,8 @@ package docker_setup_buildx
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestDockerSetupBuildx_Action(t *testing.T) {
@@ -11,37 +13,37 @@ func TestDockerSetupBuildx_Action(t *testing.T) {
 	}
 }
 
-func TestDockerSetupBuildx_ToStep(t *testing.T) {
+func TestDockerSetupBuildx_Inputs(t *testing.T) {
 	d := DockerSetupBuildx{
 		Version: "latest",
 		Driver:  "docker-container",
 	}
 
-	step := d.ToStep()
+	inputs := d.Inputs()
 
-	if step.Uses != "docker/setup-buildx-action@v3" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "docker/setup-buildx-action@v3")
+	if d.Action() != "docker/setup-buildx-action@v3" {
+		t.Errorf("Action() = %q, want %q", d.Action(), "docker/setup-buildx-action@v3")
 	}
 
-	if step.With["version"] != "latest" {
-		t.Errorf("step.With[version] = %v, want %q", step.With["version"], "latest")
+	if inputs["version"] != "latest" {
+		t.Errorf("inputs[version] = %v, want %q", inputs["version"], "latest")
 	}
 
-	if step.With["driver"] != "docker-container" {
-		t.Errorf("step.With[driver] = %v, want %q", step.With["driver"], "docker-container")
+	if inputs["driver"] != "docker-container" {
+		t.Errorf("inputs[driver] = %v, want %q", inputs["driver"], "docker-container")
 	}
 }
 
-func TestDockerSetupBuildx_ToStep_EmptyWithMaps(t *testing.T) {
+func TestDockerSetupBuildx_Inputs_EmptyWithMaps(t *testing.T) {
 	d := DockerSetupBuildx{}
-	step := d.ToStep()
+	inputs := d.Inputs()
 
-	if len(step.With) != 0 {
-		t.Errorf("empty DockerSetupBuildx.ToStep() has %d with entries, want 0", len(step.With))
+	if len(inputs) != 0 {
+		t.Errorf("empty DockerSetupBuildx.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestDockerSetupBuildx_ToStep_AllFields(t *testing.T) {
+func TestDockerSetupBuildx_Inputs_AllFields(t *testing.T) {
 	d := DockerSetupBuildx{
 		Version:        "v0.12.0",
 		Driver:         "docker-container",
@@ -57,49 +59,53 @@ func TestDockerSetupBuildx_ToStep_AllFields(t *testing.T) {
 		Cleanup:        true,
 	}
 
-	step := d.ToStep()
+	inputs := d.Inputs()
 
-	if step.With["version"] != "v0.12.0" {
-		t.Errorf("step.With[version] = %v, want %q", step.With["version"], "v0.12.0")
+	if inputs["version"] != "v0.12.0" {
+		t.Errorf("inputs[version] = %v, want %q", inputs["version"], "v0.12.0")
 	}
 
-	if step.With["driver"] != "docker-container" {
-		t.Errorf("step.With[driver] = %v, want %q", step.With["driver"], "docker-container")
+	if inputs["driver"] != "docker-container" {
+		t.Errorf("inputs[driver] = %v, want %q", inputs["driver"], "docker-container")
 	}
 
-	if step.With["driver-opts"] != "network=host" {
-		t.Errorf("step.With[driver-opts] = %v, want %q", step.With["driver-opts"], "network=host")
+	if inputs["driver-opts"] != "network=host" {
+		t.Errorf("inputs[driver-opts] = %v, want %q", inputs["driver-opts"], "network=host")
 	}
 
-	if step.With["buildkitd-flags"] != "--allow-insecure-entitlement security.insecure" {
-		t.Errorf("step.With[buildkitd-flags] = %v, want buildkitd flags string", step.With["buildkitd-flags"])
+	if inputs["buildkitd-flags"] != "--allow-insecure-entitlement security.insecure" {
+		t.Errorf("inputs[buildkitd-flags] = %v, want buildkitd flags string", inputs["buildkitd-flags"])
 	}
 
-	if step.With["install"] != true {
-		t.Errorf("step.With[install] = %v, want true", step.With["install"])
+	if inputs["install"] != true {
+		t.Errorf("inputs[install] = %v, want true", inputs["install"])
 	}
 
-	if step.With["use"] != true {
-		t.Errorf("step.With[use] = %v, want true", step.With["use"])
+	if inputs["use"] != true {
+		t.Errorf("inputs[use] = %v, want true", inputs["use"])
 	}
 
-	if step.With["platforms"] != "linux/amd64,linux/arm64" {
-		t.Errorf("step.With[platforms] = %v, want platforms string", step.With["platforms"])
+	if inputs["platforms"] != "linux/amd64,linux/arm64" {
+		t.Errorf("inputs[platforms] = %v, want platforms string", inputs["platforms"])
 	}
 
-	if step.With["cleanup"] != true {
-		t.Errorf("step.With[cleanup] = %v, want true", step.With["cleanup"])
+	if inputs["cleanup"] != true {
+		t.Errorf("inputs[cleanup] = %v, want true", inputs["cleanup"])
 	}
 }
 
-func TestDockerSetupBuildx_ToStep_ConfigInline(t *testing.T) {
+func TestDockerSetupBuildx_Inputs_ConfigInline(t *testing.T) {
 	d := DockerSetupBuildx{
 		ConfigInline: "[worker.oci]\nmax-parallelism = 4",
 	}
 
-	step := d.ToStep()
+	inputs := d.Inputs()
 
-	if step.With["config-inline"] != "[worker.oci]\nmax-parallelism = 4" {
-		t.Errorf("step.With[config-inline] = %v, want config string", step.With["config-inline"])
+	if inputs["config-inline"] != "[worker.oci]\nmax-parallelism = 4" {
+		t.Errorf("inputs[config-inline] = %v, want config string", inputs["config-inline"])
 	}
+}
+
+func TestDockerSetupBuildx_ImplementsStepAction(t *testing.T) {
+	var _ workflow.StepAction = DockerSetupBuildx{}
 }

@@ -1,10 +1,6 @@
 // Package setup_node provides a typed wrapper for actions/setup-node.
 package setup_node
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // SetupNode wraps the actions/setup-node@v4 action.
 // Setup a Node.js environment and add it to PATH.
 type SetupNode struct {
@@ -44,9 +40,9 @@ func (a SetupNode) Action() string {
 	return "actions/setup-node@v4"
 }
 
-// ToStep converts this action to a workflow step.
-func (a SetupNode) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a SetupNode) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.NodeVersion != "" {
 		with["node-version"] = a.NodeVersion
@@ -79,8 +75,5 @@ func (a SetupNode) ToStep() workflow.Step {
 		with["always-auth"] = a.AlwaysAuth
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

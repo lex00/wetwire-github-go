@@ -2,6 +2,8 @@ package setup_dotnet
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestSetupDotnet_Action(t *testing.T) {
@@ -11,36 +13,36 @@ func TestSetupDotnet_Action(t *testing.T) {
 	}
 }
 
-func TestSetupDotnet_ToStep(t *testing.T) {
+func TestSetupDotnet_Inputs(t *testing.T) {
 	a := SetupDotnet{
 		DotnetVersion: "8.0.x",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "actions/setup-dotnet@v4" {
-		t.Errorf("Uses = %q, want %q", step.Uses, "actions/setup-dotnet@v4")
+	if a.Action() != "actions/setup-dotnet@v4" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "actions/setup-dotnet@v4")
 	}
 
-	if step.With["dotnet-version"] != "8.0.x" {
-		t.Errorf("With[dotnet-version] = %v, want %q", step.With["dotnet-version"], "8.0.x")
+	if inputs["dotnet-version"] != "8.0.x" {
+		t.Errorf("inputs[dotnet-version] = %v, want %q", inputs["dotnet-version"], "8.0.x")
 	}
 }
 
-func TestSetupDotnet_ToStep_Empty(t *testing.T) {
+func TestSetupDotnet_Inputs_Empty(t *testing.T) {
 	a := SetupDotnet{}
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "actions/setup-dotnet@v4" {
-		t.Errorf("Uses = %q, want %q", step.Uses, "actions/setup-dotnet@v4")
+	if a.Action() != "actions/setup-dotnet@v4" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "actions/setup-dotnet@v4")
 	}
 
-	if _, ok := step.With["dotnet-version"]; ok {
-		t.Error("Empty dotnet-version should not be in With")
+	if _, ok := inputs["dotnet-version"]; ok {
+		t.Error("Empty dotnet-version should not be in inputs")
 	}
 }
 
-func TestSetupDotnet_ToStep_AllFields(t *testing.T) {
+func TestSetupDotnet_Inputs_AllFields(t *testing.T) {
 	a := SetupDotnet{
 		DotnetVersion:       "8.0.x",
 		DotnetQuality:       "ga",
@@ -50,26 +52,26 @@ func TestSetupDotnet_ToStep_AllFields(t *testing.T) {
 		CacheDependencyPath: "**/packages.lock.json",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["dotnet-version"] != "8.0.x" {
-		t.Errorf("dotnet-version = %v, want %q", step.With["dotnet-version"], "8.0.x")
+	if inputs["dotnet-version"] != "8.0.x" {
+		t.Errorf("dotnet-version = %v, want %q", inputs["dotnet-version"], "8.0.x")
 	}
-	if step.With["dotnet-quality"] != "ga" {
-		t.Errorf("dotnet-quality = %v, want %q", step.With["dotnet-quality"], "ga")
+	if inputs["dotnet-quality"] != "ga" {
+		t.Errorf("dotnet-quality = %v, want %q", inputs["dotnet-quality"], "ga")
 	}
-	if step.With["global-json-file"] != "./global.json" {
-		t.Errorf("global-json-file = %v, want %q", step.With["global-json-file"], "./global.json")
+	if inputs["global-json-file"] != "./global.json" {
+		t.Errorf("global-json-file = %v, want %q", inputs["global-json-file"], "./global.json")
 	}
-	if step.With["include-prerelease"] != true {
-		t.Errorf("include-prerelease = %v, want %v", step.With["include-prerelease"], true)
+	if inputs["include-prerelease"] != true {
+		t.Errorf("include-prerelease = %v, want %v", inputs["include-prerelease"], true)
 	}
-	if step.With["cache"] != true {
-		t.Errorf("cache = %v, want %v", step.With["cache"], true)
+	if inputs["cache"] != true {
+		t.Errorf("cache = %v, want %v", inputs["cache"], true)
 	}
 }
 
-func TestSetupDotnet_ToStep_Versions(t *testing.T) {
+func TestSetupDotnet_Inputs_Versions(t *testing.T) {
 	versions := []string{"6.0.x", "7.0.x", "8.0.x", "8.0.100", "9.0.x"}
 
 	for _, ver := range versions {
@@ -78,15 +80,15 @@ func TestSetupDotnet_ToStep_Versions(t *testing.T) {
 				DotnetVersion: ver,
 			}
 
-			step := a.ToStep()
-			if step.With["dotnet-version"] != ver {
-				t.Errorf("dotnet-version = %v, want %q", step.With["dotnet-version"], ver)
+			inputs := a.Inputs()
+			if inputs["dotnet-version"] != ver {
+				t.Errorf("dotnet-version = %v, want %q", inputs["dotnet-version"], ver)
 			}
 		})
 	}
 }
 
-func TestSetupDotnet_ToStep_Quality(t *testing.T) {
+func TestSetupDotnet_Inputs_Quality(t *testing.T) {
 	qualities := []string{"daily", "signed", "validated", "preview", "ga"}
 
 	for _, q := range qualities {
@@ -96,10 +98,16 @@ func TestSetupDotnet_ToStep_Quality(t *testing.T) {
 				DotnetQuality: q,
 			}
 
-			step := a.ToStep()
-			if step.With["dotnet-quality"] != q {
-				t.Errorf("dotnet-quality = %v, want %q", step.With["dotnet-quality"], q)
+			inputs := a.Inputs()
+			if inputs["dotnet-quality"] != q {
+				t.Errorf("dotnet-quality = %v, want %q", inputs["dotnet-quality"], q)
 			}
 		})
 	}
+}
+
+func TestSetupDotnet_ImplementsStepAction(t *testing.T) {
+	a := SetupDotnet{}
+	// Verify SetupDotnet implements StepAction interface
+	var _ workflow.StepAction = a
 }

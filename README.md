@@ -40,12 +40,12 @@ var Build = workflow.Job{
     Steps:  BuildSteps,
 }
 
-var BuildSteps = List(
-    checkout.Checkout{}.ToStep(),
-    setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+var BuildSteps = []any{
+    checkout.Checkout{},
+    setup_go.SetupGo{GoVersion: "1.23"},
     workflow.Step{Run: "go build ./..."},
     workflow.Step{Run: "go test ./..."},
-)
+}
 ```
 
 Build to YAML:
@@ -74,7 +74,7 @@ var DeployJob = workflow.Job{
 var CheckoutStep = checkout.Checkout{
     FetchDepth: 0,
     Submodules: "recursive",
-}.ToStep()
+}
 
 // Expression contexts
 var ConditionalStep = workflow.Step{

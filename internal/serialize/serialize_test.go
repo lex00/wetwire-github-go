@@ -53,9 +53,9 @@ func TestWorkflowWithJobs(t *testing.T) {
 			"build": {
 				Name:   "Build",
 				RunsOn: "ubuntu-latest",
-				Steps: []workflow.Step{
-					{Uses: "actions/checkout@v4"},
-					{Run: "go build ./..."},
+				Steps: []any{
+					workflow.Step{Uses: "actions/checkout@v4"},
+					workflow.Step{Run: "go build ./..."},
 				},
 			},
 		},
@@ -94,8 +94,8 @@ func TestStepWithAction(t *testing.T) {
 		Jobs: map[string]workflow.Job{
 			"build": {
 				RunsOn: "ubuntu-latest",
-				Steps: []workflow.Step{
-					{
+				Steps: []any{
+					workflow.Step{
 						Uses: "actions/checkout@v4",
 						With: workflow.With{
 							"fetch-depth": 0,
@@ -139,8 +139,8 @@ func TestMatrixStrategy(t *testing.T) {
 					},
 					FailFast: workflow.Ptr(false),
 				},
-				Steps: []workflow.Step{
-					{Run: "go test ./..."},
+				Steps: []any{
+					workflow.Step{Run: "go test ./..."},
 				},
 			},
 		},
@@ -173,8 +173,8 @@ func TestExpressionInEnv(t *testing.T) {
 		Jobs: map[string]workflow.Job{
 			"deploy": {
 				RunsOn: "ubuntu-latest",
-				Steps: []workflow.Step{
-					{
+				Steps: []any{
+					workflow.Step{
 						Run: "deploy.sh",
 						Env: workflow.Env{
 							"TOKEN": workflow.Secrets.Get("DEPLOY_TOKEN"),
@@ -206,8 +206,8 @@ func TestConditionInStep(t *testing.T) {
 		Jobs: map[string]workflow.Job{
 			"deploy": {
 				RunsOn: "ubuntu-latest",
-				Steps: []workflow.Step{
-					{
+				Steps: []any{
+					workflow.Step{
 						If:  workflow.Branch("main"),
 						Run: "deploy.sh",
 					},
@@ -359,8 +359,8 @@ func TestServiceContainer(t *testing.T) {
 						Ports: []any{"5432:5432"},
 					},
 				},
-				Steps: []workflow.Step{
-					{Run: "go test ./..."},
+				Steps: []any{
+					workflow.Step{Run: "go test ./..."},
 				},
 			},
 		},

@@ -1,10 +1,6 @@
 // Package setup_ruby provides a typed wrapper for ruby/setup-ruby.
 package setup_ruby
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // SetupRuby wraps the ruby/setup-ruby@v1 action.
 // Set up a specific version of Ruby and add it to PATH.
 type SetupRuby struct {
@@ -43,9 +39,9 @@ func (a SetupRuby) Action() string {
 	return "ruby/setup-ruby@v1"
 }
 
-// ToStep converts this action to a workflow step.
-func (a SetupRuby) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a SetupRuby) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.RubyVersion != "" {
 		with["ruby-version"] = a.RubyVersion
@@ -75,8 +71,5 @@ func (a SetupRuby) ToStep() workflow.Step {
 		with["bundler-no-lock"] = a.BundlerNoLock
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

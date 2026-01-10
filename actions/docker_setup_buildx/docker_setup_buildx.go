@@ -1,10 +1,6 @@
 // Package docker_setup_buildx provides a typed wrapper for docker/setup-buildx-action.
 package docker_setup_buildx
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // DockerSetupBuildx wraps the docker/setup-buildx-action@v3 action.
 // Set up Docker Buildx for multi-platform builds and advanced features.
 type DockerSetupBuildx struct {
@@ -50,9 +46,9 @@ func (a DockerSetupBuildx) Action() string {
 	return "docker/setup-buildx-action@v3"
 }
 
-// ToStep converts this action to a workflow step.
-func (a DockerSetupBuildx) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a DockerSetupBuildx) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.Version != "" {
 		with["version"] = a.Version
@@ -91,8 +87,5 @@ func (a DockerSetupBuildx) ToStep() workflow.Step {
 		with["cleanup"] = a.Cleanup
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

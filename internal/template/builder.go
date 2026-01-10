@@ -262,9 +262,14 @@ func (b *Builder) buildJob(ej *runner.ExtractedJob) (*workflow.Job, error) {
 
 	// Handle steps - handle both direct type and slice reconstruction
 	if steps, ok := data["Steps"].([]workflow.Step); ok {
-		job.Steps = steps
+		// Convert []workflow.Step to []any
+		anySteps := make([]any, len(steps))
+		for i, s := range steps {
+			anySteps[i] = s
+		}
+		job.Steps = anySteps
 	} else if stepsSlice, ok := data["Steps"].([]any); ok {
-		job.Steps = b.reconstructSteps(stepsSlice)
+		job.Steps = b.reconstructStepsAsAny(stepsSlice)
 	}
 
 	// Handle environment
@@ -401,9 +406,9 @@ func (b *Builder) reconstructTriggers(data map[string]any) workflow.Triggers {
 	return triggers
 }
 
-// reconstructSteps builds a slice of Steps from a generic slice.
-func (b *Builder) reconstructSteps(data []any) []workflow.Step {
-	var steps []workflow.Step
+// reconstructStepsAsAny builds a slice of Steps from a generic slice.
+func (b *Builder) reconstructStepsAsAny(data []any) []any {
+	var steps []any
 
 	for _, item := range data {
 		stepMap, ok := item.(map[string]any)

@@ -2,6 +2,8 @@ package checkout
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestCheckout_Action(t *testing.T) {
@@ -11,7 +13,7 @@ func TestCheckout_Action(t *testing.T) {
 	}
 }
 
-func TestCheckout_ToStep(t *testing.T) {
+func TestCheckout_Inputs(t *testing.T) {
 	c := Checkout{
 		Repository: "owner/repo",
 		Ref:        "main",
@@ -19,57 +21,59 @@ func TestCheckout_ToStep(t *testing.T) {
 		Submodules: "recursive",
 	}
 
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if step.Uses != "actions/checkout@v4" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "actions/checkout@v4")
+	if inputs["repository"] != "owner/repo" {
+		t.Errorf("inputs[repository] = %v, want %q", inputs["repository"], "owner/repo")
 	}
 
-	if step.With["repository"] != "owner/repo" {
-		t.Errorf("step.With[repository] = %v, want %q", step.With["repository"], "owner/repo")
+	if inputs["ref"] != "main" {
+		t.Errorf("inputs[ref] = %v, want %q", inputs["ref"], "main")
 	}
 
-	if step.With["ref"] != "main" {
-		t.Errorf("step.With[ref] = %v, want %q", step.With["ref"], "main")
+	if inputs["fetch-depth"] != 1 {
+		t.Errorf("inputs[fetch-depth] = %v, want 1", inputs["fetch-depth"])
 	}
 
-	if step.With["fetch-depth"] != 1 {
-		t.Errorf("step.With[fetch-depth] = %v, want 1", step.With["fetch-depth"])
-	}
-
-	if step.With["submodules"] != "recursive" {
-		t.Errorf("step.With[submodules] = %v, want %q", step.With["submodules"], "recursive")
+	if inputs["submodules"] != "recursive" {
+		t.Errorf("inputs[submodules] = %v, want %q", inputs["submodules"], "recursive")
 	}
 }
 
-func TestCheckout_ToStep_EmptyWithMaps(t *testing.T) {
+func TestCheckout_Inputs_Empty(t *testing.T) {
 	c := Checkout{}
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	// Empty checkout should have no with values
-	if len(step.With) != 0 {
-		t.Errorf("empty Checkout.ToStep() has %d with entries, want 0", len(step.With))
+	// Empty checkout should have no inputs
+	if len(inputs) != 0 {
+		t.Errorf("empty Checkout.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestCheckout_ToStep_BoolFields(t *testing.T) {
+func TestCheckout_Inputs_BoolFields(t *testing.T) {
 	c := Checkout{
-		Clean:           true,
-		LFS:             true,
+		Clean:              true,
+		LFS:                true,
 		PersistCredentials: true,
 	}
 
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if step.With["clean"] != true {
-		t.Errorf("step.With[clean] = %v, want true", step.With["clean"])
+	if inputs["clean"] != true {
+		t.Errorf("inputs[clean] = %v, want true", inputs["clean"])
 	}
 
-	if step.With["lfs"] != true {
-		t.Errorf("step.With[lfs] = %v, want true", step.With["lfs"])
+	if inputs["lfs"] != true {
+		t.Errorf("inputs[lfs] = %v, want true", inputs["lfs"])
 	}
 
-	if step.With["persist-credentials"] != true {
-		t.Errorf("step.With[persist-credentials] = %v, want true", step.With["persist-credentials"])
+	if inputs["persist-credentials"] != true {
+		t.Errorf("inputs[persist-credentials] = %v, want true", inputs["persist-credentials"])
 	}
+}
+
+func TestCheckout_ImplementsStepAction(t *testing.T) {
+	c := Checkout{}
+	// Verify Checkout implements StepAction interface
+	var _ workflow.StepAction = c
 }

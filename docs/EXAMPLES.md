@@ -47,12 +47,12 @@ var Build = Job{
     Steps:  BuildSteps,
 }
 
-var BuildSteps = List(
-    checkout.Checkout{}.ToStep(),
-    setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+var BuildSteps = []any{
+    checkout.Checkout{},
+    setup_go.SetupGo{GoVersion: "1.23"},
     Step{Name: "Build", Run: "go build ./..."},
     Step{Name: "Test", Run: "go test -v ./..."},
-)
+}
 ```
 
 ### Generated YAML
@@ -122,11 +122,11 @@ var MatrixTest = Job{
     Steps:    MatrixSteps,
 }
 
-var MatrixSteps = List(
-    checkout.Checkout{}.ToStep(),
-    setup_go.SetupGo{GoVersion: Matrix.Get("go")}.ToStep(),
+var MatrixSteps = []any{
+    checkout.Checkout{},
+    setup_go.SetupGo{GoVersion: Matrix.Get("go")},
     Step{Name: "Test", Run: "go test -v ./..."},
-)
+}
 ```
 
 ### Generated YAML
@@ -197,14 +197,14 @@ var DockerJob = Job{
     Steps: DockerSteps,
 }
 
-var DockerSteps = List(
-    checkout.Checkout{}.ToStep(),
-    docker_setup_buildx.DockerSetupBuildx{}.ToStep(),
+var DockerSteps = []any{
+    checkout.Checkout{},
+    docker_setup_buildx.DockerSetupBuildx{},
     docker_login.DockerLogin{
         Registry: "ghcr.io",
         Username: GitHub.Actor,
         Password: Secrets.Get("GITHUB_TOKEN"),
-    }.ToStep(),
+    },
     docker_build_push.DockerBuildPush{
         Context:   ".",
         Push:      true,
@@ -212,8 +212,8 @@ var DockerSteps = List(
         Platforms: "linux/amd64,linux/arm64",
         CacheFrom: "type=gha",
         CacheTo:   "type=gha,mode=max",
-    }.ToStep(),
-)
+    },
+}
 ```
 
 ### Generated YAML
@@ -286,8 +286,8 @@ var ReleaseJob = Job{
     Steps: ReleaseSteps,
 }
 
-var ReleaseSteps = List(
-    checkout.Checkout{FetchDepth: 0}.ToStep(),
+var ReleaseSteps = []any{
+    checkout.Checkout{FetchDepth: 0},
     Step{
         Name: "Build",
         Run:  "go build -o myapp ./cmd/myapp",
@@ -295,8 +295,8 @@ var ReleaseSteps = List(
     gh_release.GhRelease{
         Files:         "myapp",
         GenerateReleaseNotes: true,
-    }.ToStep(),
-)
+    },
+}
 ```
 
 ### Generated YAML
@@ -365,23 +365,23 @@ var MonorepoTriggers = Triggers{
 var BackendJob = Job{
     Name:   "backend",
     RunsOn: "ubuntu-latest",
-    Steps: List(
-        checkout.Checkout{}.ToStep(),
-        setup_go.SetupGo{GoVersion: "1.23"}.ToStep(),
+    Steps: []any{
+        checkout.Checkout{},
+        setup_go.SetupGo{GoVersion: "1.23"},
         Step{
             Name:             "Test Backend",
             Run:              "go test ./...",
             WorkingDirectory: "backend",
         },
-    ),
+    },
 }
 
 var FrontendJob = Job{
     Name:   "frontend",
     RunsOn: "ubuntu-latest",
-    Steps: List(
-        checkout.Checkout{}.ToStep(),
-        setup_node.SetupNode{NodeVersion: "20"}.ToStep(),
+    Steps: []any{
+        checkout.Checkout{},
+        setup_node.SetupNode{NodeVersion: "20"},
         Step{
             Name:             "Install",
             Run:              "npm ci",
@@ -392,7 +392,7 @@ var FrontendJob = Job{
             Run:              "npm test",
             WorkingDirectory: "frontend",
         },
-    ),
+    },
 }
 ```
 
@@ -468,8 +468,8 @@ var MaintenanceTriggers = Triggers{
 var CleanupJob = Job{
     Name:   "cleanup",
     RunsOn: "ubuntu-latest",
-    Steps: List(
-        checkout.Checkout{}.ToStep(),
+    Steps: []any{
+        checkout.Checkout{},
         Step{
             Name: "Clean old artifacts",
             Run: `
@@ -479,7 +479,7 @@ var CleanupJob = Job{
             `,
             Env: Env{"GH_TOKEN": Secrets.Get("GITHUB_TOKEN")},
         },
-    ),
+    },
 }
 ```
 
@@ -542,7 +542,7 @@ var LabelJob = Job{
         Contents:     "read",
         PullRequests: "write",
     },
-    Steps: List(
+    Steps: []any{
         github_script.GithubScript{
             Script: `
                 const { data: files } = await github.rest.pulls.listFiles({
@@ -568,8 +568,8 @@ var LabelJob = Job{
                     });
                 }
             `,
-        }.ToStep(),
-    ),
+        },
+    },
 }
 ```
 
@@ -656,8 +656,8 @@ var StagingDeploy = Job{
         Name: "staging",
         URL:  "https://staging.example.com",
     },
-    Steps: List(
-        checkout.Checkout{}.ToStep(),
+    Steps: []any{
+        checkout.Checkout{},
         Step{
             Name: "Deploy to Staging",
             Run:  "echo 'Deploying to staging...'",
@@ -666,7 +666,7 @@ var StagingDeploy = Job{
                 "API_KEY":    Secrets.Get("STAGING_API_KEY"),
             },
         },
-    ),
+    },
 }
 
 var ProductionDeploy = Job{
@@ -677,8 +677,8 @@ var ProductionDeploy = Job{
         Name: "production",
         URL:  "https://example.com",
     },
-    Steps: List(
-        checkout.Checkout{}.ToStep(),
+    Steps: []any{
+        checkout.Checkout{},
         Step{
             Name: "Deploy to Production",
             Run:  "echo 'Deploying to production...'",
@@ -687,7 +687,7 @@ var ProductionDeploy = Job{
                 "API_KEY":    Secrets.Get("PRODUCTION_API_KEY"),
             },
         },
-    ),
+    },
 }
 ```
 

@@ -53,7 +53,7 @@ var Deploy = workflow.Job{
 
 ### How do I use action wrappers?
 
-Import typed action wrappers and use `.ToStep()`:
+Import typed action wrappers and use them directly in `[]any{}` slices:
 
 ```go
 import "github.com/lex00/wetwire-github-go/actions/checkout"
@@ -61,7 +61,7 @@ import "github.com/lex00/wetwire-github-go/actions/checkout"
 var CheckoutStep = checkout.Checkout{
     FetchDepth: 0,
     Submodules: "recursive",
-}.ToStep()
+}
 ```
 
 ### How do I access secrets and matrix values?

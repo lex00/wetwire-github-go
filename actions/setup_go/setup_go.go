@@ -1,10 +1,6 @@
 // Package setup_go provides a typed wrapper for actions/setup-go.
 package setup_go
 
-import (
-	"github.com/lex00/wetwire-github-go/workflow"
-)
-
 // SetupGo wraps the actions/setup-go@v5 action.
 // Setup a Go environment and add it to PATH.
 type SetupGo struct {
@@ -35,9 +31,9 @@ func (a SetupGo) Action() string {
 	return "actions/setup-go@v5"
 }
 
-// ToStep converts this action to a workflow step.
-func (a SetupGo) ToStep() workflow.Step {
-	with := make(workflow.With)
+// Inputs returns the action inputs as a map.
+func (a SetupGo) Inputs() map[string]any {
+	with := make(map[string]any)
 
 	if a.GoVersion != "" {
 		with["go-version"] = a.GoVersion
@@ -61,8 +57,5 @@ func (a SetupGo) ToStep() workflow.Step {
 		with["architecture"] = a.Architecture
 	}
 
-	return workflow.Step{
-		Uses: a.Action(),
-		With: with,
-	}
+	return with
 }

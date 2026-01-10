@@ -2,6 +2,8 @@ package cache
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestCache_Action(t *testing.T) {
@@ -11,42 +13,42 @@ func TestCache_Action(t *testing.T) {
 	}
 }
 
-func TestCache_ToStep(t *testing.T) {
+func TestCache_Inputs(t *testing.T) {
 	c := Cache{
 		Path:        "~/.cache/go-build",
 		Key:         "go-cache-key",
 		RestoreKeys: "go-cache-",
 	}
 
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if step.Uses != "actions/cache@v4" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "actions/cache@v4")
+	if c.Action() != "actions/cache@v4" {
+		t.Errorf("Action() = %q, want %q", c.Action(), "actions/cache@v4")
 	}
 
-	if step.With["path"] != "~/.cache/go-build" {
-		t.Errorf("step.With[path] = %v, want %q", step.With["path"], "~/.cache/go-build")
+	if inputs["path"] != "~/.cache/go-build" {
+		t.Errorf("inputs[path] = %v, want %q", inputs["path"], "~/.cache/go-build")
 	}
 
-	if step.With["key"] != "go-cache-key" {
-		t.Errorf("step.With[key] = %v, want %q", step.With["key"], "go-cache-key")
+	if inputs["key"] != "go-cache-key" {
+		t.Errorf("inputs[key] = %v, want %q", inputs["key"], "go-cache-key")
 	}
 
-	if step.With["restore-keys"] != "go-cache-" {
-		t.Errorf("step.With[restore-keys] = %v, want %q", step.With["restore-keys"], "go-cache-")
+	if inputs["restore-keys"] != "go-cache-" {
+		t.Errorf("inputs[restore-keys] = %v, want %q", inputs["restore-keys"], "go-cache-")
 	}
 }
 
-func TestCache_ToStep_Empty(t *testing.T) {
+func TestCache_Inputs_Empty(t *testing.T) {
 	c := Cache{}
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if len(step.With) != 0 {
-		t.Errorf("empty Cache.ToStep() has %d with entries, want 0", len(step.With))
+	if len(inputs) != 0 {
+		t.Errorf("empty Cache.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestCache_ToStep_BoolFields(t *testing.T) {
+func TestCache_Inputs_BoolFields(t *testing.T) {
 	c := Cache{
 		EnableCrossOsArchive: true,
 		FailOnCacheMiss:      true,
@@ -54,33 +56,37 @@ func TestCache_ToStep_BoolFields(t *testing.T) {
 		SaveAlways:           true,
 	}
 
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if step.With["enableCrossOsArchive"] != true {
-		t.Errorf("step.With[enableCrossOsArchive] = %v, want true", step.With["enableCrossOsArchive"])
+	if inputs["enableCrossOsArchive"] != true {
+		t.Errorf("inputs[enableCrossOsArchive] = %v, want true", inputs["enableCrossOsArchive"])
 	}
 
-	if step.With["fail-on-cache-miss"] != true {
-		t.Errorf("step.With[fail-on-cache-miss] = %v, want true", step.With["fail-on-cache-miss"])
+	if inputs["fail-on-cache-miss"] != true {
+		t.Errorf("inputs[fail-on-cache-miss] = %v, want true", inputs["fail-on-cache-miss"])
 	}
 
-	if step.With["lookup-only"] != true {
-		t.Errorf("step.With[lookup-only] = %v, want true", step.With["lookup-only"])
+	if inputs["lookup-only"] != true {
+		t.Errorf("inputs[lookup-only] = %v, want true", inputs["lookup-only"])
 	}
 
-	if step.With["save-always"] != true {
-		t.Errorf("step.With[save-always] = %v, want true", step.With["save-always"])
+	if inputs["save-always"] != true {
+		t.Errorf("inputs[save-always] = %v, want true", inputs["save-always"])
 	}
 }
 
-func TestCache_ToStep_IntFields(t *testing.T) {
+func TestCache_Inputs_IntFields(t *testing.T) {
 	c := Cache{
 		UploadChunkSize: 1048576,
 	}
 
-	step := c.ToStep()
+	inputs := c.Inputs()
 
-	if step.With["upload-chunk-size"] != 1048576 {
-		t.Errorf("step.With[upload-chunk-size] = %v, want 1048576", step.With["upload-chunk-size"])
+	if inputs["upload-chunk-size"] != 1048576 {
+		t.Errorf("inputs[upload-chunk-size] = %v, want 1048576", inputs["upload-chunk-size"])
 	}
+}
+
+func TestCache_ImplementsStepAction(t *testing.T) {
+	var _ workflow.StepAction = Cache{}
 }

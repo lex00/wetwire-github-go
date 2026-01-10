@@ -2,6 +2,8 @@ package setup_node
 
 import (
 	"testing"
+
+	"github.com/lex00/wetwire-github-go/workflow"
 )
 
 func TestSetupNode_Action(t *testing.T) {
@@ -11,32 +13,32 @@ func TestSetupNode_Action(t *testing.T) {
 	}
 }
 
-func TestSetupNode_ToStep(t *testing.T) {
+func TestSetupNode_Inputs(t *testing.T) {
 	a := SetupNode{
 		NodeVersion: "20",
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.Uses != "actions/setup-node@v4" {
-		t.Errorf("step.Uses = %q, want %q", step.Uses, "actions/setup-node@v4")
+	if a.Action() != "actions/setup-node@v4" {
+		t.Errorf("Action() = %q, want %q", a.Action(), "actions/setup-node@v4")
 	}
 
-	if step.With["node-version"] != "20" {
-		t.Errorf("step.With[node-version] = %v, want %q", step.With["node-version"], "20")
+	if inputs["node-version"] != "20" {
+		t.Errorf("inputs[node-version] = %v, want %q", inputs["node-version"], "20")
 	}
 }
 
-func TestSetupNode_ToStep_Empty(t *testing.T) {
+func TestSetupNode_Inputs_Empty(t *testing.T) {
 	a := SetupNode{}
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if len(step.With) != 0 {
-		t.Errorf("empty SetupNode.ToStep() has %d with entries, want 0", len(step.With))
+	if len(inputs) != 0 {
+		t.Errorf("empty SetupNode.Inputs() has %d entries, want 0", len(inputs))
 	}
 }
 
-func TestSetupNode_ToStep_AllFields(t *testing.T) {
+func TestSetupNode_Inputs_AllFields(t *testing.T) {
 	a := SetupNode{
 		NodeVersion:         "18.x",
 		NodeVersionFile:     ".nvmrc",
@@ -50,45 +52,51 @@ func TestSetupNode_ToStep_AllFields(t *testing.T) {
 		AlwaysAuth:          true,
 	}
 
-	step := a.ToStep()
+	inputs := a.Inputs()
 
-	if step.With["node-version"] != "18.x" {
-		t.Errorf("step.With[node-version] = %v, want %q", step.With["node-version"], "18.x")
+	if inputs["node-version"] != "18.x" {
+		t.Errorf("inputs[node-version] = %v, want %q", inputs["node-version"], "18.x")
 	}
 
-	if step.With["node-version-file"] != ".nvmrc" {
-		t.Errorf("step.With[node-version-file] = %v, want %q", step.With["node-version-file"], ".nvmrc")
+	if inputs["node-version-file"] != ".nvmrc" {
+		t.Errorf("inputs[node-version-file] = %v, want %q", inputs["node-version-file"], ".nvmrc")
 	}
 
-	if step.With["architecture"] != "x64" {
-		t.Errorf("step.With[architecture] = %v, want %q", step.With["architecture"], "x64")
+	if inputs["architecture"] != "x64" {
+		t.Errorf("inputs[architecture] = %v, want %q", inputs["architecture"], "x64")
 	}
 
-	if step.With["check-latest"] != true {
-		t.Errorf("step.With[check-latest] = %v, want true", step.With["check-latest"])
+	if inputs["check-latest"] != true {
+		t.Errorf("inputs[check-latest] = %v, want true", inputs["check-latest"])
 	}
 
-	if step.With["registry-url"] != "https://npm.pkg.github.com" {
-		t.Errorf("step.With[registry-url] = %v, want %q", step.With["registry-url"], "https://npm.pkg.github.com")
+	if inputs["registry-url"] != "https://npm.pkg.github.com" {
+		t.Errorf("inputs[registry-url] = %v, want %q", inputs["registry-url"], "https://npm.pkg.github.com")
 	}
 
-	if step.With["scope"] != "@myorg" {
-		t.Errorf("step.With[scope] = %v, want %q", step.With["scope"], "@myorg")
+	if inputs["scope"] != "@myorg" {
+		t.Errorf("inputs[scope] = %v, want %q", inputs["scope"], "@myorg")
 	}
 
-	if step.With["token"] != "token" {
-		t.Errorf("step.With[token] = %v, want %q", step.With["token"], "token")
+	if inputs["token"] != "token" {
+		t.Errorf("inputs[token] = %v, want %q", inputs["token"], "token")
 	}
 
-	if step.With["cache"] != "npm" {
-		t.Errorf("step.With[cache] = %v, want %q", step.With["cache"], "npm")
+	if inputs["cache"] != "npm" {
+		t.Errorf("inputs[cache] = %v, want %q", inputs["cache"], "npm")
 	}
 
-	if step.With["cache-dependency-path"] != "package-lock.json" {
-		t.Errorf("step.With[cache-dependency-path] = %v, want %q", step.With["cache-dependency-path"], "package-lock.json")
+	if inputs["cache-dependency-path"] != "package-lock.json" {
+		t.Errorf("inputs[cache-dependency-path] = %v, want %q", inputs["cache-dependency-path"], "package-lock.json")
 	}
 
-	if step.With["always-auth"] != true {
-		t.Errorf("step.With[always-auth] = %v, want true", step.With["always-auth"])
+	if inputs["always-auth"] != true {
+		t.Errorf("inputs[always-auth] = %v, want true", inputs["always-auth"])
 	}
+}
+
+func TestSetupNode_ImplementsStepAction(t *testing.T) {
+	a := SetupNode{}
+	// Verify SetupNode implements StepAction interface
+	var _ workflow.StepAction = a
 }
