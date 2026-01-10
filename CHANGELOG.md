@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **INTERNALS.md** - Architecture documentation (#95)
+  - AST discovery system with Mermaid diagram
+  - Template generation and multi-artifact output
+  - Serialization and expression handling
+  - Linter architecture (12 rules)
+  - Importer architecture
+  - Agent integration and scoring system
 - **DEVELOPERS.md** - Comprehensive developer guide (#94)
   - Development setup and prerequisites
   - Project structure overview

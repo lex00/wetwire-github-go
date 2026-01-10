@@ -109,7 +109,7 @@ Type-safe wrappers for popular GitHub Actions:
 | FAQ | ✅ | `docs/FAQ.md` |
 | Roadmap | ✅ | `docs/ROADMAP.md` |
 | Developers | ✅ | `docs/DEVELOPERS.md` |
-| Internals | ❌ | `docs/INTERNALS.md` |
+| Internals | ✅ | `docs/INTERNALS.md` |
 | Examples | ❌ | `docs/EXAMPLES.md` |
 
 ---
