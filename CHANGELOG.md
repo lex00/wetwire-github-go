@@ -19,6 +19,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Use `scoring` package from wetwire-core-go for session scoring
   - Remove local `internal/personas/` and `internal/scoring/` packages
   - Updated wetwire-core-go dependency to v1.2.0
+- **Core Command Framework** - Use wetwire-core-go command infrastructure (#222)
+  - Use `cmd.NewRootCommand()` from wetwire-core-go for root command
+  - Consistent CLI structure with other wetwire domain packages
+  - Domain-specific commands (build, lint, etc.) preserved as-is
 
 ### Changed
 - **Remove .ToStep() Method** - Action wrappers now implement `StepAction` interface (#110)
