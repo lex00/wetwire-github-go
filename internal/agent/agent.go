@@ -39,6 +39,9 @@ type StreamHandler func(text string)
 
 // Config configures the GitHubAgent.
 type Config struct {
+	// Provider specifies the LLM provider (anthropic, kiro)
+	Provider string
+
 	// APIKey for Anthropic (defaults to ANTHROPIC_API_KEY env var)
 	APIKey string
 

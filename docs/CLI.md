@@ -160,6 +160,7 @@ wetwire-github design [prompt] [flags]
 ```
 
 **Flags:**
+- `--provider <provider>` — LLM provider: `anthropic` or `kiro` (default: anthropic)
 - `--stream` — Stream output tokens
 - `--max-lint-cycles <n>` — Maximum lint/fix cycles (default: 5)
 - `--model <model>` — Claude model to use (default: claude-sonnet-4-20250514)
@@ -183,6 +184,7 @@ This starts the MCP protocol over stdio with the following tools:
 ```bash
 wetwire-github design "Create a CI workflow for a Go project"
 wetwire-github design --stream "Add matrix testing for Go 1.22 and 1.23"
+wetwire-github design --provider kiro "Create a deployment workflow"
 ```
 
 ### `wetwire-github test`
@@ -194,6 +196,7 @@ wetwire-github test <path> [flags]
 ```
 
 **Flags:**
+- `--provider <provider>` — LLM provider: `anthropic` or `kiro` (default: anthropic)
 - `--format <format>` — Output format: `text` or `json` (default: `text`)
 - `--persona <name>` — Run specific persona: `beginner`, `intermediate`, `expert`, `terse`, `verbose`
 - `--scenario <name>` — Run specific scenario: `ci-workflow`, `deployment`, `release`, `matrix`
@@ -221,6 +224,7 @@ wetwire-github test <path> [flags]
 wetwire-github test .
 wetwire-github test . --persona beginner --score
 wetwire-github test . --scenario ci-workflow --format json
+wetwire-github test . --provider kiro --persona beginner
 wetwire-github test --list
 ```
 
