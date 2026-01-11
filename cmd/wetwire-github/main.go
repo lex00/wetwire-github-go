@@ -43,4 +43,6 @@ func init() {
 	rootCmd.AddCommand(testCmd)
 	rootCmd.AddCommand(graphCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(diffCmd)
+	rootCmd.AddCommand(watchCmd)
 }
