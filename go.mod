@@ -32,7 +32,7 @@ require (
 require (
 	github.com/anthropics/anthropic-sdk-go v1.19.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/lex00/wetwire-core-go v1.0.1
+	github.com/lex00/wetwire-core-go v1.2.0
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 	github.com/rhysd/actionlint v1.7.10
 	github.com/spf13/cobra v1.10.2

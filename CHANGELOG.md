@@ -14,6 +14,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Updated CLI documentation with provider examples
 
 ### Changed
+- **Centralized Personas and Scoring** - Migrate to wetwire-core-go packages (#221)
+  - Use `personas` package from wetwire-core-go for developer persona definitions
+  - Use `scoring` package from wetwire-core-go for session scoring
+  - Remove local `internal/personas/` and `internal/scoring/` packages
+  - Updated wetwire-core-go dependency to v1.2.0
+
+### Changed
 - **Remove .ToStep() Method** - Action wrappers now implement `StepAction` interface (#110)
   - Action wrappers can be used directly in `Job.Steps` slice
   - Changed `Job.Steps` type from `[]Step` to `[]any` to support both `Step` and action wrappers
