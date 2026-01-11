@@ -11,8 +11,9 @@ import (
 
 	wetwire "github.com/lex00/wetwire-github-go"
 	"github.com/lex00/wetwire-github-go/internal/discover"
-	"github.com/lex00/wetwire-github-go/internal/personas"
-	"github.com/lex00/wetwire-github-go/internal/scoring"
+
+	"github.com/lex00/wetwire-core-go/agent/personas"
+	"github.com/lex00/wetwire-core-go/agent/scoring"
 )
 
 var testFormat string
