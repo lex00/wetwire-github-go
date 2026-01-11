@@ -4,7 +4,7 @@ All notable changes to wetwire-github-go are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.0.0] - 2026-01-11
 
 ### Added
 - **Provider Flag** - Add `--provider` flag to `design` and `test` commands (#220)
@@ -431,5 +431,6 @@ Initial release with full GitHub Actions workflow generation from typed Go decla
 - Intermediate representation (IR) for YAML parsing
 - Reference example testing with round-trip validation
 
-[Unreleased]: https://github.com/lex00/wetwire-github-go/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/lex00/wetwire-github-go/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/lex00/wetwire-github-go/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/lex00/wetwire-github-go/releases/tag/v0.1.0
