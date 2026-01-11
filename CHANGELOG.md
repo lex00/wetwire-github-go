@@ -64,6 +64,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Added examples/README.md with example categorization and usage instructions
   - Added formal attribution to testdata/reference/ for imported starter-workflows (MIT)
   - Clear distinction between hand-written examples and imported workflows
+- **Diff and Watch Commands** - New CLI commands for iterative development (#209)
+  - `diff`: Semantically compare workflow configurations (Go packages or YAML files)
+  - `watch`: Auto-rebuild workflows on source file changes with fsnotify
+  - Support for text, JSON, and markdown output formats
+  - Configurable debounce duration for watch mode
+  - Lint-only mode for watch command
 - **Security Lint Rules (WAG017-WAG018)** - 2 new security-focused lint rules (#160, #161)
   - WAG017: Suggest adding explicit permissions scope for workflow security
   - WAG018: Detect dangerous pull_request_target patterns with checkout actions

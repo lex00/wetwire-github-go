@@ -202,6 +202,62 @@ func outputLintError(file, message string) {
 	os.Exit(2)
 }
 
+// LintPathResult is an extended lint result with an Errors field for watch mode.
+type LintPathResult struct {
+	Success bool
+	Issues  []wetwire.LintIssue
+	Errors  []string
+}
+
+// runLintPath runs the linter on the given path and returns a result.
+// This is used by the watch command to check lint status without exiting.
+func runLintPath(path string) LintPathResult {
+	result := LintPathResult{Success: false}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("resolving path: %v", err))
+		return result
+	}
+
+	info, err := os.Stat(absPath)
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("accessing path: %v", err))
+		return result
+	}
+
+	l := linter.DefaultLinter()
+
+	var lintResult *linter.LintResult
+	if info.IsDir() {
+		lintResult, err = l.LintDir(absPath)
+	} else {
+		lintResult, err = l.LintFile(absPath)
+	}
+
+	if err != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("linting failed: %v", err))
+		return result
+	}
+
+	result.Success = lintResult.Success
+	result.Issues = make([]wetwire.LintIssue, len(lintResult.Issues))
+
+	for i, issue := range lintResult.Issues {
+		result.Issues[i] = wetwire.LintIssue{
+			File:     issue.File,
+			Line:     issue.Line,
+			Column:   issue.Column,
+			Severity: issue.Severity,
+			Message:  issue.Message,
+			Rule:     issue.Rule,
+			Fixable:  issue.Fixable,
+		}
+	}
+
+	return result
+}
+
 // outputLintResult outputs the lint result in the appropriate format.
 func outputLintResult(result wetwire.LintResult) {
 	if lintFormat == "json" {
