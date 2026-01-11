@@ -10,12 +10,19 @@ These workflows are used in round-trip tests to verify that:
 3. The generated Go code can be compiled and executed
 4. The executed code produces YAML output that is semantically equivalent to the original
 
-## Workflow Sources
+## Attribution
 
-These workflows are based on official GitHub starter workflows from:
-https://github.com/actions/starter-workflows
+These workflows are based on official GitHub starter workflows.
 
-They have been slightly modified to:
+| Source | License | Import Date |
+|--------|---------|-------------|
+| [actions/starter-workflows](https://github.com/actions/starter-workflows) | MIT | 2026-01-10 |
+
+The original starter-workflows repository is licensed under the MIT License. See the [original LICENSE](https://github.com/actions/starter-workflows/blob/main/LICENSE) for details.
+
+## Modifications
+
+The workflows have been modified from their original form to:
 - Use concrete branch names instead of placeholders (e.g., `main` instead of `$default-branch`)
 - Use concrete cron expressions instead of placeholders
 - Simplify matrix configurations for testing purposes
