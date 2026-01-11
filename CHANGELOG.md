@@ -52,6 +52,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Private keys (RSA, EC, DSA, OpenSSH, PGP), Slack tokens, Google API keys
   - Twilio, SendGrid, Mailgun, NPM, PyPI tokens, JWT tokens
   - DigitalOcean, Heroku, Azure credentials
+- **CI Coverage Reporting** - Added coverage reporting to CI workflow (#212)
+  - Generates coverage profile with atomic mode
+  - Reports total and per-package coverage to GitHub Actions step summary
+  - Warns when coverage drops below 70% threshold
 - **LINT_RULES.md Documentation** - Complete documentation of all 20 lint rules (#211)
   - Rule index with severity and auto-fix status
   - Detailed descriptions with bad/good code examples
