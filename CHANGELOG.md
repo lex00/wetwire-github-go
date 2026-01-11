@@ -4,6 +4,13 @@ All notable changes to wetwire-github-go are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.2] - 2026-01-11
+
+### Added
+- **Codecov Integration** - Upload coverage reports to Codecov (#228)
+  - Added codecov-action@v4 to CI workflow for coverage reporting
+  - Added codecov badge to README.md for visibility
+
 ## [1.0.1] - 2026-01-11
 
 ### Added
@@ -439,7 +446,8 @@ Initial release with full GitHub Actions workflow generation from typed Go decla
 - Intermediate representation (IR) for YAML parsing
 - Reference example testing with round-trip validation
 
-[Unreleased]: https://github.com/lex00/wetwire-github-go/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/lex00/wetwire-github-go/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/lex00/wetwire-github-go/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/lex00/wetwire-github-go/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/lex00/wetwire-github-go/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/lex00/wetwire-github-go/releases/tag/v0.1.0
