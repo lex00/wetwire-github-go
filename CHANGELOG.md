@@ -47,6 +47,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - WAG019: Detect circular dependencies in job needs (e.g., A -> B -> C -> A)
   - Uses DFS with recursion stack for efficient cycle detection
   - Reports all jobs involved in the cycle with file locations
+- **Comprehensive Secret Detection (WAG020)** - Detect 25+ hardcoded secret patterns (#205)
+  - AWS access keys, GitHub tokens (all variants), Stripe keys (live/test)
+  - Private keys (RSA, EC, DSA, OpenSSH, PGP), Slack tokens, Google API keys
+  - Twilio, SendGrid, Mailgun, NPM, PyPI tokens, JWT tokens
+  - DigitalOcean, Heroku, Azure credentials
 - **Security Lint Rules (WAG017-WAG018)** - 2 new security-focused lint rules (#160, #161)
   - WAG017: Suggest adding explicit permissions scope for workflow security
   - WAG018: Detect dangerous pull_request_target patterns with checkout actions
