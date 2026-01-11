@@ -70,6 +70,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Support for text, JSON, and markdown output formats
   - Configurable debounce duration for watch mode
   - Lint-only mode for watch command
+- **Kiro CLI Integration** - AI-assisted workflow design with Kiro (#208)
+  - `internal/kiro/` package for auto-installation of agent config
+  - Embedded wetwire-runner.json with GitHub Actions workflow prompts
+  - Project-level MCP configuration for Kiro integration
+  - Automatic binary detection with go run fallback
 - **Security Lint Rules (WAG017-WAG018)** - 2 new security-focused lint rules (#160, #161)
   - WAG017: Suggest adding explicit permissions scope for workflow security
   - WAG018: Detect dangerous pull_request_target patterns with checkout actions
