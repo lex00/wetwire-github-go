@@ -343,6 +343,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - 4 MCP tools: wetwire_init, wetwire_lint, wetwire_build, wetwire_validate
   - Enables integration with Kiro, Claude Desktop, and other MCP-compatible IDEs
 
+- **README Badges** - Added missing badges per WETWIRE_SPEC.md Section 12.4 (#223)
+  - Go Reference badge (pkg.go.dev)
+  - Go Report Card badge (goreportcard.com)
+  - Badge order: CI, Go Reference, Go Report Card, License
+
 ### Fixed
 - Documentation accuracy: project structures, CLI flags, status tables
 - Runner now resolves relative paths in replace directives for proper module extraction
