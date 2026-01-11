@@ -22,8 +22,8 @@ func TestDefaultLinter(t *testing.T) {
 	if l == nil {
 		t.Error("DefaultLinter() returned nil")
 	}
-	if len(l.Rules()) != 19 {
-		t.Errorf("len(Rules()) = %d, want 19", len(l.Rules()))
+	if len(l.Rules()) != 20 {
+		t.Errorf("len(Rules()) = %d, want 20", len(l.Rules()))
 	}
 }
 
@@ -1980,5 +1980,313 @@ var CI = workflow.Workflow{
 
 	if !result.Success {
 		t.Error("WAG019 should not flag when there are no jobs")
+	}
+}
+
+// WAG020 - Secret Pattern Detection Tests
+
+func TestWAG020_Check_AWSAccessKey(t *testing.T) {
+	content := []byte(`package main
+
+var awsKey = "AKIAIOSFODNN7EXAMPLE"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect AWS access key pattern")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG020" {
+			found = true
+			if issue.Severity != "error" {
+				t.Errorf("WAG020 issues should be severity 'error', got %s", issue.Severity)
+			}
+			if !strings.Contains(issue.Message, "AWS") {
+				t.Errorf("WAG020 message should mention AWS, got: %s", issue.Message)
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG020 issue not found")
+	}
+}
+
+func TestWAG020_Check_PrivateKey(t *testing.T) {
+	content := []byte(`package main
+
+var privateKey = "-----BEGIN RSA PRIVATE KEY-----\nMIIE..."
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect private key header")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG020" && strings.Contains(issue.Message, "private key") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Expected WAG020 private key issue not found")
+	}
+}
+
+func TestWAG020_Check_StripeKey(t *testing.T) {
+	// Using string concatenation to avoid GitHub secret scanning
+	stripePrefix := "sk_" + "live_"
+	content := []byte(`package main
+
+var stripeKey = "` + stripePrefix + `51H7xxxxxxxxxxxxxxxxxxxxxxxF"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect Stripe secret key")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG020" && strings.Contains(issue.Message, "Stripe") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Expected WAG020 Stripe key issue not found")
+	}
+}
+
+func TestWAG020_Check_SlackToken(t *testing.T) {
+	// Using string concatenation to avoid GitHub secret scanning
+	slackPrefix := "xox" + "b-"
+	content := []byte(`package main
+
+var slackToken = "` + slackPrefix + `1234567890123-1234567890123-abcdefghijklmnopqrstuvwx"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect Slack token")
+	}
+}
+
+func TestWAG020_Check_GoogleAPIKey(t *testing.T) {
+	content := []byte(`package main
+
+var googleKey = "AIzaSyD1234567890abcdefghijklmnopqrstuvwx"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect Google API key")
+	}
+}
+
+func TestWAG020_Check_GitHubOAuthToken(t *testing.T) {
+	content := []byte(`package main
+
+var ghOAuth = "gho_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect GitHub OAuth token")
+	}
+}
+
+func TestWAG020_Check_SendGridKey(t *testing.T) {
+	// Using string concatenation to avoid GitHub secret scanning
+	sgPrefix := "SG" + "."
+	content := []byte(`package main
+
+var sendgridKey = "` + sgPrefix + `abcdefghijklmnopqrstuv.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQ"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect SendGrid API key")
+	}
+}
+
+func TestWAG020_Check_TwilioKey(t *testing.T) {
+	// Using string concatenation to avoid GitHub secret scanning
+	twilioPrefix := "S" + "K"
+	content := []byte(`package main
+
+var twilioKey = "` + twilioPrefix + `1234567890abcdef1234567890abcdef"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect Twilio API key")
+	}
+}
+
+func TestWAG020_Check_NPMToken(t *testing.T) {
+	content := []byte(`package main
+
+var npmToken = "npm_abcdefghijklmnopqrstuvwxyz1234567890"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect NPM token")
+	}
+}
+
+func TestWAG020_Check_PyPIToken(t *testing.T) {
+	content := []byte(`package main
+
+var pypiToken = "pypi-AgEIcHlwaS5vcmcxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect PyPI token")
+	}
+}
+
+func TestWAG020_Check_JWTToken(t *testing.T) {
+	content := []byte(`package main
+
+var jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect JWT token")
+	}
+}
+
+func TestWAG020_Check_NoSecrets(t *testing.T) {
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+}
+
+var normalString = "hello world"
+var envVar = "${{ secrets.MY_SECRET }}"
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		for _, issue := range result.Issues {
+			t.Logf("Unexpected issue: %s", issue.Message)
+		}
+		t.Error("WAG020 should not flag normal strings or secrets references")
+	}
+}
+
+func TestWAG020_Check_InEnvValue(t *testing.T) {
+	// Using string concatenation to avoid GitHub secret scanning
+	stripeTestPrefix := "sk_" + "test_"
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{
+	Env: map[string]any{
+		"STRIPE_KEY": "` + stripeTestPrefix + `51H7xxxxxxxxxxxxxxxxxxxF",
+	},
+}
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect secrets in Env map values")
+	}
+}
+
+func TestWAG020_Check_InRunCommand(t *testing.T) {
+	// Using string concatenation to avoid GitHub secret scanning
+	stripeLivePrefix := "sk_" + "live_"
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var Step = workflow.Step{
+	Run: "curl -H 'Authorization: Bearer ` + stripeLivePrefix + `1234567890abcdefghijklmnop' https://api.stripe.com",
+}
+`)
+
+	l := NewLinter(&WAG020{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG020 should detect secrets in Run commands")
 	}
 }

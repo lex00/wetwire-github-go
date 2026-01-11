@@ -1577,3 +1577,119 @@ func normalizeCycle(cycle []string) string {
 
 	return strings.Join(normalized, "->")
 }
+
+// WAG020 detects hardcoded secrets and credentials in code.
+type WAG020 struct{}
+
+func (r *WAG020) ID() string { return "WAG020" }
+func (r *WAG020) Description() string {
+	return "Detect hardcoded secrets, API keys, and credentials"
+}
+
+// secretPattern defines a secret detection pattern with a description.
+type secretPattern struct {
+	pattern     *regexp.Regexp
+	description string
+}
+
+// secretPatterns contains all known secret patterns to detect.
+var secretPatterns = []secretPattern{
+	// AWS credentials
+	{regexp.MustCompile(`AKIA[0-9A-Z]{16}`), "AWS access key"},
+	{regexp.MustCompile(`(?i)(aws_secret_access_key|aws_secret_key)\s*[:=]\s*['"][A-Za-z0-9/+=]{40}['"]`), "AWS secret key"},
+
+	// GitHub tokens
+	{regexp.MustCompile(`ghp_[A-Za-z0-9]{36,}`), "GitHub personal access token"},
+	{regexp.MustCompile(`ghs_[A-Za-z0-9]{36,}`), "GitHub server token"},
+	{regexp.MustCompile(`ghu_[A-Za-z0-9]{36,}`), "GitHub user token"},
+	{regexp.MustCompile(`ghr_[A-Za-z0-9]{36,}`), "GitHub refresh token"},
+	{regexp.MustCompile(`gho_[A-Za-z0-9]{36,}`), "GitHub OAuth token"},
+	{regexp.MustCompile(`github_pat_[A-Za-z0-9]{22,}`), "GitHub fine-grained PAT"},
+
+	// Private keys
+	{regexp.MustCompile(`-----BEGIN RSA PRIVATE KEY-----`), "RSA private key"},
+	{regexp.MustCompile(`-----BEGIN PRIVATE KEY-----`), "private key"},
+	{regexp.MustCompile(`-----BEGIN EC PRIVATE KEY-----`), "EC private key"},
+	{regexp.MustCompile(`-----BEGIN DSA PRIVATE KEY-----`), "DSA private key"},
+	{regexp.MustCompile(`-----BEGIN OPENSSH PRIVATE KEY-----`), "OpenSSH private key"},
+	{regexp.MustCompile(`-----BEGIN PGP PRIVATE KEY BLOCK-----`), "PGP private key"},
+
+	// Stripe keys
+	{regexp.MustCompile(`sk_live_[A-Za-z0-9]{20,}`), "Stripe live secret key"},
+	{regexp.MustCompile(`sk_test_[A-Za-z0-9]{20,}`), "Stripe test secret key"},
+	{regexp.MustCompile(`rk_live_[A-Za-z0-9]{20,}`), "Stripe live restricted key"},
+	{regexp.MustCompile(`rk_test_[A-Za-z0-9]{20,}`), "Stripe test restricted key"},
+
+	// Slack tokens
+	{regexp.MustCompile(`xox[baprs]-[0-9]{10,}-[0-9]{10,}-[A-Za-z0-9]{20,}`), "Slack token"},
+
+	// Google API keys
+	{regexp.MustCompile(`AIza[A-Za-z0-9_-]{35}`), "Google API key"},
+
+	// Twilio
+	{regexp.MustCompile(`SK[a-f0-9]{32}`), "Twilio API key"},
+	{regexp.MustCompile(`AC[a-f0-9]{32}`), "Twilio Account SID"},
+
+	// SendGrid
+	{regexp.MustCompile(`SG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}`), "SendGrid API key"},
+
+	// Mailgun
+	{regexp.MustCompile(`key-[A-Za-z0-9]{32}`), "Mailgun API key"},
+
+	// NPM tokens
+	{regexp.MustCompile(`npm_[A-Za-z0-9]{36,}`), "NPM token"},
+
+	// PyPI tokens
+	{regexp.MustCompile(`pypi-[A-Za-z0-9]{50,}`), "PyPI token"},
+
+	// JWT tokens (detect base64-encoded JWT structure)
+	{regexp.MustCompile(`eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*`), "JWT token"},
+
+	// Heroku
+	{regexp.MustCompile(`[hH]eroku.*[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}`), "Heroku API key"},
+
+	// DigitalOcean
+	{regexp.MustCompile(`dop_v1_[A-Za-z0-9]{64}`), "DigitalOcean personal access token"},
+	{regexp.MustCompile(`doo_v1_[A-Za-z0-9]{64}`), "DigitalOcean OAuth token"},
+
+	// Azure
+	{regexp.MustCompile(`(?i)azure[A-Za-z0-9_-]*['\"][A-Za-z0-9/+=]{40,}['\"]`), "Azure credential"},
+}
+
+func (r *WAG020) Check(fset *token.FileSet, file *ast.File, path string) []LintIssue {
+	var issues []LintIssue
+
+	ast.Inspect(file, func(n ast.Node) bool {
+		bl, ok := n.(*ast.BasicLit)
+		if !ok || bl.Kind != token.STRING {
+			return true
+		}
+
+		val := strings.Trim(bl.Value, `"'` + "`")
+
+		// Skip if this is a secrets reference (proper usage)
+		if strings.Contains(val, "secrets.") {
+			return true
+		}
+
+		// Check against all secret patterns
+		for _, sp := range secretPatterns {
+			if sp.pattern.MatchString(val) {
+				pos := fset.Position(bl.Pos())
+				issues = append(issues, LintIssue{
+					File:     path,
+					Line:     pos.Line,
+					Column:   pos.Column,
+					Severity: "error",
+					Message:  fmt.Sprintf("Hardcoded %s detected - use secrets context instead", sp.description),
+					Rule:     r.ID(),
+					Fixable:  false,
+				})
+				break // Only report first matching pattern
+			}
+		}
+		return true
+	})
+
+	return issues
+}
