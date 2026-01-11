@@ -2,9 +2,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
+	corecmd "github.com/lex00/wetwire-core-go/cmd"
 )
 
 // Version information (set via ldflags at build time)
@@ -16,21 +17,16 @@ var (
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-var rootCmd = &cobra.Command{
-	Use:   "wetwire-github",
-	Short: "Generate GitHub YAML from typed Go declarations",
-	Long: `wetwire-github generates GitHub Actions workflows, Dependabot configs,
-and Issue Templates from typed Go declarations.
-
-Example:
-  wetwire-github build ./my-workflows
-  wetwire-github import .github/workflows/ci.yml -o my-workflows/
-  wetwire-github validate .github/workflows/ci.yml`,
-}
+// rootCmd uses the core command framework for consistent CLI structure.
+var rootCmd = corecmd.NewRootCommand(
+	"wetwire-github",
+	"Generate GitHub YAML from typed Go declarations",
+)
 
 func init() {
 	rootCmd.AddCommand(buildCmd)
