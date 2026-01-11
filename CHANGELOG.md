@@ -52,6 +52,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Private keys (RSA, EC, DSA, OpenSSH, PGP), Slack tokens, Google API keys
   - Twilio, SendGrid, Mailgun, NPM, PyPI tokens, JWT tokens
   - DigitalOcean, Heroku, Azure credentials
+- **LINT_RULES.md Documentation** - Complete documentation of all 20 lint rules (#211)
+  - Rule index with severity and auto-fix status
+  - Detailed descriptions with bad/good code examples
+  - Usage instructions for lint command and JSON output
 - **Security Lint Rules (WAG017-WAG018)** - 2 new security-focused lint rules (#160, #161)
   - WAG017: Suggest adding explicit permissions scope for workflow security
   - WAG018: Detect dangerous pull_request_target patterns with checkout actions
