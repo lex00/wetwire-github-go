@@ -43,6 +43,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `internal/linter`: 83.9% → 91.3% (7+ percentage point improvement) (#143, #149)
   - `codegen`: 85.2% → 95.7% (10+ percentage point improvement) (#143, #158)
   - `internal/runner`: 89.9% → 90.8% (additional edge case tests) (#158)
+- **Circular Dependency Detection (WAG019)** - New lint rule for job dependency cycles (#204)
+  - WAG019: Detect circular dependencies in job needs (e.g., A -> B -> C -> A)
+  - Uses DFS with recursion stack for efficient cycle detection
+  - Reports all jobs involved in the cycle with file locations
 - **Security Lint Rules (WAG017-WAG018)** - 2 new security-focused lint rules (#160, #161)
   - WAG017: Suggest adding explicit permissions scope for workflow security
   - WAG018: Detect dangerous pull_request_target patterns with checkout actions
