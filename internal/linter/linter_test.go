@@ -22,8 +22,8 @@ func TestDefaultLinter(t *testing.T) {
 	if l == nil {
 		t.Error("DefaultLinter() returned nil")
 	}
-	if len(l.Rules()) != 18 {
-		t.Errorf("len(Rules()) = %d, want 18", len(l.Rules()))
+	if len(l.Rules()) != 19 {
+		t.Errorf("len(Rules()) = %d, want 19", len(l.Rules()))
 	}
 }
 
@@ -1715,5 +1715,270 @@ var CI = workflow.Workflow{
 
 	if !result.Success {
 		t.Error("WAG017 should not flag when Permissions is set")
+	}
+}
+
+// WAG019 - Circular Dependency Detection Tests
+
+func TestWAG019_Check_SimpleCycle(t *testing.T) {
+	// A -> B -> A (simple 2-job cycle)
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var JobA = workflow.Job{
+	Name:   "job-a",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobB},
+}
+
+var JobB = workflow.Job{
+	Name:   "job-b",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobA},
+}
+`)
+
+	l := NewLinter(&WAG019{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG019 should have detected circular dependency between JobA and JobB")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG019" {
+			found = true
+			if issue.Severity != "error" {
+				t.Errorf("WAG019 issues should be severity 'error', got %s", issue.Severity)
+			}
+			if !strings.Contains(issue.Message, "JobA") || !strings.Contains(issue.Message, "JobB") {
+				t.Errorf("WAG019 message should contain job names, got: %s", issue.Message)
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG019 issue not found")
+	}
+}
+
+func TestWAG019_Check_ThreeJobCycle(t *testing.T) {
+	// A -> B -> C -> A (3-job cycle)
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var JobA = workflow.Job{
+	Name:   "job-a",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobC},
+}
+
+var JobB = workflow.Job{
+	Name:   "job-b",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobA},
+}
+
+var JobC = workflow.Job{
+	Name:   "job-c",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobB},
+}
+`)
+
+	l := NewLinter(&WAG019{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG019 should have detected circular dependency in 3-job cycle")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG019" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Expected WAG019 issue not found")
+	}
+}
+
+func TestWAG019_Check_SelfReference(t *testing.T) {
+	// A -> A (self-referencing cycle)
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var JobA = workflow.Job{
+	Name:   "job-a",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobA},
+}
+`)
+
+	l := NewLinter(&WAG019{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG019 should have detected self-referencing circular dependency")
+	}
+
+	found := false
+	for _, issue := range result.Issues {
+		if issue.Rule == "WAG019" {
+			found = true
+			if !strings.Contains(issue.Message, "JobA") {
+				t.Errorf("WAG019 message should contain job name, got: %s", issue.Message)
+			}
+		}
+	}
+	if !found {
+		t.Error("Expected WAG019 issue not found")
+	}
+}
+
+func TestWAG019_Check_NoCycle(t *testing.T) {
+	// Linear chain: A -> B -> C (no cycle)
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var JobA = workflow.Job{
+	Name:   "job-a",
+	RunsOn: "ubuntu-latest",
+}
+
+var JobB = workflow.Job{
+	Name:   "job-b",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobA},
+}
+
+var JobC = workflow.Job{
+	Name:   "job-c",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobB},
+}
+`)
+
+	l := NewLinter(&WAG019{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		for _, issue := range result.Issues {
+			t.Logf("Unexpected issue: %s", issue.Message)
+		}
+		t.Error("WAG019 should not flag linear dependency chain")
+	}
+}
+
+func TestWAG019_Check_DiamondDependency(t *testing.T) {
+	// Diamond shape: A -> B, A -> C, B -> D, C -> D (no cycle)
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var JobA = workflow.Job{
+	Name:   "job-a",
+	RunsOn: "ubuntu-latest",
+}
+
+var JobB = workflow.Job{
+	Name:   "job-b",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobA},
+}
+
+var JobC = workflow.Job{
+	Name:   "job-c",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobA},
+}
+
+var JobD = workflow.Job{
+	Name:   "job-d",
+	RunsOn: "ubuntu-latest",
+	Needs:  []any{JobB, JobC},
+}
+`)
+
+	l := NewLinter(&WAG019{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		for _, issue := range result.Issues {
+			t.Logf("Unexpected issue: %s", issue.Message)
+		}
+		t.Error("WAG019 should not flag diamond dependency pattern (no cycle)")
+	}
+}
+
+func TestWAG019_Check_SingleDependencyFormat(t *testing.T) {
+	// Test with single dependency (not slice): A -> B -> A
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var JobA = workflow.Job{
+	Name:   "job-a",
+	RunsOn: "ubuntu-latest",
+	Needs:  JobB,
+}
+
+var JobB = workflow.Job{
+	Name:   "job-b",
+	RunsOn: "ubuntu-latest",
+	Needs:  JobA,
+}
+`)
+
+	l := NewLinter(&WAG019{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if result.Success {
+		t.Error("WAG019 should detect cycle with single dependency format")
+	}
+}
+
+func TestWAG019_Check_NoJobs(t *testing.T) {
+	// No jobs at all
+	content := []byte(`package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Name: "CI",
+}
+`)
+
+	l := NewLinter(&WAG019{})
+	result, err := l.LintContent("test.go", content)
+	if err != nil {
+		t.Fatalf("LintContent() error = %v", err)
+	}
+
+	if !result.Success {
+		t.Error("WAG019 should not flag when there are no jobs")
 	}
 }
