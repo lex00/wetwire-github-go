@@ -17,6 +17,7 @@ var designMaxLintCycles int
 var designModel string
 var designWorkDir string
 var designMCPServer bool
+var designProvider string
 
 var designCmd = &cobra.Command{
 	Use:   "design [prompt]",
@@ -35,12 +36,17 @@ wetwire-github tools to:
 
 The assistant can automatically fix lint errors through multiple cycles.
 
+Providers:
+  anthropic  - Use Anthropic Claude API (default)
+  kiro       - Use Kiro AI agent
+
 Example:
   wetwire-github design "Create a CI workflow for a Go project"
   wetwire-github design --stream "Add a release workflow"
   wetwire-github design --max-lint-cycles 5 "Create multi-platform build"
+  wetwire-github design --provider kiro "Create a deployment workflow"
 
-Requires ANTHROPIC_API_KEY environment variable to be set.`,
+Requires ANTHROPIC_API_KEY environment variable to be set (for anthropic provider).`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Run MCP server if requested
 		if designMCPServer {
@@ -56,6 +62,7 @@ func init() {
 	designCmd.Flags().IntVar(&designMaxLintCycles, "max-lint-cycles", 5, "maximum lint/fix cycles")
 	designCmd.Flags().StringVar(&designModel, "model", "claude-sonnet-4-20250514", "model to use")
 	designCmd.Flags().StringVarP(&designWorkDir, "workdir", "w", ".", "working directory for generated files")
+	designCmd.Flags().StringVar(&designProvider, "provider", "anthropic", "LLM provider (anthropic, kiro)")
 	designCmd.Flags().BoolVar(&designMCPServer, "mcp-server", false, "Run as MCP server (internal use)")
 	_ = designCmd.Flags().MarkHidden("mcp-server")
 }
@@ -82,6 +89,23 @@ func (d *consoleDeveloper) Respond(ctx context.Context, question string) (string
 
 // runDesign executes the design command.
 func runDesign(prompt string) error {
+	// Validate provider
+	if !isValidProvider(designProvider) {
+		fmt.Fprintf(os.Stderr, "error: invalid provider %q (valid: anthropic, kiro)\n", designProvider)
+		os.Exit(1)
+		return nil
+	}
+
+	// Kiro provider not yet implemented
+	if designProvider == "kiro" {
+		fmt.Fprintln(os.Stderr, "error: kiro provider not yet implemented")
+		fmt.Fprintln(os.Stderr, "")
+		fmt.Fprintln(os.Stderr, "The kiro provider will be available in a future release.")
+		fmt.Fprintln(os.Stderr, "Use --provider anthropic for now.")
+		os.Exit(1)
+		return nil
+	}
+
 	// Check for ANTHROPIC_API_KEY
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
 	if apiKey == "" {
@@ -111,6 +135,7 @@ func runDesign(prompt string) error {
 	// Print status
 	fmt.Println("wetwire-github design")
 	fmt.Println("")
+	fmt.Printf("Provider: %s\n", designProvider)
 	fmt.Printf("Model: %s\n", designModel)
 	fmt.Printf("Stream: %t\n", designStream)
 	fmt.Printf("Max lint cycles: %d\n", designMaxLintCycles)
@@ -119,6 +144,7 @@ func runDesign(prompt string) error {
 
 	// Create agent config
 	config := agent.Config{
+		Provider:      designProvider,
 		APIKey:        apiKey,
 		Model:         designModel,
 		WorkDir:       designWorkDir,

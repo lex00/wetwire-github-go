@@ -2060,12 +2060,12 @@ func TestGitHubAgent_EdgeCases(t *testing.T) {
 	defer os.Unsetenv("ANTHROPIC_API_KEY")
 
 	tests := []struct {
-		name     string
-		setup    func(*GitHubAgent)
-		test     func(*testing.T, *GitHubAgent)
+		name  string
+		setup func(*GitHubAgent)
+		test  func(*testing.T, *GitHubAgent)
 	}{
 		{
-			name: "write same file twice",
+			name:  "write same file twice",
 			setup: func(a *GitHubAgent) {},
 			test: func(t *testing.T, a *GitHubAgent) {
 				a.toolWriteFile("test.go", "package main")
@@ -2077,7 +2077,7 @@ func TestGitHubAgent_EdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name: "lint without any files",
+			name:  "lint without any files",
 			setup: func(a *GitHubAgent) {},
 			test: func(t *testing.T, a *GitHubAgent) {
 				a.toolRunLint(".")
@@ -2101,7 +2101,7 @@ func TestGitHubAgent_EdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name: "read non-existent file",
+			name:  "read non-existent file",
 			setup: func(a *GitHubAgent) {},
 			test: func(t *testing.T, a *GitHubAgent) {
 				result := a.toolReadFile("does-not-exist.go")
@@ -2111,7 +2111,7 @@ func TestGitHubAgent_EdgeCases(t *testing.T) {
 			},
 		},
 		{
-			name: "init package with empty name",
+			name:  "init package with empty name",
 			setup: func(a *GitHubAgent) {},
 			test: func(t *testing.T, a *GitHubAgent) {
 				result := a.toolInitPackage("")
@@ -2795,9 +2795,9 @@ func TestGitHubAgent_ExecuteTool_AllPathsCovered(t *testing.T) {
 
 	// Test all tool routes
 	testCases := []struct {
-		tool     string
-		input    string
-		checkFn  func(*testing.T, string)
+		tool    string
+		input   string
+		checkFn func(*testing.T, string)
 	}{
 		{
 			"init_package",
@@ -2971,11 +2971,11 @@ func TestGitHubAgent_CheckCompletionGate_AllEdgeCases(t *testing.T) {
 	defer os.Unsetenv("ANTHROPIC_API_KEY")
 
 	tests := []struct {
-		name           string
-		setupAgent     func(*GitHubAgent)
-		responseText   string
-		wantEnforce    bool
-		wantSubstring  string
+		name          string
+		setupAgent    func(*GitHubAgent)
+		responseText  string
+		wantEnforce   bool
+		wantSubstring string
 	}{
 		{
 			name: "no files no keywords",
@@ -3255,7 +3255,6 @@ func TestGitHubAgent_MultipleStateResets(t *testing.T) {
 		t.Errorf("should have 3 lint cycles, got %d", agent.GetLintCycles())
 	}
 }
-
 
 // TestGitHubAgent_ToolRunLint_LintPassedState tests that lintPassed is set correctly on successful lint
 func TestGitHubAgent_ToolRunLint_LintPassedState(t *testing.T) {
@@ -3812,9 +3811,9 @@ func TestGitHubAgent_WorkDirConfiguration(t *testing.T) {
 	defer os.Unsetenv("ANTHROPIC_API_KEY")
 
 	tests := []struct {
-		name       string
-		workDir    string
-		wantDir    string
+		name    string
+		workDir string
+		wantDir string
 	}{
 		{
 			name:    "default work dir",

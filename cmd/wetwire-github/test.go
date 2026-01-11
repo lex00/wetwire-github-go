@@ -20,6 +20,7 @@ var testPersona string
 var testScenario string
 var testList bool
 var testScore bool
+var testProvider string
 
 var testCmd = &cobra.Command{
 	Use:   "test <path>",
@@ -51,10 +52,15 @@ Scoring (5 dimensions, 0-3 each, max 15):
 
 Thresholds: 0-5 Failure, 6-9 Partial, 10-12 Success, 13-15 Excellent
 
+Providers:
+  anthropic  - Use Anthropic Claude API (default)
+  kiro       - Use Kiro AI agent
+
 Example:
   wetwire-github test .
   wetwire-github test . --persona beginner
   wetwire-github test . --scenario ci-workflow --score
+  wetwire-github test . --provider kiro --persona beginner
   wetwire-github test --list`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -74,6 +80,7 @@ func init() {
 	testCmd.Flags().StringVar(&testScenario, "scenario", "", "run specific scenario (ci-workflow, deployment, release, matrix)")
 	testCmd.Flags().BoolVar(&testList, "list", false, "list available personas and scenarios")
 	testCmd.Flags().BoolVar(&testScore, "score", false, "show scoring breakdown")
+	testCmd.Flags().StringVar(&testProvider, "provider", "anthropic", "LLM provider (anthropic, kiro)")
 }
 
 // listTestPersonas lists available personas and scenarios.
@@ -105,6 +112,13 @@ func listTestPersonas() error {
 
 // runTest executes the test command.
 func runTest(path string) error {
+	// Validate provider
+	if !isValidProvider(testProvider) {
+		fmt.Fprintf(os.Stderr, "error: invalid provider %q (valid: anthropic, kiro)\n", testProvider)
+		os.Exit(1)
+		return nil
+	}
+
 	// Validate persona if specified
 	if testPersona != "" {
 		if _, err := personas.Get(testPersona); err != nil {

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Provider Flag** - Add `--provider` flag to `design` and `test` commands (#220)
+  - Supports `anthropic` (default) and `kiro` providers
+  - Kiro provider integration pending wetwire-core-go provider abstraction
+  - Added Provider field to agent.Config for future extensibility
+  - Updated CLI documentation with provider examples
+
 ### Changed
 - **Remove .ToStep() Method** - Action wrappers now implement `StepAction` interface (#110)
   - Action wrappers can be used directly in `Job.Steps` slice
