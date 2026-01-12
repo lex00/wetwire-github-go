@@ -2,6 +2,9 @@
 //
 // When design --mcp-server is called, this runs the MCP protocol over stdio,
 // providing wetwire_init, wetwire_lint, wetwire_build, and wetwire_validate tools.
+//
+// This implementation uses wetwire-core-go/mcp infrastructure for the server
+// and protocol handling, with GitHub-specific tool handlers.
 package main
 
 import (
@@ -13,7 +16,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/lex00/wetwire-core-go/mcp"
 
 	wetwire "github.com/lex00/wetwire-github-go"
 	"github.com/lex00/wetwire-github-go/internal/discover"
@@ -26,83 +29,154 @@ import (
 // runMCPServer starts the MCP server on stdio transport.
 // This is called when design --mcp-server is invoked.
 func runMCPServer() error {
-	server := mcp.NewServer(&mcp.Implementation{
+	server := mcp.NewServer(mcp.Config{
 		Name:    "wetwire-github",
 		Version: getVersion(),
-	}, nil)
+	})
 
-	// Register tools
-	registerInitTool(server)
-	registerLintTool(server)
-	registerBuildTool(server)
-	registerValidateTool(server)
+	// Register standard tools with GitHub-specific handlers
+	registerTools(server)
 
 	// Run on stdio transport
-	return server.Run(context.Background(), &mcp.StdioTransport{})
+	return server.Start(context.Background())
 }
 
-// InitArgs are the arguments for the wetwire_init tool.
-type InitArgs struct {
-	Name string `json:"name" jsonschema:"required,Project name (e.g. my-workflows, ci-project)"`
-	Path string `json:"path,omitempty" jsonschema:"Workspace directory to create project in (defaults to current directory)"`
+// Tool schemas for standard wetwire tools
+var (
+	initSchema = map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"name": map[string]any{
+				"type":        "string",
+				"description": "Project name",
+			},
+			"path": map[string]any{
+				"type":        "string",
+				"description": "Output directory (default: current directory)",
+			},
+		},
+	}
+
+	buildSchema = map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"package": map[string]any{
+				"type":        "string",
+				"description": "Package path to discover resources from",
+			},
+			"output": map[string]any{
+				"type":        "string",
+				"description": "Output directory for generated files",
+			},
+			"dry_run": map[string]any{
+				"type":        "boolean",
+				"description": "Return content without writing files",
+			},
+		},
+	}
+
+	lintSchema = map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"package": map[string]any{
+				"type":        "string",
+				"description": "Package path to lint",
+			},
+		},
+	}
+
+	validateSchema = map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"path": map[string]any{
+				"type":        "string",
+				"description": "Path to file or directory to validate",
+			},
+		},
+	}
+)
+
+// registerTools registers all GitHub-specific MCP tools.
+func registerTools(server *mcp.Server) {
+	server.RegisterToolWithSchema(
+		"wetwire_init",
+		"Initialize a new wetwire-github project with example code",
+		handleInit,
+		initSchema,
+	)
+
+	server.RegisterToolWithSchema(
+		"wetwire_build",
+		"Generate GitHub Actions YAML workflows from wetwire declarations",
+		handleBuild,
+		buildSchema,
+	)
+
+	server.RegisterToolWithSchema(
+		"wetwire_lint",
+		"Check code quality and style (WAG001-WAG008 lint rules)",
+		handleLint,
+		lintSchema,
+	)
+
+	server.RegisterToolWithSchema(
+		"wetwire_validate",
+		"Validate generated workflows using actionlint",
+		handleValidate,
+		validateSchema,
+	)
 }
 
-// InitResult is the result of the wetwire_init tool.
-type InitResult struct {
-	Success bool     `json:"success"`
-	Path    string   `json:"path"`
-	Files   []string `json:"files"`
-	Error   string   `json:"error,omitempty"`
-}
-
-// validProjectName matches valid Go module/project names
+// validMCPProjectName matches valid Go module/project names
 var validMCPProjectName = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`)
 
-func registerInitTool(server *mcp.Server) {
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "wetwire_init",
-		Description: "Initialize a new wetwire-github project in a subdirectory. Creates {path}/{name}/ with go.mod and workflow declarations.",
-	}, handleInit)
-}
+// handleInit implements the wetwire_init tool.
+func handleInit(_ context.Context, args map[string]any) (string, error) {
+	type InitResult struct {
+		Success bool     `json:"success"`
+		Path    string   `json:"path"`
+		Files   []string `json:"files"`
+		Error   string   `json:"error,omitempty"`
+	}
 
-func handleInit(_ context.Context, _ *mcp.CallToolRequest, args InitArgs) (*mcp.CallToolResult, any, error) {
 	result := InitResult{}
 
-	if args.Name == "" {
+	name, _ := args["name"].(string)
+	if name == "" {
 		result.Error = "name is required"
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Validate project name
-	if !validMCPProjectName.MatchString(args.Name) {
-		result.Error = fmt.Sprintf("invalid project name %q: must start with a letter and contain only letters, numbers, hyphens, or underscores", args.Name)
-		return toolResult(result)
+	if !validMCPProjectName.MatchString(name) {
+		result.Error = fmt.Sprintf("invalid project name %q: must start with a letter and contain only letters, numbers, hyphens, or underscores", name)
+		return toJSON(result)
 	}
 
 	// Default path to current directory
-	workspaceDir := args.Path
+	workspaceDir, _ := args["path"].(string)
 	if workspaceDir == "" {
 		workspaceDir = "."
 	}
 
 	// Create project as subdirectory of workspace
-	projectPath := filepath.Join(workspaceDir, args.Name)
+	projectPath := filepath.Join(workspaceDir, name)
 	result.Path = projectPath
 
 	// Check if project already exists
 	if _, err := os.Stat(projectPath); err == nil {
 		result.Error = fmt.Sprintf("project already exists: %s", projectPath)
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Create project directory
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
 		result.Error = fmt.Sprintf("creating project directory: %v", err)
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Use project name as module name
-	moduleName := args.Name
+	moduleName := name
 
 	// Write go.mod
 	goMod := fmt.Sprintf(`module %s
@@ -115,7 +189,7 @@ require github.com/lex00/wetwire-github-go v0.1.0
 	goModPath := filepath.Join(projectPath, "go.mod")
 	if err := os.WriteFile(goModPath, []byte(goMod), 0644); err != nil {
 		result.Error = fmt.Sprintf("writing go.mod: %v", err)
-		return toolResult(result)
+		return toJSON(result)
 	}
 	result.Files = append(result.Files, "go.mod")
 
@@ -161,7 +235,7 @@ var BuildSteps = []any{
 	workflowsGoPath := filepath.Join(projectPath, "workflows.go")
 	if err := os.WriteFile(workflowsGoPath, []byte(workflowsGo), 0644); err != nil {
 		result.Error = fmt.Sprintf("writing workflows.go: %v", err)
-		return toolResult(result)
+		return toJSON(result)
 	}
 	result.Files = append(result.Files, "workflows.go")
 
@@ -182,48 +256,43 @@ Thumbs.db
 	gitignorePath := filepath.Join(projectPath, ".gitignore")
 	if err := os.WriteFile(gitignorePath, []byte(gitignore), 0644); err != nil {
 		result.Error = fmt.Sprintf("writing .gitignore: %v", err)
-		return toolResult(result)
+		return toJSON(result)
 	}
 	result.Files = append(result.Files, ".gitignore")
 
 	result.Success = true
-	return toolResult(result)
+	return toJSON(result)
 }
 
-// LintArgs are the arguments for the wetwire_lint tool.
-type LintArgs struct {
-	Path string `json:"path" jsonschema:"Path to the Go package to lint (e.g. . or ./workflows)"`
-}
-
-func registerLintTool(server *mcp.Server) {
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "wetwire_lint",
-		Description: "Lint Go packages for wetwire-github style issues (WAG001-WAG008 rules)",
-	}, handleLint)
-}
-
-func handleLint(_ context.Context, _ *mcp.CallToolRequest, args LintArgs) (*mcp.CallToolResult, any, error) {
+// handleLint implements the wetwire_lint tool.
+func handleLint(_ context.Context, args map[string]any) (string, error) {
 	result := wetwire.LintResult{}
 
-	if args.Path == "" {
+	// Support both "path" and "package" parameter names for compatibility
+	path, _ := args["package"].(string)
+	if path == "" {
+		path, _ = args["path"].(string)
+	}
+
+	if path == "" {
 		result.Issues = append(result.Issues, wetwire.LintIssue{
 			Severity: "error",
-			Message:  "path is required",
+			Message:  "package is required",
 			Rule:     "internal",
 		})
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Discover workflows (validates references)
 	disc := discover.NewDiscoverer()
-	discoverResult, err := disc.Discover(args.Path)
+	discoverResult, err := disc.Discover(path)
 	if err != nil {
 		result.Issues = append(result.Issues, wetwire.LintIssue{
 			Severity: "error",
 			Message:  fmt.Sprintf("discovery failed: %v", err),
 			Rule:     "internal",
 		})
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Convert discovery errors to lint issues
@@ -237,11 +306,11 @@ func handleLint(_ context.Context, _ *mcp.CallToolRequest, args LintArgs) (*mcp.
 
 	// Run lint rules
 	l := linter.DefaultLinter()
-	lintResult, err := l.LintDir(args.Path)
+	lintResult, err := l.LintDir(path)
 	if err != nil {
 		result.Issues = append(result.Issues, wetwire.LintIssue{
 			Severity: "warning",
-			Message:  fmt.Sprintf("failed to lint %s: %v", args.Path, err),
+			Message:  fmt.Sprintf("failed to lint %s: %v", path, err),
 			Rule:     "internal",
 		})
 	} else {
@@ -258,52 +327,46 @@ func handleLint(_ context.Context, _ *mcp.CallToolRequest, args LintArgs) (*mcp.
 	}
 
 	result.Success = len(result.Issues) == 0
-	return toolResult(result)
+	return toJSON(result)
 }
 
-// BuildArgs are the arguments for the wetwire_build tool.
-type BuildArgs struct {
-	Path   string `json:"path" jsonschema:"Path to the Go package to build (e.g. . or ./workflows)"`
-	Output string `json:"output,omitempty" jsonschema:"Output directory for YAML files (default: .github/workflows)"`
-	DryRun bool   `json:"dry_run,omitempty" jsonschema:"If true, return YAML content without writing files"`
-}
+// handleBuild implements the wetwire_build tool.
+func handleBuild(_ context.Context, args map[string]any) (string, error) {
+	type BuildResult struct {
+		Success   bool              `json:"success"`
+		Workflows map[string]string `json:"workflows,omitempty"`
+		Files     []string          `json:"files,omitempty"`
+		Errors    []string          `json:"errors,omitempty"`
+	}
 
-// BuildResult is the result of the wetwire_build tool.
-type BuildResult struct {
-	Success   bool              `json:"success"`
-	Workflows map[string]string `json:"workflows,omitempty"` // name -> YAML content
-	Files     []string          `json:"files,omitempty"`     // written file paths
-	Errors    []string          `json:"errors,omitempty"`
-}
-
-func registerBuildTool(server *mcp.Server) {
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "wetwire_build",
-		Description: "Generate GitHub Actions YAML workflows from Go packages containing wetwire-github declarations",
-	}, handleBuild)
-}
-
-func handleBuild(_ context.Context, _ *mcp.CallToolRequest, args BuildArgs) (*mcp.CallToolResult, any, error) {
 	result := BuildResult{
 		Workflows: make(map[string]string),
 	}
 
-	if args.Path == "" {
-		result.Errors = append(result.Errors, "path is required")
-		return toolResult(result)
+	// Support both "path" and "package" parameter names for compatibility
+	path, _ := args["package"].(string)
+	if path == "" {
+		path, _ = args["path"].(string)
 	}
 
-	outputDir := args.Output
+	if path == "" {
+		result.Errors = append(result.Errors, "package is required")
+		return toJSON(result)
+	}
+
+	outputDir, _ := args["output"].(string)
 	if outputDir == "" {
 		outputDir = ".github/workflows"
 	}
 
+	dryRun, _ := args["dry_run"].(bool)
+
 	// Discover workflows
 	disc := discover.NewDiscoverer()
-	discoverResult, err := disc.Discover(args.Path)
+	discoverResult, err := disc.Discover(path)
 	if err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("discovery failed: %v", err))
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Check for discovery errors
@@ -311,26 +374,26 @@ func handleBuild(_ context.Context, _ *mcp.CallToolRequest, args BuildArgs) (*mc
 		for _, e := range discoverResult.Errors {
 			result.Errors = append(result.Errors, e)
 		}
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Check we have workflows to build
 	if len(discoverResult.Workflows) == 0 {
 		result.Errors = append(result.Errors, "no workflows found")
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Extract values using runner
 	r := runner.NewRunner()
-	extracted, err := r.ExtractValues(args.Path, discoverResult)
+	extracted, err := r.ExtractValues(path, discoverResult)
 	if err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("extracting values: %v", err))
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	if extracted.Error != "" {
 		result.Errors = append(result.Errors, extracted.Error)
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Build templates
@@ -338,7 +401,7 @@ func handleBuild(_ context.Context, _ *mcp.CallToolRequest, args BuildArgs) (*mc
 	built, err := builder.Build(discoverResult, extracted)
 	if err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("template build failed: %v", err))
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Add template builder errors
@@ -350,11 +413,11 @@ func handleBuild(_ context.Context, _ *mcp.CallToolRequest, args BuildArgs) (*mc
 	}
 
 	// Write files if not dry run
-	if !args.DryRun {
+	if !dryRun {
 		// Create output directory
 		if err := os.MkdirAll(outputDir, 0755); err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("creating output directory: %v", err))
-			return toolResult(result)
+			return toJSON(result)
 		}
 
 		for name := range result.Workflows {
@@ -368,7 +431,7 @@ func handleBuild(_ context.Context, _ *mcp.CallToolRequest, args BuildArgs) (*mc
 	}
 
 	result.Success = len(result.Errors) == 0
-	return toolResult(result)
+	return toJSON(result)
 }
 
 // toMCPFilename converts a workflow name to a valid filename.
@@ -383,37 +446,26 @@ func toMCPFilename(name string) string {
 	return strings.ToLower(result.String())
 }
 
-// ValidateArgs are the arguments for the wetwire_validate tool.
-type ValidateArgs struct {
-	Path string `json:"path" jsonschema:"Path to YAML file or directory to validate"`
-}
+// handleValidate implements the wetwire_validate tool.
+func handleValidate(_ context.Context, args map[string]any) (string, error) {
+	type ValidateResult struct {
+		Success bool     `json:"success"`
+		Errors  []string `json:"errors,omitempty"`
+	}
 
-// ValidateResult is the result of the wetwire_validate tool.
-type ValidateResult struct {
-	Success bool     `json:"success"`
-	Errors  []string `json:"errors,omitempty"`
-}
-
-func registerValidateTool(server *mcp.Server) {
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "wetwire_validate",
-		Description: "Validate GitHub Actions YAML workflows using actionlint",
-	}, handleValidate)
-}
-
-func handleValidate(_ context.Context, _ *mcp.CallToolRequest, args ValidateArgs) (*mcp.CallToolResult, any, error) {
 	result := ValidateResult{}
 
-	if args.Path == "" {
+	path, _ := args["path"].(string)
+	if path == "" {
 		result.Errors = append(result.Errors, "path is required")
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	// Validate the workflow file
-	validationResult, err := validation.ValidateWorkflowFile(args.Path)
+	validationResult, err := validation.ValidateWorkflowFile(path)
 	if err != nil {
 		result.Errors = append(result.Errors, fmt.Sprintf("validation failed: %v", err))
-		return toolResult(result)
+		return toJSON(result)
 	}
 
 	for _, issue := range validationResult.Issues {
@@ -421,19 +473,14 @@ func handleValidate(_ context.Context, _ *mcp.CallToolRequest, args ValidateArgs
 	}
 
 	result.Success = len(result.Errors) == 0
-	return toolResult(result)
+	return toJSON(result)
 }
 
-// toolResult creates an MCP CallToolResult from any JSON-serializable value.
-func toolResult(v any) (*mcp.CallToolResult, any, error) {
+// toJSON marshals the given value to a JSON string.
+func toJSON(v any) (string, error) {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		return nil, nil, fmt.Errorf("marshaling result: %w", err)
+		return "", fmt.Errorf("marshaling result: %w", err)
 	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: string(data)},
-		},
-	}, nil, nil
+	return string(data), nil
 }

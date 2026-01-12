@@ -1,6 +1,7 @@
 // Package kiro provides Kiro CLI integration for wetwire-github.
 //
-// This package handles:
+// This package wraps wetwire-core-go/kiro with GitHub-specific configuration
+// and handles:
 //   - Auto-installation of Kiro agent configuration
 //   - Project-level MCP configuration
 //   - Launching Kiro CLI chat sessions
@@ -13,6 +14,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	corekiro "github.com/lex00/wetwire-core-go/kiro"
 )
 
 //go:embed configs/wetwire-runner.json
@@ -27,6 +30,22 @@ type mcpServer struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
 	Cwd     string   `json:"cwd,omitempty"`
+}
+
+// GetCoreConfig returns a kiro.Config suitable for launching GitHub-specific agents.
+// This provides the base configuration that can be passed to core kiro functions.
+func GetCoreConfig() corekiro.Config {
+	return corekiro.Config{
+		AgentName:   "wetwire-github-runner",
+		AgentPrompt: "You are a GitHub Actions workflow expert using wetwire-github-go.",
+		MCPCommand:  findWetwireBinaryPath() + " mcp",
+		WorkDir:     getCurrentWorkDir(),
+	}
+}
+
+func getCurrentWorkDir() string {
+	cwd, _ := os.Getwd()
+	return cwd
 }
 
 // EnsureInstalled checks if Kiro configs are installed and installs them if needed.
