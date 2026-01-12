@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/lex00/wetwire-core-go/providers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -91,7 +91,7 @@ func TestGitHubAgent_Run_UsesStreamingWhenHandlerSet(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		streamHandler StreamHandler
+		streamHandler providers.StreamHandler
 		expectStream  bool
 	}{
 		{
@@ -141,7 +141,7 @@ func TestGitHubAgent_RunWithStreaming_MessageBuilding(t *testing.T) {
 
 	// Verify the agent is set up for streaming
 	assert.NotNil(t, agent.streamHandler)
-	assert.NotNil(t, agent.client)
+	assert.NotNil(t, agent.provider)
 }
 
 // TestGitHubAgent_StreamHandler_ConcurrentCalls tests concurrent stream handler calls
@@ -258,7 +258,7 @@ func TestGitHubAgent_Run_WithoutStreamHandler(t *testing.T) {
 
 	// The Run method will use the non-streaming path
 	// We can't test the actual API call without mocking, but we verify the setup
-	assert.NotNil(t, agent.client)
+	assert.NotNil(t, agent.provider)
 }
 
 // TestGitHubAgent_StreamHandler_MultipleAgents tests multiple agents with different handlers
@@ -432,16 +432,16 @@ func TestGitHubAgent_StreamingContentBlockArray(t *testing.T) {
 	// The runWithStreaming method builds an array of ContentBlockUnion
 	// This tests that pattern
 
-	var contentBlocks []anthropic.ContentBlockUnion
+	var contentBlocks []providers.ContentBlock
 
 	// Add text block
-	contentBlocks = append(contentBlocks, anthropic.ContentBlockUnion{
+	contentBlocks = append(contentBlocks, providers.ContentBlock{
 		Type: "text",
 		Text: "Hello world",
 	})
 
 	// Add tool block
-	contentBlocks = append(contentBlocks, anthropic.ContentBlockUnion{
+	contentBlocks = append(contentBlocks, providers.ContentBlock{
 		Type:  "tool_use",
 		ID:    "tool_1",
 		Name:  "write_file",
@@ -456,19 +456,19 @@ func TestGitHubAgent_StreamingContentBlockArray(t *testing.T) {
 
 // TestGitHubAgent_StreamingMessageConstruction tests message construction
 func TestGitHubAgent_StreamingMessageConstruction(t *testing.T) {
-	// The runWithStreaming method constructs an anthropic.Message
+	// The runWithStreaming method constructs a providers.MessageResponse
 	// This tests that pattern
 
-	message := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	message := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "Response text"},
 		},
-		StopReason: anthropic.StopReasonEndTurn,
+		StopReason: providers.StopReasonEndTurn,
 	}
 
 	assert.NotNil(t, message)
 	assert.Len(t, message.Content, 1)
-	assert.Equal(t, anthropic.StopReasonEndTurn, message.StopReason)
+	assert.Equal(t, providers.StopReasonEndTurn, message.StopReason)
 }
 
 // TestGitHubAgent_StreamingIndexMapping tests index-based content mapping

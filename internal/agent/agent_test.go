@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/lex00/wetwire-core-go/agent/results"
+	"github.com/lex00/wetwire-core-go/providers"
+	"github.com/lex00/wetwire-core-go/providers/anthropic"
 )
 
 func TestNewGitHubAgent_NoAPIKey(t *testing.T) {
@@ -338,8 +339,8 @@ func TestGitHubAgent_GetTools(t *testing.T) {
 	}
 
 	for i, tool := range tools {
-		if tool.OfTool.Name != expectedTools[i] {
-			t.Errorf("tools[%d].Name = %q, want %q", i, tool.OfTool.Name, expectedTools[i])
+		if tool.Name != expectedTools[i] {
+			t.Errorf("tools[%d].Name = %q, want %q", i, tool.Name, expectedTools[i])
 		}
 	}
 }
@@ -494,7 +495,7 @@ func TestGitHubAgent_CheckCompletionGate(t *testing.T) {
 			// Create mock response
 			resp := &mockMessage{text: tt.responseText}
 
-			enforcement := agent.checkCompletionGate(resp.toAnthropicMessage())
+			enforcement := agent.checkCompletionGate(resp.toMessageResponse())
 			gotEnforce := enforcement != ""
 
 			if gotEnforce != tt.wantEnforce {
@@ -510,14 +511,14 @@ func TestGitHubAgent_CheckCompletionGate(t *testing.T) {
 	}
 }
 
-// mockMessage helps create anthropic.Message for testing
+// mockMessage helps create providers.MessageResponse for testing
 type mockMessage struct {
 	text string
 }
 
-func (m *mockMessage) toAnthropicMessage() *anthropic.Message {
-	return &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+func (m *mockMessage) toMessageResponse() *providers.MessageResponse {
+	return &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: m.text},
 		},
 	}
@@ -775,8 +776,8 @@ func TestGitHubAgent_CheckCompletionGate_MultipleTextBlocks(t *testing.T) {
 	agent.lintCalled = false
 
 	// Create response with multiple text blocks
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "First part of response. "},
 			{Type: "text", Text: "Second part. "},
 			{Type: "text", Text: "I'm done now."},
@@ -805,8 +806,8 @@ func TestGitHubAgent_CheckCompletionGate_NonTextBlocks(t *testing.T) {
 	agent.lintCalled = false
 
 	// Create response with non-text blocks (tool_use)
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "tool_use", Name: "write_file"},
 			{Type: "text", Text: "Writing file now."},
 		},
@@ -836,8 +837,8 @@ func TestGitHubAgent_CheckCompletionGate_ToolUseBlocksIgnored(t *testing.T) {
 
 	// Create response with tool_use blocks that have completion-like names
 	// but only text blocks should be checked for completion keywords
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "tool_use", Name: "done_tool"},
 			{Type: "text", Text: "Still working on it."},
 		},
@@ -1065,8 +1066,8 @@ func TestGitHubAgent_CheckCompletionGate_EmptyContent(t *testing.T) {
 	agent.generatedFiles = nil
 
 	// Empty content
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{},
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{},
 	}
 
 	enforcement := agent.checkCompletionGate(resp)
@@ -1093,8 +1094,8 @@ func TestGitHubAgent_CheckCompletionGate_AllConditionsMet(t *testing.T) {
 	agent.lintPassed = true
 
 	// Response says it's complete
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "Your CI workflow is complete! The files have been generated."},
 		},
 	}
@@ -1257,8 +1258,8 @@ func TestGitHubAgent_CheckCompletionGate_PendingLintMessage(t *testing.T) {
 	agent.pendingLint = true
 	agent.lintPassed = false
 
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "All done!"},
 		},
 	}
@@ -1285,8 +1286,8 @@ func TestGitHubAgent_CheckCompletionGate_LintNotPassedMessage(t *testing.T) {
 	agent.pendingLint = false
 	agent.lintPassed = false
 
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "Finished!"},
 		},
 	}
@@ -1311,8 +1312,8 @@ func TestGitHubAgent_CheckCompletionGate_LintNotCalledMessage(t *testing.T) {
 	agent.generatedFiles = []string{"file.go"}
 	agent.lintCalled = false
 
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "Complete!"},
 		},
 	}
@@ -2148,8 +2149,8 @@ func TestGitHubAgent_CheckCompletionGateWithFiles(t *testing.T) {
 	agent.generatedFiles = []string{"file1.go", "file2.go"}
 	agent.lintCalled = false
 
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "Here are the files I generated."},
 		},
 	}
@@ -2589,8 +2590,8 @@ func TestGitHubAgent_CheckCompletionGate_WithGeneratedFilesNoCompletionKeywords(
 	agent.generatedFiles = []string{"workflow.go"}
 	agent.lintCalled = false
 
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "I wrote the workflow file for you."},
 		},
 	}
@@ -2699,8 +2700,8 @@ func TestGitHubAgent_CheckCompletionGate_CaseSensitivity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := &anthropic.Message{
-				Content: []anthropic.ContentBlockUnion{
+			resp := &providers.MessageResponse{
+				Content: []providers.ContentBlock{
 					{Type: "text", Text: tt.text},
 				},
 			}
@@ -2760,11 +2761,7 @@ func TestGitHubAgent_GetToolsCompleteness(t *testing.T) {
 
 	// Verify each tool has proper structure
 	for i, tool := range tools {
-		if tool.OfTool == nil {
-			t.Errorf("tool[%d] OfTool is nil", i)
-			continue
-		}
-		if tool.OfTool.Name == "" {
+		if tool.Name == "" {
 			t.Errorf("tool[%d] Name is empty", i)
 		}
 		// Just verify tool has a name - that's sufficient for structure validation
@@ -3040,8 +3037,8 @@ func TestGitHubAgent_CheckCompletionGate_AllEdgeCases(t *testing.T) {
 
 			tt.setupAgent(agent)
 
-			resp := &anthropic.Message{
-				Content: []anthropic.ContentBlockUnion{
+			resp := &providers.MessageResponse{
+				Content: []providers.ContentBlock{
 					{Type: "text", Text: tt.responseText},
 				},
 			}
@@ -3168,8 +3165,8 @@ func TestGitHubAgent_ComprehensiveIntegration(t *testing.T) {
 	}
 
 	// 8. Test completion gate
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "I'm done now!"},
 		},
 	}
@@ -3571,8 +3568,8 @@ func TestGitHubAgent_CheckCompletionGate_AllPaths(t *testing.T) {
 			agent.pendingLint = tt.pendingLint
 			agent.lintPassed = tt.lintPassed
 
-			resp := &anthropic.Message{
-				Content: []anthropic.ContentBlockUnion{
+			resp := &providers.MessageResponse{
+				Content: []providers.ContentBlock{
 					{Type: "text", Text: tt.responseText},
 				},
 			}
@@ -3693,18 +3690,13 @@ func TestGitHubAgent_GetTools_ToolDetails(t *testing.T) {
 
 	// Verify each tool has required fields
 	for i, tool := range tools {
-		if tool.OfTool == nil {
-			t.Errorf("tools[%d].OfTool is nil", i)
-			continue
-		}
-
-		if tool.OfTool.Name == "" {
+		if tool.Name == "" {
 			t.Errorf("tools[%d].Name is empty", i)
 		}
 
 		// InputSchema should have Properties
-		if tool.OfTool.InputSchema.Properties == nil {
-			t.Errorf("tools[%d] (%s) has nil Properties", i, tool.OfTool.Name)
+		if tool.InputSchema.Properties == nil {
+			t.Errorf("tools[%d] (%s) has nil Properties", i, tool.Name)
 		}
 	}
 }
@@ -3782,7 +3774,7 @@ func TestGitHubAgent_ModelConfiguration(t *testing.T) {
 		{
 			name:      "default model",
 			model:     "",
-			wantModel: string(anthropic.ModelClaudeSonnet4_20250514),
+			wantModel: anthropic.DefaultModel,
 		},
 		{
 			name:      "custom model",
