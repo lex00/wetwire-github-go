@@ -41,4 +41,5 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(diffCmd)
 	rootCmd.AddCommand(watchCmd)
+	rootCmd.AddCommand(mcpCmd)
 }

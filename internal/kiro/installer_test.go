@@ -8,64 +8,80 @@ import (
 )
 
 func TestEnsureAgentConfig(t *testing.T) {
-	// Create a temp home directory
+	// Create temp directories
 	tempDir := t.TempDir()
+	tempHome := filepath.Join(tempDir, "home")
+	tempProject := filepath.Join(tempDir, "project")
+	os.MkdirAll(tempHome, 0755)
+	os.MkdirAll(tempProject, 0755)
+
+	// Set environment
 	originalHome := os.Getenv("HOME")
-	t.Setenv("HOME", tempDir)
+	t.Setenv("HOME", tempHome)
 	defer os.Setenv("HOME", originalHome)
 
+	originalDir, _ := os.Getwd()
+	os.Chdir(tempProject)
+	defer os.Chdir(originalDir)
+
 	// First install
-	installed, err := ensureAgentConfig(false)
+	err := EnsureInstalled()
 	if err != nil {
 		t.Fatalf("first install failed: %v", err)
 	}
-	if !installed {
-		t.Error("expected agent config to be installed on first run")
-	}
 
 	// Verify file exists
-	agentPath := filepath.Join(tempDir, ".kiro", "agents", "wetwire-runner.json")
+	agentPath := filepath.Join(tempHome, ".kiro", "agents", "wetwire-github-runner.json")
 	if _, err := os.Stat(agentPath); err != nil {
 		t.Fatalf("agent config file not found: %v", err)
 	}
 
-	// Second install without force should not overwrite
-	installed, err = ensureAgentConfig(false)
+	// Read and verify config can be parsed
+	data, err := os.ReadFile(agentPath)
 	if err != nil {
-		t.Fatalf("second install failed: %v", err)
-	}
-	if installed {
-		t.Error("expected agent config NOT to be reinstalled without force")
+		t.Fatalf("reading agent config: %v", err)
 	}
 
-	// Third install with force should overwrite
-	installed, err = ensureAgentConfig(true)
-	if err != nil {
-		t.Fatalf("force install failed: %v", err)
+	var config AgentConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		t.Fatalf("parsing agent config: %v", err)
 	}
-	if !installed {
-		t.Error("expected agent config to be reinstalled with force")
+
+	if config.Name != "wetwire-github-runner" {
+		t.Errorf("agent name = %q, want %q", config.Name, "wetwire-github-runner")
+	}
+
+	// Verify MCP server is configured
+	if _, ok := config.MCPServers["wetwire"]; !ok {
+		t.Error("wetwire MCP server not found in agent config")
 	}
 }
 
 func TestEnsureProjectMCPConfig(t *testing.T) {
-	// Create a temp directory and change to it
+	// Create temp directories
 	tempDir := t.TempDir()
+	tempHome := filepath.Join(tempDir, "home")
+	tempProject := filepath.Join(tempDir, "project")
+	os.MkdirAll(tempHome, 0755)
+	os.MkdirAll(tempProject, 0755)
+
+	// Set environment
+	originalHome := os.Getenv("HOME")
+	t.Setenv("HOME", tempHome)
+	defer os.Setenv("HOME", originalHome)
+
 	originalDir, _ := os.Getwd()
-	os.Chdir(tempDir)
+	os.Chdir(tempProject)
 	defer os.Chdir(originalDir)
 
 	// First install
-	installed, err := ensureProjectMCPConfig(false)
+	err := EnsureInstalled()
 	if err != nil {
 		t.Fatalf("first install failed: %v", err)
 	}
-	if !installed {
-		t.Error("expected MCP config to be installed on first run")
-	}
 
 	// Verify file exists
-	mcpPath := filepath.Join(tempDir, ".kiro", "mcp.json")
+	mcpPath := filepath.Join(tempProject, ".kiro", "mcp.json")
 	if _, err := os.Stat(mcpPath); err != nil {
 		t.Fatalf("MCP config file not found: %v", err)
 	}
@@ -76,48 +92,27 @@ func TestEnsureProjectMCPConfig(t *testing.T) {
 		t.Fatalf("reading MCP config: %v", err)
 	}
 
-	var config mcpConfig
+	var config map[string]MCPEntry
 	if err := json.Unmarshal(data, &config); err != nil {
 		t.Fatalf("parsing MCP config: %v", err)
 	}
 
-	if config.MCPServers == nil {
-		t.Fatal("MCPServers is nil")
+	if config == nil {
+		t.Fatal("MCP config is nil")
 	}
 
-	if _, ok := config.MCPServers["wetwire"]; !ok {
+	if _, ok := config["wetwire"]; !ok {
 		t.Error("wetwire MCP server not found in config")
 	}
 
-	// Second install without force should not overwrite
-	installed, err = ensureProjectMCPConfig(false)
-	if err != nil {
-		t.Fatalf("second install failed: %v", err)
-	}
-	if installed {
-		t.Error("expected MCP config NOT to be reinstalled without force")
-	}
-}
-
-func TestFindWetwireBinaryPath(t *testing.T) {
-	// This test just verifies the function doesn't panic
-	// The actual path depends on the runtime environment
-	path := findWetwireBinaryPath()
-	// path may be empty (for go run fallback) or a valid path
-	_ = path
-}
-
-func TestGetMCPServerConfig(t *testing.T) {
-	config := getMCPServerConfig()
-
-	// Verify config has required fields
-	if config.Command == "" {
+	// Verify command is set
+	if config["wetwire"].Command == "" {
 		t.Error("MCP server command is empty")
 	}
 
-	// Args should contain "mcp"
+	// Verify args contain "mcp"
 	foundMcp := false
-	for _, arg := range config.Args {
+	for _, arg := range config["wetwire"].Args {
 		if arg == "mcp" {
 			foundMcp = true
 			break
@@ -125,6 +120,16 @@ func TestGetMCPServerConfig(t *testing.T) {
 	}
 	if !foundMcp {
 		t.Error("MCP server args should contain 'mcp'")
+	}
+}
+
+func TestMCPCommand(t *testing.T) {
+	// Test that MCPCommand constant is set correctly
+	if MCPCommand == "" {
+		t.Error("MCPCommand constant is empty")
+	}
+	if MCPCommand != "wetwire-github" {
+		t.Errorf("MCPCommand = %q, want %q", MCPCommand, "wetwire-github")
 	}
 }
 
@@ -152,7 +157,7 @@ func TestEnsureInstalled(t *testing.T) {
 	}
 
 	// Verify agent config exists
-	agentPath := filepath.Join(tempHome, ".kiro", "agents", "wetwire-runner.json")
+	agentPath := filepath.Join(tempHome, ".kiro", "agents", "wetwire-github-runner.json")
 	if _, err := os.Stat(agentPath); err != nil {
 		t.Errorf("agent config not found after EnsureInstalled: %v", err)
 	}
@@ -196,12 +201,12 @@ func TestEnsureInstalledWithForce(t *testing.T) {
 
 func TestAgentConfigContent(t *testing.T) {
 	// Verify embedded config can be parsed
-	data, err := configFS.ReadFile("configs/wetwire-runner.json")
+	data, err := configFS.ReadFile("configs/wetwire-github-runner.json")
 	if err != nil {
 		t.Fatalf("reading embedded config: %v", err)
 	}
 
-	var config agentConfig
+	var config AgentConfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		t.Fatalf("parsing embedded config: %v", err)
 	}
@@ -210,8 +215,8 @@ func TestAgentConfigContent(t *testing.T) {
 	if config.Name == "" {
 		t.Error("agent name is empty")
 	}
-	if config.Name != "wetwire-runner" {
-		t.Errorf("agent name = %q, want %q", config.Name, "wetwire-runner")
+	if config.Name != "wetwire-github-runner" {
+		t.Errorf("agent name = %q, want %q", config.Name, "wetwire-github-runner")
 	}
 	if config.Description == "" {
 		t.Error("agent description is empty")
