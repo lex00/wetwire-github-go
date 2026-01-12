@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/lex00/wetwire-core-go/agent/results"
+	"github.com/lex00/wetwire-core-go/providers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -413,8 +413,8 @@ func TestGitHubAgent_CheckCompletionGate_WithGeneratedFilesNoCompletion(t *testi
 	agent.lintCalled = false
 
 	// Response without completion keywords
-	resp := &anthropic.Message{
-		Content: []anthropic.ContentBlockUnion{
+	resp := &providers.MessageResponse{
+		Content: []providers.ContentBlock{
 			{Type: "text", Text: "Here is the workflow code."},
 		},
 	}
@@ -578,7 +578,7 @@ func TestGitHubAgent_GetTools_AllToolsPresent(t *testing.T) {
 
 	toolNames := make([]string, len(tools))
 	for i, tool := range tools {
-		toolNames[i] = tool.OfTool.Name
+		toolNames[i] = tool.Name
 	}
 
 	expectedTools := []string{
@@ -606,18 +606,13 @@ func TestGitHubAgent_GetTools_ToolSchemas(t *testing.T) {
 	tools := agent.getTools()
 
 	for _, tool := range tools {
-		assert.NotNil(t, tool.OfTool)
-		assert.NotEmpty(t, tool.OfTool.Name)
-		assert.NotNil(t, tool.OfTool.Description)
+		assert.NotEmpty(t, tool.Name)
+		assert.NotEmpty(t, tool.Description)
 
 		// Verify input schema has properties
-		props := tool.OfTool.InputSchema.Properties
+		props := tool.InputSchema.Properties
 		assert.NotNil(t, props)
-		// Properties is a map[string]any, so we can check it's not empty
-		propsMap, ok := props.(map[string]any)
-		if ok {
-			assert.Greater(t, len(propsMap), 0)
-		}
+		assert.Greater(t, len(props), 0)
 	}
 }
 
@@ -846,8 +841,8 @@ func TestGitHubAgent_CheckCompletionGate_CaseInsensitiveKeywords(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := &anthropic.Message{
-				Content: []anthropic.ContentBlockUnion{
+			resp := &providers.MessageResponse{
+				Content: []providers.ContentBlock{
 					{Type: "text", Text: tt.text},
 				},
 			}

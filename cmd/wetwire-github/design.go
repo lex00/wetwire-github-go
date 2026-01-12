@@ -144,7 +144,6 @@ func runDesign(prompt string) error {
 
 	// Create agent config
 	config := agent.Config{
-		Provider:      designProvider,
 		APIKey:        apiKey,
 		Model:         designModel,
 		WorkDir:       designWorkDir,

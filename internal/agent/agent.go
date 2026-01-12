@@ -10,22 +10,22 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/anthropics/anthropic-sdk-go"
-	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/lex00/wetwire-core-go/agent/orchestrator"
 	"github.com/lex00/wetwire-core-go/agent/results"
+	"github.com/lex00/wetwire-core-go/providers"
+	"github.com/lex00/wetwire-core-go/providers/anthropic"
 )
 
-// GitHubAgent generates GitHub Actions workflows using the Anthropic API.
+// GitHubAgent generates GitHub Actions workflows using an AI provider.
 type GitHubAgent struct {
-	client         anthropic.Client
+	provider       providers.Provider
 	model          string
 	session        *results.Session
 	developer      orchestrator.Developer
 	workDir        string
 	generatedFiles []string
 	maxLintCycles  int
-	streamHandler  StreamHandler
+	streamHandler  providers.StreamHandler
 
 	// Lint enforcement state
 	lintCalled  bool
@@ -34,15 +34,12 @@ type GitHubAgent struct {
 	lintCycles  int
 }
 
-// StreamHandler is called for each text chunk during streaming.
-type StreamHandler func(text string)
-
 // Config configures the GitHubAgent.
 type Config struct {
-	// Provider specifies the LLM provider (anthropic, kiro)
-	Provider string
+	// Provider specifies the LLM provider instance (if nil, creates default Anthropic)
+	Provider providers.Provider
 
-	// APIKey for Anthropic (defaults to ANTHROPIC_API_KEY env var)
+	// APIKey for Anthropic (defaults to ANTHROPIC_API_KEY env var, used if Provider is nil)
 	APIKey string
 
 	// Model to use (defaults to claude-sonnet-4-20250514)
@@ -61,20 +58,22 @@ type Config struct {
 	Developer orchestrator.Developer
 
 	// StreamHandler is called for each text chunk during streaming
-	StreamHandler StreamHandler
+	StreamHandler providers.StreamHandler
 }
 
 // NewGitHubAgent creates a new GitHubAgent.
 func NewGitHubAgent(config Config) (*GitHubAgent, error) {
-	apiKey := config.APIKey
-	if apiKey == "" {
-		apiKey = os.Getenv("ANTHROPIC_API_KEY")
+	provider := config.Provider
+	if provider == nil {
+		// Create default Anthropic provider
+		p, err := anthropic.New(anthropic.Config{
+			APIKey: config.APIKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+		provider = p
 	}
-	if apiKey == "" {
-		return nil, fmt.Errorf("ANTHROPIC_API_KEY environment variable not set")
-	}
-
-	client := anthropic.NewClient(option.WithAPIKey(apiKey))
 
 	if config.WorkDir == "" {
 		config.WorkDir = "."
@@ -85,11 +84,11 @@ func NewGitHubAgent(config Config) (*GitHubAgent, error) {
 
 	model := config.Model
 	if model == "" {
-		model = string(anthropic.ModelClaudeSonnet4_20250514)
+		model = anthropic.DefaultModel
 	}
 
 	return &GitHubAgent{
-		client:        client,
+		provider:      provider,
 		model:         model,
 		session:       config.Session,
 		developer:     config.Developer,
@@ -148,8 +147,8 @@ Always run_lint after writing files, and fix any issues before running build.`
 func (a *GitHubAgent) Run(ctx context.Context, prompt string) error {
 	tools := a.getTools()
 
-	messages := []anthropic.MessageParam{
-		anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
+	messages := []providers.Message{
+		providers.NewUserMessage(prompt),
 	}
 
 	// Agentic loop
@@ -160,46 +159,44 @@ func (a *GitHubAgent) Run(ctx context.Context, prompt string) error {
 		default:
 		}
 
-		params := anthropic.MessageNewParams{
-			Model:     anthropic.Model(a.model),
+		req := providers.MessageRequest{
+			Model:     a.model,
 			MaxTokens: 4096,
-			System:    []anthropic.TextBlockParam{{Text: systemPrompt}},
+			System:    systemPrompt,
 			Messages:  messages,
 			Tools:     tools,
 		}
 
-		var resp *anthropic.Message
+		var resp *providers.MessageResponse
 		var err error
 
 		if a.streamHandler != nil {
-			resp, err = a.runWithStreaming(ctx, params)
+			resp, err = a.provider.StreamMessage(ctx, req, a.streamHandler)
 		} else {
-			resp, err = a.client.Messages.New(ctx, params)
+			resp, err = a.provider.CreateMessage(ctx, req)
 		}
 		if err != nil {
 			return fmt.Errorf("API call failed: %w", err)
 		}
 
-		messages = append(messages, resp.ToParam())
+		messages = append(messages, providers.NewAssistantMessage(resp.Content))
 
-		if resp.StopReason == anthropic.StopReasonEndTurn {
+		if resp.StopReason == providers.StopReasonEndTurn {
 			if enforcement := a.checkCompletionGate(resp); enforcement != "" {
-				messages = append(messages, anthropic.NewUserMessage(
-					anthropic.NewTextBlock(enforcement),
-				))
+				messages = append(messages, providers.NewUserMessage(enforcement))
 				continue
 			}
 			break
 		}
 
-		if resp.StopReason == anthropic.StopReasonToolUse {
-			var toolResults []anthropic.ContentBlockParamUnion
+		if resp.StopReason == providers.StopReasonToolUse {
+			var toolResults []providers.ContentBlock
 			var toolsCalled []string
 
 			for _, block := range resp.Content {
 				if block.Type == "tool_use" {
 					result := a.executeTool(ctx, block.Name, block.Input)
-					toolResults = append(toolResults, anthropic.NewToolResultBlock(
+					toolResults = append(toolResults, providers.NewToolResult(
 						block.ID,
 						result,
 						false,
@@ -208,96 +205,15 @@ func (a *GitHubAgent) Run(ctx context.Context, prompt string) error {
 				}
 			}
 
-			messages = append(messages, anthropic.NewUserMessage(toolResults...))
+			messages = append(messages, providers.NewToolResultMessage(toolResults))
 
 			if enforcement := a.checkLintEnforcement(toolsCalled); enforcement != "" {
-				messages = append(messages, anthropic.NewUserMessage(
-					anthropic.NewTextBlock(enforcement),
-				))
+				messages = append(messages, providers.NewUserMessage(enforcement))
 			}
 		}
 	}
 
 	return nil
-}
-
-func (a *GitHubAgent) runWithStreaming(ctx context.Context, params anthropic.MessageNewParams) (*anthropic.Message, error) {
-	stream := a.client.Messages.NewStreaming(ctx, params)
-
-	var message *anthropic.Message
-	var contentBlocks []anthropic.ContentBlockUnion
-	currentTextContent := make(map[int64]*strings.Builder)
-	currentToolInput := make(map[int64]*strings.Builder)
-
-	for stream.Next() {
-		event := stream.Current()
-
-		switch event.Type {
-		case "message_start":
-			startEvent := event.AsMessageStart()
-			message = &startEvent.Message
-			contentBlocks = nil
-			currentTextContent = make(map[int64]*strings.Builder)
-
-		case "content_block_start":
-			startEvent := event.AsContentBlockStart()
-			if startEvent.ContentBlock.Type == "text" {
-				currentTextContent[startEvent.Index] = &strings.Builder{}
-			} else if startEvent.ContentBlock.Type == "tool_use" {
-				currentToolInput[startEvent.Index] = &strings.Builder{}
-			}
-			block := anthropic.ContentBlockUnion{
-				Type: startEvent.ContentBlock.Type,
-				ID:   startEvent.ContentBlock.ID,
-				Name: startEvent.ContentBlock.Name,
-				Text: startEvent.ContentBlock.Text,
-			}
-			contentBlocks = append(contentBlocks, block)
-
-		case "content_block_delta":
-			deltaEvent := event.AsContentBlockDelta()
-			if deltaEvent.Delta.Type == "text_delta" && deltaEvent.Delta.Text != "" {
-				a.streamHandler(deltaEvent.Delta.Text)
-				if builder, ok := currentTextContent[deltaEvent.Index]; ok {
-					builder.WriteString(deltaEvent.Delta.Text)
-				}
-			}
-			if deltaEvent.Delta.Type == "input_json_delta" && deltaEvent.Delta.PartialJSON != "" {
-				if builder, ok := currentToolInput[deltaEvent.Index]; ok {
-					builder.WriteString(deltaEvent.Delta.PartialJSON)
-				}
-			}
-
-		case "content_block_stop":
-			stopEvent := event.AsContentBlockStop()
-			idx := int(stopEvent.Index)
-			if idx < len(contentBlocks) {
-				if builder, ok := currentTextContent[stopEvent.Index]; ok {
-					contentBlocks[idx].Text = builder.String()
-				}
-				if builder, ok := currentToolInput[stopEvent.Index]; ok {
-					contentBlocks[idx].Input = json.RawMessage(builder.String())
-				}
-			}
-
-		case "message_delta":
-			deltaEvent := event.AsMessageDelta()
-			if message != nil {
-				message.StopReason = deltaEvent.Delta.StopReason
-				message.StopSequence = deltaEvent.Delta.StopSequence
-			}
-		}
-	}
-
-	if err := stream.Err(); err != nil {
-		return nil, err
-	}
-
-	if message != nil {
-		message.Content = contentBlocks
-	}
-
-	return message, nil
 }
 
 func (a *GitHubAgent) checkLintEnforcement(toolsCalled []string) string {
@@ -322,7 +238,7 @@ Call run_lint now before proceeding.`
 	return ""
 }
 
-func (a *GitHubAgent) checkCompletionGate(resp *anthropic.Message) string {
+func (a *GitHubAgent) checkCompletionGate(resp *providers.MessageResponse) string {
 	var responseText string
 	for _, block := range resp.Content {
 		if block.Type == "text" {
@@ -362,115 +278,101 @@ Review the lint output and fix the issues.`
 	return ""
 }
 
-func (a *GitHubAgent) getTools() []anthropic.ToolUnionParam {
-	return []anthropic.ToolUnionParam{
+func (a *GitHubAgent) getTools() []providers.Tool {
+	return []providers.Tool{
 		{
-			OfTool: &anthropic.ToolParam{
-				Name:        "init_package",
-				Description: anthropic.String("Initialize a new wetwire-github workflow project"),
-				InputSchema: anthropic.ToolInputSchemaParam{
-					Properties: map[string]any{
-						"name": map[string]any{
-							"type":        "string",
-							"description": "Project name (directory name)",
-						},
+			Name:        "init_package",
+			Description: "Initialize a new wetwire-github workflow project",
+			InputSchema: providers.ToolInputSchema{
+				Properties: map[string]any{
+					"name": map[string]any{
+						"type":        "string",
+						"description": "Project name (directory name)",
 					},
-					Required: []string{"name"},
 				},
+				Required: []string{"name"},
 			},
 		},
 		{
-			OfTool: &anthropic.ToolParam{
-				Name:        "write_file",
-				Description: anthropic.String("Write content to a Go file"),
-				InputSchema: anthropic.ToolInputSchemaParam{
-					Properties: map[string]any{
-						"path": map[string]any{
-							"type":        "string",
-							"description": "File path relative to work directory",
-						},
-						"content": map[string]any{
-							"type":        "string",
-							"description": "File content",
-						},
+			Name:        "write_file",
+			Description: "Write content to a Go file",
+			InputSchema: providers.ToolInputSchema{
+				Properties: map[string]any{
+					"path": map[string]any{
+						"type":        "string",
+						"description": "File path relative to work directory",
 					},
-					Required: []string{"path", "content"},
+					"content": map[string]any{
+						"type":        "string",
+						"description": "File content",
+					},
 				},
+				Required: []string{"path", "content"},
 			},
 		},
 		{
-			OfTool: &anthropic.ToolParam{
-				Name:        "read_file",
-				Description: anthropic.String("Read a file's contents"),
-				InputSchema: anthropic.ToolInputSchemaParam{
-					Properties: map[string]any{
-						"path": map[string]any{
-							"type":        "string",
-							"description": "File path relative to work directory",
-						},
+			Name:        "read_file",
+			Description: "Read a file's contents",
+			InputSchema: providers.ToolInputSchema{
+				Properties: map[string]any{
+					"path": map[string]any{
+						"type":        "string",
+						"description": "File path relative to work directory",
 					},
-					Required: []string{"path"},
 				},
+				Required: []string{"path"},
 			},
 		},
 		{
-			OfTool: &anthropic.ToolParam{
-				Name:        "run_lint",
-				Description: anthropic.String("Run the wetwire-github linter on the project"),
-				InputSchema: anthropic.ToolInputSchemaParam{
-					Properties: map[string]any{
-						"path": map[string]any{
-							"type":        "string",
-							"description": "Project path to lint",
-						},
+			Name:        "run_lint",
+			Description: "Run the wetwire-github linter on the project",
+			InputSchema: providers.ToolInputSchema{
+				Properties: map[string]any{
+					"path": map[string]any{
+						"type":        "string",
+						"description": "Project path to lint",
 					},
-					Required: []string{"path"},
 				},
+				Required: []string{"path"},
 			},
 		},
 		{
-			OfTool: &anthropic.ToolParam{
-				Name:        "run_build",
-				Description: anthropic.String("Build the YAML workflows from the Go project"),
-				InputSchema: anthropic.ToolInputSchemaParam{
-					Properties: map[string]any{
-						"path": map[string]any{
-							"type":        "string",
-							"description": "Project path to build",
-						},
+			Name:        "run_build",
+			Description: "Build the YAML workflows from the Go project",
+			InputSchema: providers.ToolInputSchema{
+				Properties: map[string]any{
+					"path": map[string]any{
+						"type":        "string",
+						"description": "Project path to build",
 					},
-					Required: []string{"path"},
 				},
+				Required: []string{"path"},
 			},
 		},
 		{
-			OfTool: &anthropic.ToolParam{
-				Name:        "run_validate",
-				Description: anthropic.String("Validate generated YAML with actionlint"),
-				InputSchema: anthropic.ToolInputSchemaParam{
-					Properties: map[string]any{
-						"path": map[string]any{
-							"type":        "string",
-							"description": "Path to YAML file or directory",
-						},
+			Name:        "run_validate",
+			Description: "Validate generated YAML with actionlint",
+			InputSchema: providers.ToolInputSchema{
+				Properties: map[string]any{
+					"path": map[string]any{
+						"type":        "string",
+						"description": "Path to YAML file or directory",
 					},
-					Required: []string{"path"},
 				},
+				Required: []string{"path"},
 			},
 		},
 		{
-			OfTool: &anthropic.ToolParam{
-				Name:        "ask_developer",
-				Description: anthropic.String("Ask the developer a clarifying question"),
-				InputSchema: anthropic.ToolInputSchemaParam{
-					Properties: map[string]any{
-						"question": map[string]any{
-							"type":        "string",
-							"description": "The question to ask",
-						},
+			Name:        "ask_developer",
+			Description: "Ask the developer a clarifying question",
+			InputSchema: providers.ToolInputSchema{
+				Properties: map[string]any{
+					"question": map[string]any{
+						"type":        "string",
+						"description": "The question to ask",
 					},
-					Required: []string{"question"},
 				},
+				Required: []string{"question"},
 			},
 		},
 	}
