@@ -5,6 +5,7 @@ go 1.24.0
 require gopkg.in/yaml.v3 v3.0.1
 
 require (
+	github.com/anthropics/anthropic-sdk-go v1.19.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.9.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.18.0 // indirect
@@ -27,9 +28,8 @@ require (
 )
 
 require (
-	github.com/anthropics/anthropic-sdk-go v1.19.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/lex00/wetwire-core-go v1.4.0
+	github.com/lex00/wetwire-core-go v1.5.0
 	github.com/rhysd/actionlint v1.7.10
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
