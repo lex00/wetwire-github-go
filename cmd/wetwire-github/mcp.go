@@ -1,6 +1,6 @@
 // MCP server implementation for IDE integration.
 //
-// When design --mcp-server is called, this runs the MCP protocol over stdio,
+// When 'wetwire-github mcp' is called, this runs the MCP protocol over stdio,
 // providing wetwire_init, wetwire_lint, wetwire_build, and wetwire_validate tools.
 //
 // This implementation uses wetwire-core-go/mcp infrastructure for the server
@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/lex00/wetwire-core-go/mcp"
+	"github.com/spf13/cobra"
 
 	wetwire "github.com/lex00/wetwire-github-go"
 	"github.com/lex00/wetwire-github-go/internal/discover"
@@ -26,8 +27,29 @@ import (
 	"github.com/lex00/wetwire-github-go/internal/validation"
 )
 
+// newMCPCmd creates the "mcp" subcommand for running the MCP server.
+func newMCPCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mcp",
+		Short: "Run MCP server for IDE integration",
+		Long: `Run the Model Context Protocol (MCP) server on stdio transport.
+
+This command starts an MCP server that exposes wetwire-github tools:
+  - wetwire_init: Initialize a new wetwire-github project
+  - wetwire_lint: Lint Go packages for wetwire-github issues
+  - wetwire_build: Generate GitHub Actions YAML from Go packages
+  - wetwire_validate: Validate GitHub Actions YAML via actionlint
+
+This is typically used by IDEs and AI assistants to integrate with wetwire-github.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runMCPServer()
+		},
+	}
+
+	return cmd
+}
+
 // runMCPServer starts the MCP server on stdio transport.
-// This is called when design --mcp-server is invoked.
 func runMCPServer() error {
 	server := mcp.NewServer(mcp.Config{
 		Name:    "wetwire-github",
@@ -484,3 +506,5 @@ func toJSON(v any) (string, error) {
 	}
 	return string(data), nil
 }
+
+var mcpCmd = newMCPCmd()
