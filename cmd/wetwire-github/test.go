@@ -1,364 +1,295 @@
+// Command test runs automated persona-based testing.
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
+	"os/signal"
+	"syscall"
 
-	"github.com/spf13/cobra"
-
-	wetwire "github.com/lex00/wetwire-github-go"
-	"github.com/lex00/wetwire-github-go/internal/discover"
-
+	"github.com/lex00/wetwire-github-go/internal/kiro"
+	"github.com/lex00/wetwire-core-go/agent/agents"
+	"github.com/lex00/wetwire-core-go/agent/orchestrator"
 	"github.com/lex00/wetwire-core-go/agent/personas"
-	"github.com/lex00/wetwire-core-go/agent/scoring"
+	"github.com/lex00/wetwire-core-go/agent/results"
+	"github.com/spf13/cobra"
 )
 
-var testFormat string
-var testPersona string
-var testScenario string
-var testList bool
-var testScore bool
-var testProvider string
+// newTestCmd creates the "test" subcommand for automated persona-based testing.
+// It runs AI agents with different personas to evaluate code generation quality.
+func newTestCmd() *cobra.Command {
+	var outputDir string
+	var personaName string
+	var scenario string
+	var maxLintCycles int
+	var stream bool
+	var provider string
+	var allPersonas bool
 
-var testCmd = &cobra.Command{
-	Use:   "test <path>",
-	Short: "Run persona-based workflow tests",
-	Long: `Test runs persona-based tests against workflow declarations.
-
-Developer personas simulate different types of users interacting with
-the AI agent to test workflow generation quality.
+	cmd := &cobra.Command{
+		Use:   "test [prompt]",
+		Short: "Run automated persona-based testing",
+		Long: `Run automated testing with AI personas to evaluate code generation quality.
 
 Available personas:
-  beginner      - New to GitHub Actions, needs guidance
-  intermediate  - Some experience, knows basics but misses details
-  expert        - Deep CI/CD knowledge, precise requirements
-  terse         - Minimal words, expects system to infer
-  verbose       - Over-explains, buries requirements in prose
-
-Scenarios:
-  ci-workflow   - Basic CI workflow test
-  deployment    - Deployment workflow test
-  release       - Release workflow test
-  matrix        - Matrix strategy workflow test
-
-Scoring (5 dimensions, 0-3 each, max 15):
-  Completeness       - Were all required workflows generated?
-  Lint Quality       - Did the code pass linting?
-  Code Quality       - Does the code follow idiomatic patterns?
-  Output Validity    - Is the generated YAML valid?
-  Question Efficiency - Appropriate number of clarifying questions?
-
-Thresholds: 0-5 Failure, 6-9 Partial, 10-12 Success, 13-15 Excellent
+  - beginner: New to GitHub Actions, asks many clarifying questions
+  - intermediate: Familiar with CI/CD basics, asks targeted questions
+  - expert: Deep GitHub Actions knowledge, asks advanced questions
+  - terse: Gives minimal responses
+  - verbose: Provides detailed context
 
 Providers:
-  anthropic  - Use Anthropic Claude API (default)
-  kiro       - Use Kiro AI agent
+  - anthropic (default): Uses Anthropic API with wetwire-core-go
+  - kiro: Uses Kiro CLI (set SKIP_KIRO_TESTS=1 to skip in CI)
+
+NOTE: Kiro provider runs in non-interactive mode, so persona simulation is
+limited. The agent runs autonomously without waiting for responses. For true
+persona simulation with multi-turn conversations, use the anthropic provider.
 
 Example:
-  wetwire-github test .
-  wetwire-github test . --persona beginner
-  wetwire-github test . --scenario ci-workflow --score
-  wetwire-github test . --provider kiro --persona beginner
-  wetwire-github test --list`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if testList {
-			return listTestPersonas()
-		}
-		if len(args) == 0 {
-			return fmt.Errorf("path argument required")
-		}
-		return runTest(args[0])
-	},
-}
-
-func init() {
-	testCmd.Flags().StringVar(&testFormat, "format", "text", "output format (text, json)")
-	testCmd.Flags().StringVar(&testPersona, "persona", "", "run specific persona ("+strings.Join(personas.Names(), ", ")+")")
-	testCmd.Flags().StringVar(&testScenario, "scenario", "", "run specific scenario (ci-workflow, deployment, release, matrix)")
-	testCmd.Flags().BoolVar(&testList, "list", false, "list available personas and scenarios")
-	testCmd.Flags().BoolVar(&testScore, "score", false, "show scoring breakdown")
-	testCmd.Flags().StringVar(&testProvider, "provider", "anthropic", "LLM provider (anthropic, kiro)")
-}
-
-// listTestPersonas lists available personas and scenarios.
-func listTestPersonas() error {
-	fmt.Println("Developer Personas:")
-	fmt.Println("")
-	for _, p := range personas.All() {
-		fmt.Printf("  %-14s %s\n", p.Name, p.Description)
+    wetwire-github test --persona beginner "Create a CI workflow for a Go project"
+    wetwire-github test --provider kiro "Create a deployment workflow"
+    wetwire-github test --provider kiro --all-personas "Create a release workflow"`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			prompt := args[0]
+			if allPersonas {
+				return runTestAllPersonas(prompt, outputDir, scenario, maxLintCycles, stream, provider)
+			}
+			return runTest(prompt, outputDir, personaName, scenario, maxLintCycles, stream, provider)
+		},
 	}
-	fmt.Println("")
-	fmt.Println("Scenarios:")
-	fmt.Println("")
-	fmt.Println("  ci-workflow     Basic CI workflow (build, test, lint)")
-	fmt.Println("  deployment      Deployment workflow (multi-environment)")
-	fmt.Println("  release         Release workflow (tags, changelog, artifacts)")
-	fmt.Println("  matrix          Matrix strategy (multi-version, multi-OS)")
-	fmt.Println("")
-	fmt.Println("Scoring Dimensions (0-3 each):")
-	fmt.Println("")
-	fmt.Println("  Completeness        Were all required workflows generated?")
-	fmt.Println("  Lint Quality        Did the code pass wetwire-github linting?")
-	fmt.Println("  Code Quality        Does the code follow idiomatic patterns?")
-	fmt.Println("  Output Validity     Is the generated YAML valid per actionlint?")
-	fmt.Println("  Question Efficiency Appropriate number of clarifying questions?")
-	fmt.Println("")
-	fmt.Println("Thresholds: 0-5 Failure, 6-9 Partial, 10-12 Success, 13-15 Excellent")
+
+	cmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Output directory for generated files")
+	cmd.Flags().StringVarP(&personaName, "persona", "p", "intermediate", "Persona to use (beginner, intermediate, expert, terse, verbose)")
+	cmd.Flags().StringVarP(&scenario, "scenario", "S", "default", "Scenario name for tracking")
+	cmd.Flags().IntVarP(&maxLintCycles, "max-lint-cycles", "l", 3, "Maximum lint/fix cycles")
+	cmd.Flags().BoolVarP(&stream, "stream", "s", false, "Stream AI responses")
+	cmd.Flags().StringVar(&provider, "provider", "anthropic", "AI provider: 'anthropic' or 'kiro'")
+	cmd.Flags().BoolVar(&allPersonas, "all-personas", false, "Run test with all personas")
+
+	return cmd
+}
+
+// runTest executes a single persona test with the specified provider.
+// It dispatches to either Kiro CLI or Anthropic API based on the provider parameter.
+func runTest(prompt, outputDir, personaName, scenario string, maxLintCycles int, stream bool, provider string) error {
+	switch provider {
+	case "kiro":
+		return runTestKiro(prompt, outputDir, personaName, scenario, stream)
+	case "anthropic":
+		return runTestAnthropic(prompt, outputDir, personaName, scenario, maxLintCycles, stream)
+	default:
+		return fmt.Errorf("unknown provider: %s (use 'anthropic' or 'kiro')", provider)
+	}
+}
+
+// runTestAllPersonas runs the test with all available personas sequentially.
+// It aggregates results and reports which personas passed or failed.
+func runTestAllPersonas(prompt, outputDir, scenario string, maxLintCycles int, stream bool, provider string) error {
+	personaNames := personas.Names()
+	testResults := make(map[string]*kiro.TestResult)
+	var failed []string
+
+	fmt.Printf("Running tests with all %d personas\n\n", len(personaNames))
+
+	for _, personaName := range personaNames {
+		// Create persona-specific output directory
+		personaOutputDir := fmt.Sprintf("%s/%s", outputDir, personaName)
+
+		fmt.Printf("=== Running persona: %s ===\n", personaName)
+
+		var err error
+		switch provider {
+		case "kiro":
+			err = runTestKiro(prompt, personaOutputDir, personaName, scenario, stream)
+		case "anthropic":
+			err = runTestAnthropic(prompt, personaOutputDir, personaName, scenario, maxLintCycles, stream)
+		default:
+			return fmt.Errorf("unknown provider: %s", provider)
+		}
+
+		if err != nil {
+			fmt.Printf("Persona %s: FAILED - %v\n\n", personaName, err)
+			failed = append(failed, personaName)
+		} else {
+			fmt.Printf("Persona %s: PASSED\n\n", personaName)
+		}
+	}
+
+	// Print summary
+	fmt.Println("\n=== All Personas Summary ===")
+	fmt.Printf("Total: %d\n", len(personaNames))
+	fmt.Printf("Passed: %d\n", len(personaNames)-len(failed))
+	fmt.Printf("Failed: %d\n", len(failed))
+	if len(failed) > 0 {
+		fmt.Printf("Failed personas: %v\n", failed)
+		return fmt.Errorf("%d personas failed", len(failed))
+	}
+
+	_ = testResults // For future detailed result tracking
 	return nil
 }
 
-// runTest executes the test command.
-func runTest(path string) error {
-	// Validate provider
-	if !isValidProvider(testProvider) {
-		fmt.Fprintf(os.Stderr, "error: invalid provider %q (valid: anthropic, kiro)\n", testProvider)
-		os.Exit(1)
+// runTestKiro runs a persona test using the Kiro CLI in non-interactive mode.
+// The test can be skipped by setting SKIP_KIRO_TESTS=1.
+func runTestKiro(prompt, outputDir, personaName, scenario string, stream bool) error {
+	// Check if Kiro tests are disabled
+	if os.Getenv("SKIP_KIRO_TESTS") == "1" {
+		fmt.Println("Skipping Kiro test (SKIP_KIRO_TESTS=1)")
 		return nil
 	}
 
-	// Validate persona if specified
-	if testPersona != "" {
-		if _, err := personas.Get(testPersona); err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
-			return nil
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle interrupt
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		fmt.Println("\nInterrupted, cleaning up...")
+		cancel()
+	}()
+
+	// Validate persona name using core personas
+	if _, err := personas.Get(personaName); err != nil {
+		return fmt.Errorf("invalid persona: %w", err)
+	}
+
+	// Create test runner
+	runner := kiro.NewTestRunner(outputDir)
+
+	// Set up streaming if enabled
+	if stream {
+		runner.StreamHandler = func(text string) {
+			fmt.Print(text)
 		}
 	}
 
-	// Resolve absolute path
-	absPath, err := filepath.Abs(path)
+	// Ensure test environment is ready
+	if err := runner.EnsureTestEnvironment(); err != nil {
+		return fmt.Errorf("preparing test environment: %w", err)
+	}
+
+	fmt.Printf("Running Kiro test with persona '%s' and scenario '%s'\n", personaName, scenario)
+	fmt.Printf("Prompt: %s\n\n", prompt)
+
+	// Run the test with persona
+	result, err := runner.RunWithPersona(ctx, prompt, personaName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: resolving path: %v\n", err)
-		os.Exit(1)
-		return nil
+		return fmt.Errorf("test failed: %w", err)
 	}
 
-	// Check if path exists
-	if _, err := os.Stat(absPath); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "error: path not found: %s\n", path)
-		os.Exit(1)
-		return nil
+	// Print summary
+	fmt.Println("\n--- Test Summary ---")
+	fmt.Printf("Provider: kiro\n")
+	fmt.Printf("Persona: %s\n", personaName)
+	fmt.Printf("Scenario: %s\n", scenario)
+	fmt.Printf("Duration: %s\n", result.Duration)
+	fmt.Printf("Success: %v\n", result.Success)
+	fmt.Printf("Lint passed: %v\n", result.LintPassed)
+	fmt.Printf("Build passed: %v\n", result.BuildPassed)
+	fmt.Printf("Files created: %d\n", len(result.FilesCreated))
+	for _, f := range result.FilesCreated {
+		fmt.Printf("  - %s\n", f)
 	}
-
-	// Discover workflows
-	disc := discover.NewDiscoverer()
-	discovered, err := disc.Discover(absPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: discovery failed: %v\n", err)
-		os.Exit(1)
-		return nil
-	}
-
-	// Run basic structural tests
-	result := runStructuralTests(discovered, testPersona)
-
-	// Calculate score if requested
-	var score *scoring.Score
-	if testScore {
-		score = calculateScore(discovered, testPersona, testScenario)
-	}
-
-	// Output result
-	if testFormat == "json" {
-		output := struct {
-			Result wetwire.TestResult `json:"result"`
-			Score  *scoring.Score     `json:"score,omitempty"`
-		}{
-			Result: result,
-			Score:  score,
+	if len(result.ErrorMessages) > 0 {
+		fmt.Println("Errors:")
+		for _, e := range result.ErrorMessages {
+			fmt.Printf("  - %s\n", e)
 		}
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(output)
-	}
-
-	// Text output
-	if len(result.Tests) == 0 {
-		fmt.Println("No tests run")
-		return nil
-	}
-
-	for _, t := range result.Tests {
-		if t.Passed {
-			fmt.Printf("PASS %s\n", t.Name)
-		} else {
-			fmt.Printf("FAIL %s: %s\n", t.Name, t.Error)
-		}
-	}
-
-	fmt.Printf("\n%d passed, %d failed\n", result.Passed, result.Failed)
-
-	// Show score if requested
-	if score != nil {
-		fmt.Println("")
-		fmt.Print(score.String())
 	}
 
 	if !result.Success {
-		os.Exit(1)
+		return fmt.Errorf("test failed")
 	}
+
 	return nil
 }
 
-// runStructuralTests runs basic structural tests on discovered workflows.
-func runStructuralTests(discovered *discover.DiscoveryResult, persona string) wetwire.TestResult {
-	result := wetwire.TestResult{
-		Success: true,
-		Tests:   []wetwire.TestCase{},
-		Passed:  0,
-		Failed:  0,
+// runTestAnthropic runs a persona test using the Anthropic API with multi-turn conversation.
+// It creates an AI developer with the specified persona that responds to the runner agent.
+func runTestAnthropic(prompt, outputDir, personaName, scenario string, maxLintCycles int, stream bool) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle interrupt
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		fmt.Println("\nInterrupted, cleaning up...")
+		cancel()
+	}()
+
+	// Get persona
+	persona, err := personas.Get(personaName)
+	if err != nil {
+		return fmt.Errorf("invalid persona: %w", err)
 	}
 
-	// Test: Workflows exist
-	if len(discovered.Workflows) > 0 {
-		result.Tests = append(result.Tests, wetwire.TestCase{
-			Name:    "workflows_exist",
-			Persona: persona,
-			Passed:  true,
-		})
-		result.Passed++
-	} else {
-		result.Tests = append(result.Tests, wetwire.TestCase{
-			Name:    "workflows_exist",
-			Persona: persona,
-			Passed:  false,
-			Error:   "no workflows found",
-		})
-		result.Failed++
-		result.Success = false
-	}
+	// Create session for tracking
+	session := results.NewSession(personaName, scenario)
 
-	// Test: Jobs exist
-	if len(discovered.Jobs) > 0 {
-		result.Tests = append(result.Tests, wetwire.TestCase{
-			Name:    "jobs_exist",
-			Persona: persona,
-			Passed:  true,
-		})
-		result.Passed++
-	} else {
-		result.Tests = append(result.Tests, wetwire.TestCase{
-			Name:    "jobs_exist",
-			Persona: persona,
-			Passed:  false,
-			Error:   "no jobs found",
-		})
-		result.Failed++
-		result.Success = false
-	}
+	// Create AI developer with persona
+	responder := agents.CreateDeveloperResponder("")
+	developer := orchestrator.NewAIDeveloper(persona, responder)
 
-	// Test: No parse errors
-	if len(discovered.Errors) == 0 {
-		result.Tests = append(result.Tests, wetwire.TestCase{
-			Name:    "no_parse_errors",
-			Persona: persona,
-			Passed:  true,
-		})
-		result.Passed++
-	} else {
-		result.Tests = append(result.Tests, wetwire.TestCase{
-			Name:    "no_parse_errors",
-			Persona: persona,
-			Passed:  false,
-			Error:   fmt.Sprintf("%d parse errors", len(discovered.Errors)),
-		})
-		result.Failed++
-		result.Success = false
-	}
-
-	// Test: All workflow jobs exist
-	for _, wf := range discovered.Workflows {
-		testName := fmt.Sprintf("workflow_%s_jobs_valid", wf.Name)
-		jobNames := make(map[string]bool)
-		for _, job := range discovered.Jobs {
-			jobNames[job.Name] = true
-		}
-
-		allExist := true
-		for _, jobRef := range wf.Jobs {
-			if !jobNames[jobRef] {
-				allExist = false
-				break
-			}
-		}
-
-		if allExist {
-			result.Tests = append(result.Tests, wetwire.TestCase{
-				Name:    testName,
-				Persona: persona,
-				Passed:  true,
-			})
-			result.Passed++
-		} else {
-			result.Tests = append(result.Tests, wetwire.TestCase{
-				Name:    testName,
-				Persona: persona,
-				Passed:  false,
-				Error:   "references undefined jobs",
-			})
-			result.Failed++
-			result.Success = false
+	// Create stream handler if streaming enabled
+	var streamHandler agents.StreamHandler
+	if stream {
+		streamHandler = func(text string) {
+			fmt.Print(text)
 		}
 	}
 
-	return result
+	// Create runner agent
+	runner, err := agents.NewRunnerAgent(agents.RunnerConfig{
+		WorkDir:       outputDir,
+		MaxLintCycles: maxLintCycles,
+		Session:       session,
+		Developer:     developer,
+		StreamHandler: streamHandler,
+		Domain:        GitHubDomain(),
+	})
+	if err != nil {
+		return fmt.Errorf("creating runner: %w", err)
+	}
+
+	fmt.Printf("Running test with persona '%s' and scenario '%s'\n", personaName, scenario)
+	fmt.Printf("Prompt: %s\n\n", prompt)
+
+	// Run the agent
+	if err := runner.Run(ctx, prompt); err != nil {
+		return fmt.Errorf("test failed: %w", err)
+	}
+
+	// Complete session
+	session.Complete()
+
+	// Write results
+	writer := results.NewWriter(outputDir)
+	if err := writer.Write(session); err != nil {
+		fmt.Printf("Warning: failed to write results: %v\n", err)
+	} else {
+		fmt.Printf("\nResults written to: %s\n", outputDir)
+	}
+
+	// Print summary
+	fmt.Println("\n--- Test Summary ---")
+	fmt.Printf("Persona: %s\n", personaName)
+	fmt.Printf("Scenario: %s\n", scenario)
+	fmt.Printf("Generated files: %d\n", len(runner.GetGeneratedFiles()))
+	for _, f := range runner.GetGeneratedFiles() {
+		fmt.Printf("  - %s\n", f)
+	}
+	fmt.Printf("Lint cycles: %d\n", runner.GetLintCycles())
+	fmt.Printf("Lint passed: %v\n", runner.LintPassed())
+	fmt.Printf("Questions asked: %d\n", len(session.Questions))
+
+	return nil
 }
 
-// calculateScore computes a score for the discovered workflows.
-func calculateScore(discovered *discover.DiscoveryResult, persona, scenario string) *scoring.Score {
-	score := scoring.NewScore(persona, scenario)
-
-	// Score completeness based on workflows found
-	expectedWorkflows := 1 // Base expectation
-	if scenario == "deployment" {
-		expectedWorkflows = 2 // Deploy usually has CI + deploy
-	} else if scenario == "matrix" {
-		expectedWorkflows = 1 // Matrix is usually in one workflow
-	}
-	rating, notes := scoring.ScoreCompleteness(expectedWorkflows, len(discovered.Workflows))
-	score.Completeness.Rating = rating
-	score.Completeness.Notes = notes
-
-	// Score lint quality (no lint cycles for static analysis)
-	// For structural tests, assume lint passed if no parse errors
-	lintPassed := len(discovered.Errors) == 0
-	rating, notes = scoring.ScoreLintQuality(0, lintPassed)
-	score.LintQuality.Rating = rating
-	score.LintQuality.Notes = notes
-
-	// Score code quality based on structural analysis
-	var issues []string
-	for _, wf := range discovered.Workflows {
-		if wf.Name == "" {
-			issues = append(issues, "workflow missing name")
-		}
-		if len(wf.Jobs) == 0 {
-			issues = append(issues, fmt.Sprintf("workflow %s has no jobs", wf.Name))
-		}
-	}
-	for _, job := range discovered.Jobs {
-		if job.Name == "" {
-			issues = append(issues, "job missing name")
-		}
-	}
-	rating, notes = scoring.ScoreCodeQuality(issues)
-	score.CodeQuality.Rating = rating
-	score.CodeQuality.Notes = notes
-
-	// Score output validity (would need actionlint for real validation)
-	// For now, base on parse errors
-	rating, notes = scoring.ScoreOutputValidity(len(discovered.Errors), 0)
-	score.OutputValidity.Rating = rating
-	score.OutputValidity.Notes = notes
-
-	// Score question efficiency (0 questions for static analysis)
-	rating, notes = scoring.ScoreQuestionEfficiency(0)
-	score.QuestionEfficiency.Rating = rating
-	score.QuestionEfficiency.Notes = notes
-
-	return score
-}
+var testCmd = newTestCmd()

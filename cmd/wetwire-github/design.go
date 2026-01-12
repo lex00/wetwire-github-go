@@ -1,3 +1,4 @@
+// Command design provides AI-assisted workflow design.
 package main
 
 import (
@@ -5,179 +6,192 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
+	"github.com/lex00/wetwire-github-go/internal/kiro"
+	"github.com/lex00/wetwire-core-go/agent/agents"
+	"github.com/lex00/wetwire-core-go/agent/orchestrator"
+	"github.com/lex00/wetwire-core-go/agent/results"
 	"github.com/spf13/cobra"
-
-	"github.com/lex00/wetwire-github-go/internal/agent"
 )
 
-var designStream bool
-var designMaxLintCycles int
-var designModel string
-var designWorkDir string
-var designMCPServer bool
-var designProvider string
+// GitHubDomain returns the domain configuration for GitHub Actions workflows.
+func GitHubDomain() agents.DomainConfig {
+	return agents.DomainConfig{
+		Name:       "github",
+		CLICommand: "wetwire-github",
+		SystemPrompt: `You are a GitHub Actions workflow generator using the wetwire-github framework.
+Your job is to generate Go code that defines GitHub Actions workflows.
 
-var designCmd = &cobra.Command{
-	Use:   "design [prompt]",
-	Short: "AI-assisted workflow design",
-	Long: `Design provides AI-assisted workflow creation.
+Use the workflow pattern:
+    var CIWorkflow = workflow.Workflow{
+        Name: "CI",
+        On: workflow.On{Push: &workflow.Push{Branches: []string{"main"}}},
+        Jobs: map[string]workflow.Job{"build": BuildJob},
+    }
 
-The design command starts an interactive session where an AI assistant
-helps you create and modify GitHub Actions workflows. It uses the
-wetwire-github tools to:
+Available tools: init_package, write_file, read_file, run_lint, run_build, ask_developer
 
-  - Create new workflow projects (init)
-  - Write workflow code (write_file)
-  - Run linting checks (lint)
-  - Build YAML output (build)
-  - Validate generated YAML (validate)
+Always run_lint after writing files, and fix any issues before running build.`,
+		OutputFormat: "GitHub Actions YAML",
+	}
+}
 
-The assistant can automatically fix lint errors through multiple cycles.
+// newDesignCmd creates the "design" subcommand for AI-assisted workflow design.
+// It supports both Anthropic API and Kiro CLI providers for interactive code generation.
+func newDesignCmd() *cobra.Command {
+	var outputDir string
+	var maxLintCycles int
+	var stream bool
+	var provider string
+	var mcpServerMode bool
+
+	cmd := &cobra.Command{
+		Use:   "design [prompt]",
+		Short: "AI-assisted workflow design",
+		Long: `Start an interactive AI-assisted session to design and generate workflow code.
+
+The AI agent will:
+1. Ask clarifying questions about your requirements
+2. Generate Go code using wetwire-github patterns
+3. Run the linter and fix any issues
+4. Build the GitHub Actions YAML
 
 Providers:
-  anthropic  - Use Anthropic Claude API (default)
-  kiro       - Use Kiro AI agent
+    anthropic (default) - Uses Anthropic API directly (requires prompt)
+    kiro                - Uses Kiro CLI with wetwire-github-runner agent
+
+With the Kiro provider, you can omit the prompt and the agent will ask what
+you'd like to create. The Anthropic provider requires an initial prompt.
 
 Example:
-  wetwire-github design "Create a CI workflow for a Go project"
-  wetwire-github design --stream "Add a release workflow"
-  wetwire-github design --max-lint-cycles 5 "Create multi-platform build"
-  wetwire-github design --provider kiro "Create a deployment workflow"
+    wetwire-github design "Create a CI workflow for a Go project"
+    wetwire-github design --provider kiro "Create a release workflow"
+    wetwire-github design --provider kiro`,
+		Args: cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Hidden mode: run as MCP server (used by Kiro internally)
+			if mcpServerMode {
+				return runMCPServer()
+			}
 
-Requires ANTHROPIC_API_KEY environment variable to be set (for anthropic provider).`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Run MCP server if requested
-		if designMCPServer {
-			return runMCPServer()
+			prompt := strings.Join(args, " ")
+			if prompt == "" && provider != "kiro" {
+				return fmt.Errorf("prompt is required for the %s provider", provider)
+			}
+			return runDesign(prompt, outputDir, maxLintCycles, stream, provider)
+		},
+	}
+
+	cmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Output directory for generated files")
+	cmd.Flags().IntVarP(&maxLintCycles, "max-lint-cycles", "l", 3, "Maximum lint/fix cycles")
+	cmd.Flags().BoolVarP(&stream, "stream", "s", true, "Stream AI responses")
+	cmd.Flags().StringVar(&provider, "provider", "anthropic", "AI provider: 'anthropic' or 'kiro'")
+	cmd.Flags().BoolVar(&mcpServerMode, "mcp-server", false, "Run as MCP server (internal use)")
+	_ = cmd.Flags().MarkHidden("mcp-server")
+
+	return cmd
+}
+
+// runDesign starts an AI-assisted design session with the specified provider.
+// It dispatches to either Kiro CLI or Anthropic API based on the provider parameter.
+func runDesign(prompt, outputDir string, maxLintCycles int, stream bool, provider string) error {
+	switch provider {
+	case "kiro":
+		return runDesignKiro(prompt, outputDir)
+	case "anthropic":
+		return runDesignAnthropic(prompt, outputDir, maxLintCycles, stream)
+	default:
+		return fmt.Errorf("unknown provider: %s (use 'anthropic' or 'kiro')", provider)
+	}
+}
+
+// runDesignKiro launches an interactive Kiro CLI session with the wetwire-github-runner agent.
+func runDesignKiro(prompt, outputDir string) error {
+	// Change to output directory if specified
+	if outputDir != "." {
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
+			return fmt.Errorf("creating output directory: %w", err)
 		}
-		prompt := strings.Join(args, " ")
-		return runDesign(prompt)
-	},
-}
-
-func init() {
-	designCmd.Flags().BoolVar(&designStream, "stream", false, "stream output tokens")
-	designCmd.Flags().IntVar(&designMaxLintCycles, "max-lint-cycles", 5, "maximum lint/fix cycles")
-	designCmd.Flags().StringVar(&designModel, "model", "claude-sonnet-4-20250514", "model to use")
-	designCmd.Flags().StringVarP(&designWorkDir, "workdir", "w", ".", "working directory for generated files")
-	designCmd.Flags().StringVar(&designProvider, "provider", "anthropic", "LLM provider (anthropic, kiro)")
-	designCmd.Flags().BoolVar(&designMCPServer, "mcp-server", false, "Run as MCP server (internal use)")
-	_ = designCmd.Flags().MarkHidden("mcp-server")
-}
-
-// consoleDeveloper implements orchestrator.Developer for console input.
-type consoleDeveloper struct {
-	reader *bufio.Reader
-}
-
-func newConsoleDeveloper() *consoleDeveloper {
-	return &consoleDeveloper{
-		reader: bufio.NewReader(os.Stdin),
-	}
-}
-
-func (d *consoleDeveloper) Respond(ctx context.Context, question string) (string, error) {
-	fmt.Printf("\n[Agent Question] %s\n> ", question)
-	answer, err := d.reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(answer), nil
-}
-
-// runDesign executes the design command.
-func runDesign(prompt string) error {
-	// Validate provider
-	if !isValidProvider(designProvider) {
-		fmt.Fprintf(os.Stderr, "error: invalid provider %q (valid: anthropic, kiro)\n", designProvider)
-		os.Exit(1)
-		return nil
-	}
-
-	// Kiro provider not yet implemented
-	if designProvider == "kiro" {
-		fmt.Fprintln(os.Stderr, "error: kiro provider not yet implemented")
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintln(os.Stderr, "The kiro provider will be available in a future release.")
-		fmt.Fprintln(os.Stderr, "Use --provider anthropic for now.")
-		os.Exit(1)
-		return nil
-	}
-
-	// Check for ANTHROPIC_API_KEY
-	apiKey := os.Getenv("ANTHROPIC_API_KEY")
-	if apiKey == "" {
-		fmt.Fprintln(os.Stderr, "error: ANTHROPIC_API_KEY environment variable not set")
-		fmt.Fprintln(os.Stderr, "")
-		fmt.Fprintln(os.Stderr, "The design command requires an Anthropic API key.")
-		fmt.Fprintln(os.Stderr, "Set your API key with:")
-		fmt.Fprintln(os.Stderr, "  export ANTHROPIC_API_KEY=sk-ant-...")
-		os.Exit(1)
-		return nil
-	}
-
-	// If no prompt provided, prompt for one
-	if prompt == "" {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Describe the workflow you want to create:\n> ")
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			return fmt.Errorf("reading input: %w", err)
-		}
-		prompt = strings.TrimSpace(input)
-		if prompt == "" {
-			return fmt.Errorf("no prompt provided")
+		if err := os.Chdir(outputDir); err != nil {
+			return fmt.Errorf("changing to output directory: %w", err)
 		}
 	}
 
-	// Print status
-	fmt.Println("wetwire-github design")
-	fmt.Println("")
-	fmt.Printf("Provider: %s\n", designProvider)
-	fmt.Printf("Model: %s\n", designModel)
-	fmt.Printf("Stream: %t\n", designStream)
-	fmt.Printf("Max lint cycles: %d\n", designMaxLintCycles)
-	fmt.Printf("Work directory: %s\n", designWorkDir)
-	fmt.Println("")
+	fmt.Println("Starting Kiro CLI design session...")
+	fmt.Println()
 
-	// Create agent config
-	config := agent.Config{
-		APIKey:        apiKey,
-		Model:         designModel,
-		WorkDir:       designWorkDir,
-		MaxLintCycles: designMaxLintCycles,
-		Developer:     newConsoleDeveloper(),
-	}
+	// Launch Kiro CLI chat (handles config installation internally)
+	return kiro.LaunchChat("wetwire-github-runner", prompt)
+}
 
-	// Add stream handler if streaming is enabled
-	if designStream {
-		config.StreamHandler = func(text string) {
+// runDesignAnthropic runs an interactive design session using the Anthropic API directly.
+// It creates a runner agent that generates code, runs the linter, and fixes issues.
+func runDesignAnthropic(prompt, outputDir string, maxLintCycles int, stream bool) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Handle interrupt
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		fmt.Println("\nInterrupted, cleaning up...")
+		cancel()
+	}()
+
+	// Create session for tracking
+	session := results.NewSession("human", "design")
+
+	// Create human developer (reads from stdin)
+	reader := bufio.NewReader(os.Stdin)
+	developer := orchestrator.NewHumanDeveloper(func() (string, error) {
+		return reader.ReadString('\n')
+	})
+
+	// Create stream handler if streaming enabled
+	var streamHandler agents.StreamHandler
+	if stream {
+		streamHandler = func(text string) {
 			fmt.Print(text)
 		}
 	}
 
-	// Create and run the agent
-	a, err := agent.NewGitHubAgent(config)
+	// Create runner agent
+	runner, err := agents.NewRunnerAgent(agents.RunnerConfig{
+		WorkDir:       outputDir,
+		MaxLintCycles: maxLintCycles,
+		Session:       session,
+		Developer:     developer,
+		StreamHandler: streamHandler,
+		Domain:        GitHubDomain(),
+	})
 	if err != nil {
-		return fmt.Errorf("creating agent: %w", err)
+		return fmt.Errorf("creating runner: %w", err)
 	}
 
-	ctx := context.Background()
-	if err := a.Run(ctx, prompt); err != nil {
-		return fmt.Errorf("agent failed: %w", err)
+	fmt.Println("Starting AI-assisted design session...")
+	fmt.Println("The AI will ask questions and generate workflow code.")
+	fmt.Println("Press Ctrl+C to stop.")
+	fmt.Println()
+
+	// Run the agent
+	if err := runner.Run(ctx, prompt); err != nil {
+		return fmt.Errorf("design session failed: %w", err)
 	}
 
 	// Print summary
-	fmt.Println("")
-	fmt.Println("---")
-	fmt.Printf("Generated files: %d\n", len(a.GetGeneratedFiles()))
-	for _, f := range a.GetGeneratedFiles() {
-		fmt.Printf("  %s\n", f)
+	fmt.Println("\n--- Session Summary ---")
+	fmt.Printf("Generated files: %d\n", len(runner.GetGeneratedFiles()))
+	for _, f := range runner.GetGeneratedFiles() {
+		fmt.Printf("  - %s\n", f)
 	}
-	fmt.Printf("Lint cycles: %d\n", a.GetLintCycles())
-	fmt.Printf("Lint passed: %t\n", a.LintPassed())
+	fmt.Printf("Lint cycles: %d\n", runner.GetLintCycles())
+	fmt.Printf("Lint passed: %v\n", runner.LintPassed())
 
 	return nil
 }
+
+var designCmd = newDesignCmd()

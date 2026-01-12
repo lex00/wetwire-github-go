@@ -91,8 +91,8 @@ func TestDesignCmd_InvalidProvider(t *testing.T) {
 		t.Error("Design command should fail with invalid provider")
 	}
 
-	if !strings.Contains(stderr.String(), "invalid provider") {
-		t.Errorf("Expected error about invalid provider, got: %s", stderr.String())
+	if !strings.Contains(stderr.String(), "unknown provider") {
+		t.Errorf("Expected error about unknown provider, got: %s", stderr.String())
 	}
 }
 
@@ -110,7 +110,7 @@ func TestTestCmd_InvalidProvider(t *testing.T) {
 		t.Fatalf("Failed to build binary: %v\n%s", err, out)
 	}
 
-	cmd := exec.Command(binaryPath, "test", "--provider", "invalid", ".")
+	cmd := exec.Command(binaryPath, "test", "--provider", "invalid", "test prompt")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
@@ -119,8 +119,8 @@ func TestTestCmd_InvalidProvider(t *testing.T) {
 		t.Error("Test command should fail with invalid provider")
 	}
 
-	if !strings.Contains(stderr.String(), "invalid provider") {
-		t.Errorf("Expected error about invalid provider, got: %s", stderr.String())
+	if !strings.Contains(stderr.String(), "unknown provider") {
+		t.Errorf("Expected error about unknown provider, got: %s", stderr.String())
 	}
 }
 
