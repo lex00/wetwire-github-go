@@ -29,12 +29,12 @@ var CI = workflow.Workflow{
 
 // Triggers as flat variable
 var CITriggers = workflow.Triggers{
-    Push:        CIPush,
-    PullRequest: CIPullRequest,
+    Push:        &CIPush,
+    PullRequest: &CIPullRequest,
 }
 
-var CIPush = workflow.PushTrigger{Branches: List("main")}
-var CIPullRequest = workflow.PullRequestTrigger{Branches: List("main")}
+var CIPush = workflow.PushTrigger{Branches: []string{"main"}}
+var CIPullRequest = workflow.PullRequestTrigger{Branches: []string{"main"}}
 
 // Job declaration
 var Build = workflow.Job{
@@ -94,12 +94,12 @@ var BuildMatrix = workflow.Matrix{
 }
 
 var BuildStrategy = workflow.Strategy{
-    Matrix: BuildMatrix,
+    Matrix: &BuildMatrix,
 }
 
 var MatrixJob = workflow.Job{
     RunsOn:   "ubuntu-latest",
-    Strategy: BuildStrategy,
+    Strategy: &BuildStrategy,
 }
 ```
 
@@ -108,8 +108,8 @@ The CLI discovers declarations via **AST parsing** — no registration required.
 ## Helpers
 
 ```go
-// List() for typed slices
-Branches: List("main", "develop")
+// []string{} for typed slices
+Branches: []string{"main", "develop"}
 
 // []any{} for mixed-type slices
 Needs: []any{BuildJob, TestJob}
