@@ -25,6 +25,7 @@ type AgentConfig struct {
 type MCPServer struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
+	Cwd     string   `json:"cwd,omitempty"`
 }
 
 // MCPEntry represents an MCP server configuration.
@@ -98,6 +99,9 @@ func installAgentConfig(path string) error {
 		return fmt.Errorf("parsing embedded config: %w", err)
 	}
 
+	// Get current working directory for MCP server
+	cwd, _ := os.Getwd()
+
 	// Update MCP server with correct command (now using mcp subcommand)
 	if config.MCPServers == nil {
 		config.MCPServers = make(map[string]MCPServer)
@@ -105,6 +109,7 @@ func installAgentConfig(path string) error {
 	config.MCPServers["wetwire"] = MCPServer{
 		Command: MCPCommand,
 		Args:    []string{"mcp"},
+		Cwd:     cwd,
 	}
 
 	// Write config
