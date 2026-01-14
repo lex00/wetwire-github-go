@@ -229,6 +229,75 @@ func TestAgentConfigContent(t *testing.T) {
 	}
 }
 
+func TestInstall_SetsCwd(t *testing.T) {
+	// Test that cwd is set in agent config MCP server so it runs in the project directory
+	// Without this, wetwire_list scans the wrong directory and returns empty results
+
+	tmpDir := t.TempDir()
+	// Resolve symlinks (macOS /var -> /private/var)
+	tmpDir, _ = filepath.EvalSymlinks(tmpDir)
+	projectDir := filepath.Join(tmpDir, "project")
+	homeDir := filepath.Join(tmpDir, "home")
+
+	if err := os.MkdirAll(projectDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(homeDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Override home directory
+	t.Setenv("HOME", homeDir)
+
+	// Override working directory for the install
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(projectDir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(origWd) }()
+
+	// Run install
+	if err := EnsureInstalledWithForce(true); err != nil {
+		t.Fatalf("EnsureInstalledWithForce failed: %v", err)
+	}
+
+	// Read the agent config
+	agentPath := filepath.Join(homeDir, ".kiro", "agents", AgentName+".json")
+	data, err := os.ReadFile(agentPath)
+	if err != nil {
+		t.Fatalf("failed to read agent config: %v", err)
+	}
+
+	var agent map[string]any
+	if err := json.Unmarshal(data, &agent); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+
+	// Get mcpServers
+	mcpServers, ok := agent["mcpServers"].(map[string]any)
+	if !ok {
+		t.Fatal("agent config must have 'mcpServers' object")
+	}
+
+	// Get wetwire server config
+	server, ok := mcpServers["wetwire"].(map[string]any)
+	if !ok {
+		t.Fatal("mcpServers must contain 'wetwire' object")
+	}
+
+	// Must have cwd set to the project directory
+	cwd, ok := server["cwd"].(string)
+	if !ok {
+		t.Fatal("MCP server config must have 'cwd' field")
+	}
+	if cwd != projectDir {
+		t.Errorf("expected cwd %q, got %q", projectDir, cwd)
+	}
+}
+
 func TestInstall_HasToolsArray(t *testing.T) {
 	// Test that the generated config includes tools array
 	// Required for kiro to enable MCP tool usage
