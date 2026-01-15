@@ -4,6 +4,13 @@ All notable changes to wetwire-github-go are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- **Core Dependency Update** - Upgraded wetwire-core-go to v1.5.4 (#249)
+  - Fixes provider cwd configuration in Kiro agent setup
+  - Ensures MCP tools run in correct project directory
+
 ## [1.0.2] - 2026-01-11
 
 ### Added
