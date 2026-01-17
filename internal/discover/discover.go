@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	coreast "github.com/lex00/wetwire-core-go/ast"
 )
 
 // DiscoveredWorkflow represents a workflow found by AST parsing.
@@ -195,29 +197,20 @@ func (d *Discoverer) hasWorkflowImport(file *ast.File) bool {
 
 // getTypeName extracts the type name from a type expression.
 func (d *Discoverer) getTypeName(expr ast.Expr) string {
-	switch t := expr.(type) {
-	case *ast.Ident:
-		return t.Name
-	case *ast.SelectorExpr:
-		if x, ok := t.X.(*ast.Ident); ok {
-			return x.Name + "." + t.Sel.Name
-		}
+	typeName, pkgName := coreast.ExtractTypeName(expr)
+	if pkgName != "" {
+		return pkgName + "." + typeName
 	}
-	return ""
+	return typeName
 }
 
 // inferTypeFromValue tries to infer the type from a composite literal.
 func (d *Discoverer) inferTypeFromValue(expr ast.Expr) string {
-	switch v := expr.(type) {
-	case *ast.CompositeLit:
-		return d.getTypeName(v.Type)
-	case *ast.UnaryExpr:
-		// Handle &Type{}
-		if v.Op == token.AND {
-			return d.inferTypeFromValue(v.X)
-		}
+	typeName, pkgName := coreast.InferTypeFromValue(expr)
+	if pkgName != "" {
+		return pkgName + "." + typeName
 	}
-	return ""
+	return typeName
 }
 
 // extractJobRefs extracts job references from a workflow value.
@@ -295,10 +288,14 @@ func (d *Discoverer) extractIdentifiers(expr ast.Expr) []string {
 
 // isBuiltinIdent checks if an identifier is a built-in.
 func isBuiltinIdent(name string) bool {
-	builtins := map[string]bool{
-		"true": true, "false": true, "nil": true,
-		"any": true, "string": true, "int": true, "bool": true,
+	// Check Go built-ins using core AST package
+	if coreast.IsBuiltinIdent(name) {
+		return true
+	}
+
+	// GitHub-specific type identifiers to skip
+	githubTypes := map[string]bool{
 		"workflow": true, "Job": true, "Workflow": true,
 	}
-	return builtins[name]
+	return githubTypes[name]
 }
