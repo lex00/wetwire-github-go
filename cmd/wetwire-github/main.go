@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	corecmd "github.com/lex00/wetwire-core-go/cmd"
+	"github.com/lex00/wetwire-github-go/domain"
 )
 
 // Version information (set via ldflags at build time)
@@ -16,30 +16,27 @@ var (
 )
 
 func main() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-// rootCmd uses the core command framework for consistent CLI structure.
-var rootCmd = corecmd.NewRootCommand(
-	"wetwire-github",
-	"Generate GitHub YAML from typed Go declarations",
-)
+func run() error {
+	// Set version in domain
+	domain.Version = version
 
-func init() {
-	rootCmd.AddCommand(buildCmd)
-	rootCmd.AddCommand(validateCmd)
-	rootCmd.AddCommand(listCmd)
-	rootCmd.AddCommand(lintCmd)
-	rootCmd.AddCommand(importCmd)
-	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(designCmd)
-	rootCmd.AddCommand(testCmd)
-	rootCmd.AddCommand(graphCmd)
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(diffCmd)
-	rootCmd.AddCommand(watchCmd)
-	rootCmd.AddCommand(mcpCmd)
+	// Create the domain instance and get root command with standard tools
+	d := &domain.GitHubDomain{}
+	root := domain.CreateRootCommand(d)
+
+	// Add GitHub-specific commands
+	root.AddCommand(designCmd)
+	root.AddCommand(testCmd)
+	root.AddCommand(importCmd)
+	root.AddCommand(diffCmd)
+	root.AddCommand(watchCmd)
+	root.AddCommand(mcpCmd)
+
+	return root.Execute()
 }
