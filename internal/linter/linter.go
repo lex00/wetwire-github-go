@@ -8,17 +8,29 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	corelint "github.com/lex00/wetwire-core-go/lint"
+)
+
+// Type alias for Severity from core lint package.
+type Severity = corelint.Severity
+
+// Severity constants for backward compatibility.
+const (
+	SeverityError   = corelint.SeverityError
+	SeverityWarning = corelint.SeverityWarning
+	SeverityInfo    = corelint.SeverityInfo
 )
 
 // LintIssue represents a single lint issue found in Go code.
 type LintIssue struct {
-	File     string `json:"file"`
-	Line     int    `json:"line"`
-	Column   int    `json:"column"`
-	Severity string `json:"severity"` // "error", "warning", "info"
-	Message  string `json:"message"`
-	Rule     string `json:"rule"`
-	Fixable  bool   `json:"fixable"`
+	File     string   `json:"file"`
+	Line     int      `json:"line"`
+	Column   int      `json:"column"`
+	Severity Severity `json:"severity"` // SeverityError, SeverityWarning, SeverityInfo
+	Message  string   `json:"message"`
+	Rule     string   `json:"rule"`
+	Fixable  bool     `json:"fixable"`
 }
 
 // Rule is the interface that all linter rules must implement.
@@ -151,7 +163,7 @@ func (l *Linter) LintDir(dir string) (*LintResult, error) {
 				File:     path,
 				Line:     1,
 				Column:   1,
-				Severity: "error",
+				Severity: SeverityError,
 				Message:  err.Error(),
 				Rule:     "parse-error",
 			})

@@ -32,7 +32,7 @@ var CI = workflow.Workflow{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG017" {
 			found = true
-			if issue.Severity != "info" {
+			if issue.Severity != SeverityInfo {
 				t.Error("WAG017 issues should be severity 'info'")
 			}
 		}
@@ -100,7 +100,7 @@ var JobB = workflow.Job{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG019" {
 			found = true
-			if issue.Severity != "error" {
+			if issue.Severity != SeverityError {
 				t.Errorf("WAG019 issues should be severity 'error', got %s", issue.Severity)
 			}
 			if !strings.Contains(issue.Message, "JobA") || !strings.Contains(issue.Message, "JobB") {
@@ -352,7 +352,7 @@ var awsKey = "AKIAIOSFODNN7EXAMPLE"
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG020" {
 			found = true
-			if issue.Severity != "error" {
+			if issue.Severity != SeverityError {
 				t.Errorf("WAG020 issues should be severity 'error', got %s", issue.Severity)
 			}
 			if !strings.Contains(issue.Message, "AWS") {

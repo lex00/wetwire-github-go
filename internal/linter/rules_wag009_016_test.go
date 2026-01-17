@@ -30,7 +30,7 @@ var Matrix = workflow.Matrix{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG009" {
 			found = true
-			if issue.Severity != "error" {
+			if issue.Severity != SeverityError {
 				t.Error("WAG009 issues should be severity 'error'")
 			}
 		}
@@ -142,7 +142,7 @@ var Deploy = workflow.Job{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG011" {
 			found = true
-			if issue.Severity != "error" {
+			if issue.Severity != SeverityError {
 				t.Error("WAG011 issues should be severity 'error'")
 			}
 		}
@@ -339,7 +339,7 @@ var CI = &workflow.Workflow{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG013" {
 			found = true
-			if issue.Severity != "error" {
+			if issue.Severity != SeverityError {
 				t.Error("WAG013 issues should be severity 'error'")
 			}
 		}
@@ -419,7 +419,7 @@ var BuildJob = workflow.Job{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG014" {
 			found = true
-			if issue.Severity != "warning" {
+			if issue.Severity != SeverityWarning {
 				t.Error("WAG014 issues should be severity 'warning'")
 			}
 		}
@@ -488,7 +488,7 @@ var BuildJob = workflow.Job{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG015" {
 			found = true
-			if issue.Severity != "warning" {
+			if issue.Severity != SeverityWarning {
 				t.Error("WAG015 issues should be severity 'warning'")
 			}
 		}
@@ -591,7 +591,7 @@ var CI = workflow.Workflow{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG016" {
 			found = true
-			if issue.Severity != "warning" {
+			if issue.Severity != SeverityWarning {
 				t.Error("WAG016 issues should be severity 'warning'")
 			}
 		}

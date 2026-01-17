@@ -44,7 +44,7 @@ var DangerousWorkflow = workflow.Workflow{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG018" {
 			found = true
-			if issue.Severity != "warning" {
+			if issue.Severity != SeverityWarning {
 				t.Error("WAG018 issues should be severity 'warning'")
 			}
 		}
