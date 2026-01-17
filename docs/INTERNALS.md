@@ -44,7 +44,7 @@ graph TD
 | Builder | `internal/template` | Construct output from discovered resources |
 | Runner | `internal/runner` | Execute Go code to extract values |
 | Serializer | `internal/serialize` | Convert structs to YAML |
-| Linter | `internal/linter` | Check code for style issues |
+| Linter | `internal/lint` | Check code for style issues |
 | Importer | `internal/importer` | Convert YAML to Go code |
 | Validation | `internal/validation` | Run actionlint on generated YAML |
 
@@ -298,7 +298,7 @@ type Issue struct {
 ### Running the Linter
 
 ```go
-import "github.com/lex00/wetwire-github-go/internal/linter"
+import "github.com/lex00/wetwire-github-go/internal/lint"
 
 issues, err := linter.Lint(packages, linter.Options{
     Fix: false,
@@ -460,8 +460,8 @@ Five standard personas for testing:
 | `internal/template/builder.go` | Template builder |
 | `internal/runner/runner.go` | Value extraction |
 | `internal/serialize/serialize.go` | YAML serialization |
-| `internal/linter/linter.go` | Lint engine |
-| `internal/linter/rules.go` | Lint rule implementations |
+| `internal/lint/linter.go` | Lint engine |
+| `internal/lint/rules.go` | Lint rule implementations |
 | `internal/importer/parser.go` | YAML parser |
 | `internal/importer/codegen.go` | Go code generator |
 | `internal/validation/validation.go` | actionlint integration |

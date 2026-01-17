@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Linter Package Rename** - Renamed `internal/linter` to `internal/lint` for consistency (#269)
 - **Discover Core Migration** - Migrated discover to use `wetwire-core-go/ast` package (#268)
   - Uses coreast.ExtractTypeName and coreast.InferTypeFromValue instead of local implementations
   - Uses coreast.IsBuiltinIdent for Go builtin checks
@@ -95,7 +96,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `internal/agent`: 24.7% → 55.2% (30+ percentage point improvement) (#139, #155)
     - Added 76+ test functions covering checkCompletionGate, executeTool routing, AskDeveloper, state management
     - Functions at 100%: NewGitHubAgent, checkLintEnforcement, checkCompletionGate, getTools, executeTool, toolReadFile, AskDeveloper
-  - `internal/linter`: 83.9% → 91.3% (7+ percentage point improvement) (#143, #149)
+  - `internal/lint`: 83.9% → 91.3% (7+ percentage point improvement) (#143, #149)
   - `codegen`: 85.2% → 95.7% (10+ percentage point improvement) (#143, #158)
   - `internal/runner`: 89.9% → 90.8% (additional edge case tests) (#158)
 - **Circular Dependency Detection (WAG019)** - New lint rule for job dependency cycles (#204)
