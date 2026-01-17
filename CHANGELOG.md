@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **MCP Migration** - Migrated to automated MCP server generation (#253)
+  - Upgraded wetwire-core-go to v1.13.0 for domain.BuildMCPServer() support
+  - Replaced manual MCP tool registration with automated server generation
+  - MCP server now auto-generates tools from GitHubDomain implementation
+  - Reduced mcp.go from 500+ lines to 48 lines
+  - All MCP tools (init, build, lint, validate, list, graph) now auto-configured
 - **Core Dependency Update** - Upgraded wetwire-core-go to v1.5.4 (#249)
   - Fixes provider cwd configuration in Kiro agent setup
   - Ensures MCP tools run in correct project directory
