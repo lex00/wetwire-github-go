@@ -142,7 +142,7 @@ func runLintPath(path string) LintPathResult {
 			File:     issue.File,
 			Line:     issue.Line,
 			Column:   issue.Column,
-			Severity: issue.Severity,
+			Severity: issue.Severity.String(),
 			Message:  issue.Message,
 			Rule:     issue.Rule,
 			Fixable:  issue.Fixable,

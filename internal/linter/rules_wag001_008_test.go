@@ -75,7 +75,7 @@ var token = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG003" {
 			found = true
-			if issue.Severity != "error" {
+			if issue.Severity != SeverityError {
 				t.Error("WAG003 issues should be severity 'error'")
 			}
 		}
@@ -176,7 +176,7 @@ var BuildJob = workflow.Job{
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG004" {
 			found = true
-			if issue.Severity != "info" {
+			if issue.Severity != SeverityInfo {
 				t.Error("WAG004 issues should be severity 'info'")
 			}
 		}
@@ -274,7 +274,7 @@ var expr = "${{ success() && failure() }}"
 	for _, issue := range result.Issues {
 		if issue.Rule == "WAG008" {
 			found = true
-			if issue.Severity != "info" {
+			if issue.Severity != SeverityInfo {
 				t.Error("WAG008 issues should be severity 'info'")
 			}
 		}

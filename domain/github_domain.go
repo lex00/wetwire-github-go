@@ -225,7 +225,7 @@ func (l *githubLinter) Lint(ctx *Context, path string, opts LintOpts) (*Result, 
 		errs = append(errs, Error{
 			Path:     issue.File,
 			Line:     issue.Line,
-			Severity: issue.Severity,
+			Severity: issue.Severity.String(),
 			Message:  issue.Message,
 			Code:     issue.Rule,
 		})

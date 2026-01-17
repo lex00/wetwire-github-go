@@ -29,7 +29,7 @@ require (
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/lex00/wetwire-core-go v1.15.0
+	github.com/lex00/wetwire-core-go v1.16.0
 	github.com/rhysd/actionlint v1.7.10
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
