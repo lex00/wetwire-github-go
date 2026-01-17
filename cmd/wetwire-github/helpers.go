@@ -187,3 +187,11 @@ func toLowerString(s string) string {
 	}
 	return result
 }
+
+// getModulePath returns the path to the module root.
+func getModulePath() string {
+	// Get the absolute path to the module root
+	wd, _ := os.Getwd()
+	// Navigate up from cmd/wetwire-github to module root
+	return filepath.Dir(filepath.Dir(wd))
+}
