@@ -48,7 +48,7 @@ go test -v ./...
 go test -cover ./...
 
 # Run specific package tests
-go test -v ./internal/linter/...
+go test -v ./internal/lint/...
 ```
 
 ---
@@ -151,7 +151,7 @@ go test -v ./...
 go test -cover ./...
 
 # Run specific test
-go test -v ./internal/linter/... -run TestWAG001
+go test -v ./internal/lint/... -run TestWAG001
 
 # Run with race detection
 go test -race ./...
@@ -265,11 +265,11 @@ Rules follow the pattern `WAG<NNN>`:
 - WAG = Wetwire Actions GitHub
 - NNN = 3-digit rule number
 
-Check `internal/linter/rules.go` for the next available number.
+Check `internal/lint/rules.go` for the next available number.
 
 ### Step 2: Implement Rule
 
-Add to `internal/linter/rules.go`:
+Add to `internal/lint/rules.go`:
 
 ```go
 // checkWAG013 checks for [description].
@@ -290,7 +290,7 @@ func checkWAG013(issues *[]Issue, decl DiscoveredDecl) {
 
 ### Step 3: Register Rule
 
-Add to the `Lint()` function in `internal/linter/linter.go`:
+Add to the `Lint()` function in `internal/lint/linter.go`:
 
 ```go
 checkWAG013(&issues, decl)
@@ -298,7 +298,7 @@ checkWAG013(&issues, decl)
 
 ### Step 4: Add Tests
 
-Add to `internal/linter/linter_test.go`:
+Add to `internal/lint/linter_test.go`:
 
 ```go
 func TestWAG013(t *testing.T) {

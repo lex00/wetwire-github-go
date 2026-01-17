@@ -1,5 +1,5 @@
 // Package linter provides Go code quality rules for wetwire workflow declarations.
-package linter
+package lint
 
 import (
 	"go/ast"

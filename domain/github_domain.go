@@ -10,7 +10,7 @@ import (
 
 	coredomain "github.com/lex00/wetwire-core-go/domain"
 	"github.com/lex00/wetwire-github-go/internal/discover"
-	"github.com/lex00/wetwire-github-go/internal/linter"
+	"github.com/lex00/wetwire-github-go/internal/lint"
 	"github.com/lex00/wetwire-github-go/internal/runner"
 	"github.com/lex00/wetwire-github-go/internal/template"
 	"github.com/lex00/wetwire-github-go/internal/validation"
@@ -202,9 +202,9 @@ func (l *githubLinter) Lint(ctx *Context, path string, opts LintOpts) (*Result, 
 	}
 
 	// Create linter with default rules
-	lntr := linter.DefaultLinter()
+	lntr := lint.DefaultLinter()
 
-	var lintResult *linter.LintResult
+	var lintResult *lint.LintResult
 	if info.IsDir() {
 		lintResult, err = lntr.LintDir(absPath)
 	} else {

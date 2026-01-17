@@ -7,7 +7,7 @@ import (
 
 	wetwire "github.com/lex00/wetwire-github-go"
 	"github.com/lex00/wetwire-github-go/internal/discover"
-	"github.com/lex00/wetwire-github-go/internal/linter"
+	"github.com/lex00/wetwire-github-go/internal/lint"
 	"github.com/lex00/wetwire-github-go/internal/runner"
 	"github.com/lex00/wetwire-github-go/internal/template"
 )
@@ -120,9 +120,9 @@ func runLintPath(path string) LintPathResult {
 		return result
 	}
 
-	l := linter.DefaultLinter()
+	l := lint.DefaultLinter()
 
-	var lintResult *linter.LintResult
+	var lintResult *lint.LintResult
 	if info.IsDir() {
 		lintResult, err = l.LintDir(absPath)
 	} else {
