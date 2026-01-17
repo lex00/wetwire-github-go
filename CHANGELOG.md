@@ -7,11 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Discover Core Migration** - Migrated discover to use `wetwire-core-go/ast` package (#268)
+  - Uses coreast.ExtractTypeName and coreast.InferTypeFromValue instead of local implementations
+  - Uses coreast.IsBuiltinIdent for Go builtin checks
+  - Net reduction of 3 lines
 - **Linter Core Migration** - Migrated linter to use `wetwire-core-go/lint` package (#267)
   - Added Severity type alias and constants from core lint package
   - Replaced string severity values with typed constants (SeverityError, SeverityWarning, SeverityInfo)
   - Maintains backward compatibility through string conversion at API boundaries
-- **Core Dependency Update** - Upgraded wetwire-core-go to v1.16.0 for lint package (#267)
+- **Core Dependency Update** - Upgraded wetwire-core-go to v1.16.0 for lint and ast packages (#267, #268)
 - **MCP Migration** - Migrated to automated MCP server generation (#253)
   - Upgraded wetwire-core-go to v1.13.0 for domain.BuildMCPServer() support
   - Replaced manual MCP tool registration with automated server generation
