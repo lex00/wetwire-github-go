@@ -238,6 +238,103 @@ func (l *githubLinter) Lint(ctx *Context, path string, opts LintOpts) (*Result, 
 type githubInitializer struct{}
 
 func (i *githubInitializer) Init(ctx *Context, path string, opts InitOpts) (*Result, error) {
+	// Use opts.Path if provided, otherwise fall back to path argument
+	targetPath := opts.Path
+	if targetPath == "" || targetPath == "." {
+		targetPath = path
+	}
+
+	// Handle scenario initialization
+	if opts.Scenario {
+		return i.initScenario(ctx, targetPath, opts)
+	}
+
+	// Basic project initialization
+	return i.initProject(ctx, targetPath, opts)
+}
+
+// initScenario creates a full scenario structure with prompts and expected outputs
+func (i *githubInitializer) initScenario(ctx *Context, path string, opts InitOpts) (*Result, error) {
+	name := opts.Name
+	if name == "" {
+		name = filepath.Base(path)
+	}
+
+	description := opts.Description
+	if description == "" {
+		description = "GitHub Actions workflow scenario"
+	}
+
+	// Use core's scenario scaffolding
+	scenario := coredomain.ScaffoldScenario(name, description, "github")
+	created, err := coredomain.WriteScenario(path, scenario)
+	if err != nil {
+		return nil, fmt.Errorf("write scenario: %w", err)
+	}
+
+	// Create github-specific expected directories
+	expectedDirs := []string{
+		filepath.Join(path, "expected", "workflows"),
+	}
+	for _, dir := range expectedDirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return nil, fmt.Errorf("create directory %s: %w", dir, err)
+		}
+	}
+
+	// Create example workflow in expected/workflows/
+	exampleWorkflow := `package workflows
+
+import (
+	"github.com/lex00/wetwire-github-go/workflow"
+)
+
+// CI workflow runs on push and pull requests to main
+var CI = workflow.Workflow{
+	Name: "CI",
+	On:   CITriggers,
+	Jobs: map[string]workflow.Job{
+		"build": Build,
+	},
+}
+
+var CITriggers = workflow.Triggers{
+	Push: &workflow.PushTrigger{
+		Branches: []string{"main"},
+	},
+	PullRequest: &workflow.PullRequestTrigger{
+		Branches: []string{"main"},
+	},
+}
+
+// Build job compiles and tests the code
+var Build = workflow.Job{
+	RunsOn: "ubuntu-latest",
+	Steps: []workflow.Step{
+		{Uses: "actions/checkout@v4"},
+		{
+			Uses: "actions/setup-go@v5",
+			With: map[string]any{"go-version": "1.24"},
+		},
+		{Run: "go build ./..."},
+		{Run: "go test ./..."},
+	},
+}
+`
+	workflowPath := filepath.Join(path, "expected", "workflows", "workflows.go")
+	if err := os.WriteFile(workflowPath, []byte(exampleWorkflow), 0644); err != nil {
+		return nil, fmt.Errorf("write example workflow: %w", err)
+	}
+	created = append(created, "expected/workflows/workflows.go")
+
+	return NewResultWithData(
+		fmt.Sprintf("Created scenario %s with %d files", name, len(created)),
+		created,
+	), nil
+}
+
+// initProject creates a basic project with example workflows
+func (i *githubInitializer) initProject(ctx *Context, path string, opts InitOpts) (*Result, error) {
 	// Create directory structure
 	dirs := []string{
 		path,
