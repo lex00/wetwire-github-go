@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Agent Test Failures** - Fixed failing agent tests for completion requirements and lint state tracking (#272)
+  - Fixed lint error tracking to handle exit code 1 (actual lint failure code) in addition to exit code 2
+  - Updated tests to create actual lint violations instead of relying on command failures
+  - Tests now properly verify that lintPassed is false when lint finds issues
+
 ### Changed
 - **Split Large Test Files** - Improved maintainability by splitting test files over 800 lines
   - Split `internal/agent/agent_tools_test.go` (1564 lines) into 3 focused files: `agent_tools_file_test.go`, `agent_tools_exec_test.go`, `agent_tools_ask_test.go`
