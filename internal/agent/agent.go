@@ -469,7 +469,8 @@ func (a *GitHubAgent) toolRunLint(path string) string {
 
 	if err != nil {
 		a.lintPassed = false
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 2 {
+		// Try to parse JSON output even on error (lint failures return exit code 1)
+		if exitErr, ok := err.(*exec.ExitError); ok && (exitErr.ExitCode() == 1 || exitErr.ExitCode() == 2) {
 			var lintResult struct {
 				Success bool `json:"success"`
 				Issues  []struct {
