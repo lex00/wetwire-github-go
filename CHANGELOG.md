@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Split Large Test Files** - Improved maintainability by splitting test files over 800 lines
+  - Split `internal/agent/agent_tools_test.go` (1564 lines) into 3 focused files: `agent_tools_file_test.go`, `agent_tools_exec_test.go`, `agent_tools_ask_test.go`
+  - Split `internal/runner/runner_extract_errors_test.go` (1482 lines) into 2 files: `runner_extract_errors_dir_test.go`, `runner_extract_errors_exec_test.go`
+  - Split `internal/template/builder_test.go` (961 lines) into 2 files: `builder_core_test.go`, `builder_reconstruction_test.go`
 - **Linter Package Rename** - Renamed `internal/linter` to `internal/lint` for consistency (#269)
 - **Discover Core Migration** - Migrated discover to use `wetwire-core-go/ast` package (#268)
   - Uses coreast.ExtractTypeName and coreast.InferTypeFromValue instead of local implementations
