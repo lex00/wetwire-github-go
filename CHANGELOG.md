@@ -13,6 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Expected outputs demonstrating build, test, and deploy jobs with matrix strategy
   - Validation rules requiring minimum 1 workflow and 3 jobs
   - Examples include staging and production deployment with environment gates
+- **Imported Examples from Major Open Source Repositories** - Added 8 real-world workflow examples (#278)
+  - Docker Compose: `ci.yml`, `merge.yml` (Apache-2.0)
+  - Grafana: `backport-workflow.yml`, `codeql-analysis.yml` (AGPL-3.0)
+  - HashiCorp Terraform: `build.yml`, `checks.yml` (BUSL-1.1)
+  - Prometheus: `ci.yml`, `codeql-analysis.yml` (Apache-2.0)
+  - Total: 8 workflows, 42 jobs, 201 steps imported
+  - `examples/imported/README.md` with full attribution and license information
 - **LintOpts.Fix and LintOpts.Disable Support** - Domain validator compliance for lint options (#276)
   - `opts.Disable` skips specified lint rule IDs (e.g., `["WAG001", "WAG002"]`)
   - `opts.Fix` indicates Fix mode was requested (auto-fix reserved for future implementation)
