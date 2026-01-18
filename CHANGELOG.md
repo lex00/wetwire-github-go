@@ -23,6 +23,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Split `internal/linter/linter_test.go` (2,292 lines) into 5 files: `linter_core_test.go` (273 lines), `rules_wag001_008_test.go` (410 lines), `rules_wag009_016_test.go` (651 lines), `rules_wag017_020_test.go` (639 lines), `linter_fix_test.go` (342 lines)
   - Split `internal/serialize/serialize_test.go` (2,051 lines) into 5 files: `serialize_workflow_test.go` (560 lines), `serialize_jobs_test.go` (746 lines), `serialize_expressions_test.go` (109 lines), `serialize_dependabot_test.go` (285 lines), `serialize_templates_test.go` (381 lines)
   - Split `codegen/fetch_test.go` (1,356 lines) into 4 files: `fetch_core_test.go` (212 lines), `fetch_schema_test.go` (122 lines), `fetch_action_test.go` (217 lines), `fetch_all_test.go` (846 lines)
+- **Split Linter Rules** - Split `internal/linter/rules.go` (1,695 lines) into focused modules by rule category (#265)
+  - `rules_helpers.go` (347 lines) - Shared types, helpers, and configuration maps
+  - `rules_actions.go` (316 lines) - WAG001, WAG010, WAG012, WAG015
+  - `rules_security.go` (252 lines) - WAG003, WAG017, WAG018, WAG020
+  - `rules_structure.go` (295 lines) - WAG004-WAG008, WAG013
+  - `rules_workflow.go` (239 lines) - WAG002, WAG009, WAG014, WAG016
+  - `rules_dependencies.go` (214 lines) - WAG011, WAG019
 - **Linter Package Rename** - Renamed `internal/linter` to `internal/lint` for consistency (#269)
 - **Discover Core Migration** - Migrated discover to use `wetwire-core-go/ast` package (#268)
   - Uses coreast.ExtractTypeName and coreast.InferTypeFromValue instead of local implementations
