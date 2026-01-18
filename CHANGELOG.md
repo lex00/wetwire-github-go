@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **GitHub Actions Workflow Scenario** - Added workflow_scenario example with CI/CD patterns (#279)
+  - Scenario configuration with 3 persona prompts (beginner, intermediate, expert)
+  - System prompt with GitHub Actions domain context and best practices
+  - Expected outputs demonstrating build, test, and deploy jobs with matrix strategy
+  - Validation rules requiring minimum 1 workflow and 3 jobs
+  - Examples include staging and production deployment with environment gates
 - **LintOpts.Fix and LintOpts.Disable Support** - Domain validator compliance for lint options (#276)
   - `opts.Disable` skips specified lint rule IDs (e.g., `["WAG001", "WAG002"]`)
   - `opts.Fix` indicates Fix mode was requested (auto-fix reserved for future implementation)
