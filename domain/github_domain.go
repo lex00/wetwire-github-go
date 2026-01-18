@@ -201,8 +201,14 @@ func (l *githubLinter) Lint(ctx *Context, path string, opts LintOpts) (*Result, 
 		return nil, fmt.Errorf("accessing path: %w", err)
 	}
 
-	// Create linter with default rules
-	lntr := lint.DefaultLinter()
+	// Build lint options from LintOpts
+	lintOpts := lint.LinterOptions{
+		DisabledRules: opts.Disable,
+		Fix:           opts.Fix,
+	}
+
+	// Create linter with options (respects disabled rules)
+	lntr := lint.NewLinterWithOptions(lintOpts)
 
 	var lintResult *lint.LintResult
 	if info.IsDir() {
@@ -229,6 +235,11 @@ func (l *githubLinter) Lint(ctx *Context, path string, opts LintOpts) (*Result, 
 			Message:  issue.Message,
 			Code:     issue.Rule,
 		})
+	}
+
+	// If Fix mode is enabled, add a note about auto-fixing
+	if opts.Fix {
+		return NewErrorResultMultiple("lint issues found (Fix mode requested but auto-fix not yet implemented for these issues)", errs), nil
 	}
 
 	return NewErrorResultMultiple("lint issues found", errs), nil
