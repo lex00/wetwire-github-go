@@ -497,8 +497,21 @@ func TestGitHubAgent_ComprehensiveIntegration(t *testing.T) {
 		t.Errorf("init failed: %s", result)
 	}
 
-	// 2. Write file
-	result = agent.toolWriteFile("test-workflow/main.go", "package main")
+	// 2. Write file with lint violation (WAG001 - raw uses string)
+	result = agent.toolWriteFile("test-workflow/main.go", `package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Jobs: map[string]workflow.Job{
+		"test": {
+			Steps: []any{
+				workflow.Step{Uses: "actions/checkout@v4"},
+			},
+		},
+	},
+}
+`)
 	if !findSubstring(result, "Wrote") {
 		t.Errorf("write failed: %s", result)
 	}
@@ -513,7 +526,7 @@ func TestGitHubAgent_ComprehensiveIntegration(t *testing.T) {
 
 	// 3. Read file
 	result = agent.toolReadFile("test-workflow/main.go")
-	if result != "package main" {
+	if !findSubstring(result, "package main") {
 		t.Errorf("read returned wrong content: %s", result)
 	}
 

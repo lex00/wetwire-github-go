@@ -581,7 +581,23 @@ func TestGitHubAgent_ToolRunLint_LintPassedState(t *testing.T) {
 		t.Error("initial lintPassed should be false")
 	}
 
-	// Run lint - will fail because no wetwire-github binary, but state should still update
+	// Create a file with lint violation (WAG001 - raw uses string)
+	agent.toolWriteFile("workflows.go", `package main
+
+import "github.com/lex00/wetwire-github-go/workflow"
+
+var CI = workflow.Workflow{
+	Jobs: map[string]workflow.Job{
+		"test": {
+			Steps: []any{
+				workflow.Step{Uses: "actions/checkout@v4"},
+			},
+		},
+	},
+}
+`)
+
+	// Run lint - should fail due to lint violations
 	agent.toolRunLint(".")
 
 	// lintPassed should be false after failed lint
