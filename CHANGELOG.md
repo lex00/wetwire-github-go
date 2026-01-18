@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **LintOpts.Fix and LintOpts.Disable Support** - Domain validator compliance for lint options (#276)
+  - `opts.Disable` skips specified lint rule IDs (e.g., `["WAG001", "WAG002"]`)
+  - `opts.Fix` indicates Fix mode was requested (auto-fix reserved for future implementation)
+  - Added `LinterOptions` struct and `NewLinterWithOptions()` to internal/lint package
+  - Domain validator now passes for both LintOpts checks
+
 ### Fixed
 - **Agent Test Failures** - Fixed failing agent tests for completion requirements and lint state tracking (#272)
   - Fixed lint error tracking to handle exit code 1 (actual lint failure code) in addition to exit code 2

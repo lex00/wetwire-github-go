@@ -63,10 +63,66 @@ type Linter struct {
 	fset  *token.FileSet
 }
 
+// LinterOptions contains options for configuring the linter.
+type LinterOptions struct {
+	// DisabledRules specifies rule IDs to disable (e.g., "WAG001", "WAG002").
+	DisabledRules []string
+	// Fix automatically fixes fixable issues (reserved for future use).
+	Fix bool
+}
+
 // NewLinter creates a new Linter with the specified rules.
 func NewLinter(rules ...Rule) *Linter {
 	return &Linter{
 		rules: rules,
+		fset:  token.NewFileSet(),
+	}
+}
+
+// NewLinterWithOptions creates a linter with all default rules, excluding disabled ones.
+func NewLinterWithOptions(opts LinterOptions) *Linter {
+	// Build disabled rules set
+	disabled := make(map[string]bool)
+	for _, id := range opts.DisabledRules {
+		// Store both uppercase and original case for case-insensitive matching
+		disabled[id] = true
+		disabled[strings.ToUpper(id)] = true
+	}
+
+	// Get all default rules
+	allRules := []Rule{
+		&WAG001{},
+		&WAG002{},
+		&WAG003{},
+		&WAG004{},
+		&WAG005{},
+		&WAG006{},
+		&WAG007{MaxJobs: 10},
+		&WAG008{},
+		&WAG009{},
+		&WAG010{},
+		&WAG011{},
+		&WAG012{},
+		&WAG013{},
+		&WAG014{},
+		&WAG015{},
+		&WAG016{},
+		&WAG017{},
+		&WAG018{},
+		&WAG019{},
+		&WAG020{},
+	}
+
+	// Filter out disabled rules
+	var enabledRules []Rule
+	for _, rule := range allRules {
+		if !disabled[rule.ID()] {
+			enabledRules = append(enabledRules, rule)
+		}
+	}
+
+	return &Linter{
+		rules: enabledRules,
 		fset:  token.NewFileSet(),
 	}
 }
