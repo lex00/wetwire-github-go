@@ -13,10 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Tests now properly verify that lintPassed is false when lint finds issues
 
 ### Changed
-- **Split Large Test Files** - Improved maintainability by splitting test files over 800 lines
+- **Split Large Test Files** - Improved maintainability by splitting test files over 800 lines (#271)
   - Split `internal/agent/agent_tools_test.go` (1564 lines) into 3 focused files: `agent_tools_file_test.go`, `agent_tools_exec_test.go`, `agent_tools_ask_test.go`
   - Split `internal/runner/runner_extract_errors_test.go` (1482 lines) into 2 files: `runner_extract_errors_dir_test.go`, `runner_extract_errors_exec_test.go`
   - Split `internal/template/builder_test.go` (961 lines) into 2 files: `builder_core_test.go`, `builder_reconstruction_test.go`
+- **Split Large Test Files Into Focused Modules** - Major refactoring for maintainability (#266)
+  - Split `internal/runner/runner_test.go` (4,312 lines) into 6 files: `runner_core_test.go` (770 lines), `runner_path_test.go` (223 lines), `runner_generate_test.go` (859 lines), `runner_extract_success_test.go` (290 lines), `runner_extract_errors_test.go` (1,482 lines), `runner_integration_test.go` (764 lines)
+  - Split `internal/agent/agent_test.go` (3,870 lines) into 6 files: `agent_constructor_test.go` (375 lines), `agent_tools_test.go` (1,564 lines), `agent_state_test.go` (558 lines), `agent_enforcement_test.go` (826 lines), `agent_execute_test.go` (532 lines), `agent_helpers_test.go` (54 lines)
+  - Split `internal/linter/linter_test.go` (2,292 lines) into 5 files: `linter_core_test.go` (273 lines), `rules_wag001_008_test.go` (410 lines), `rules_wag009_016_test.go` (651 lines), `rules_wag017_020_test.go` (639 lines), `linter_fix_test.go` (342 lines)
+  - Split `internal/serialize/serialize_test.go` (2,051 lines) into 5 files: `serialize_workflow_test.go` (560 lines), `serialize_jobs_test.go` (746 lines), `serialize_expressions_test.go` (109 lines), `serialize_dependabot_test.go` (285 lines), `serialize_templates_test.go` (381 lines)
+  - Split `codegen/fetch_test.go` (1,356 lines) into 4 files: `fetch_core_test.go` (212 lines), `fetch_schema_test.go` (122 lines), `fetch_action_test.go` (217 lines), `fetch_all_test.go` (846 lines)
 - **Linter Package Rename** - Renamed `internal/linter` to `internal/lint` for consistency (#269)
 - **Discover Core Migration** - Migrated discover to use `wetwire-core-go/ast` package (#268)
   - Uses coreast.ExtractTypeName and coreast.InferTypeFromValue instead of local implementations
