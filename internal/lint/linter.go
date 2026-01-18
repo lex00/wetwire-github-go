@@ -22,16 +22,9 @@ const (
 	SeverityInfo    = corelint.SeverityInfo
 )
 
-// LintIssue represents a single lint issue found in Go code.
-type LintIssue struct {
-	File     string   `json:"file"`
-	Line     int      `json:"line"`
-	Column   int      `json:"column"`
-	Severity Severity `json:"severity"` // SeverityError, SeverityWarning, SeverityInfo
-	Message  string   `json:"message"`
-	Rule     string   `json:"rule"`
-	Fixable  bool     `json:"fixable"`
-}
+// LintIssue is a type alias for corelint.Issue for backward compatibility.
+// Use corelint.Issue directly in new code.
+type LintIssue = corelint.Issue
 
 // Rule is the interface that all linter rules must implement.
 type Rule interface {
