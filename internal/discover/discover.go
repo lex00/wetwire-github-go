@@ -5,8 +5,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
-	"path/filepath"
 	"strings"
 
 	coreast "github.com/lex00/wetwire-core-go/ast"
@@ -55,31 +53,15 @@ func (d *Discoverer) Discover(dir string) (*DiscoveryResult, error) {
 		Errors:    []string{},
 	}
 
-	// Walk the directory tree
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
+	// Walk the directory tree using coreast.WalkGoFiles
+	opts := coreast.ParseOptions{
+		SkipTests:   true,
+		SkipVendor:  true,
+		SkipHidden:  true,
+		ExcludeDirs: []string{"testdata"},
+	}
 
-		// Skip hidden directories and vendor
-		if info.IsDir() {
-			name := info.Name()
-			if strings.HasPrefix(name, ".") || name == "vendor" || name == "testdata" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		// Only process .go files
-		if !strings.HasSuffix(path, ".go") {
-			return nil
-		}
-
-		// Skip test files
-		if strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
-
+	err := coreast.WalkGoFiles(dir, opts, func(path string) error {
 		// Parse the file
 		file, err := parser.ParseFile(d.fset, path, nil, parser.ParseComments)
 		if err != nil {
