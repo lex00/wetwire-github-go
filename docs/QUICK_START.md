@@ -4,9 +4,7 @@ Get started with wetwire-github-go in 5 minutes.
 
 ## Installation
 
-```bash
-go install github.com/lex00/wetwire-github-go/cmd/wetwire-github@latest
-```
+See [README.md](../README.md) for installation instructions.
 
 ## Create a New Project
 

@@ -132,7 +132,7 @@ wetwire-github mcp
 
 This exposes four tools for AI assistants:
 - `wetwire_init` - Initialize new workflow projects
-- `wetwire_lint` - Validate code against WAG001-WAG008 rules
+- `wetwire_lint` - Validate code against lint rules (see [LINT_RULES.md](docs/LINT_RULES.md))
 - `wetwire_build` - Generate .github/workflows/*.yml from Go code
 - `wetwire_validate` - Validate YAML with actionlint
 

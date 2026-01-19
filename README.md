@@ -167,11 +167,26 @@ wetwire-github design --provider kiro "Create a CI workflow for a Go project"
 
 The MCP server (`wetwire-github mcp`) exposes tools for AI assistants:
 - `wetwire_init` - Initialize new workflow projects
-- `wetwire_lint` - Validate code against WAG001-WAG008 rules
+- `wetwire_lint` - Validate code against lint rules
 - `wetwire_build` - Generate .github/workflows/*.yml from Go code
 - `wetwire_validate` - Validate YAML with actionlint
 
 See [docs/GITHUB-KIRO-CLI.md](docs/GITHUB-KIRO-CLI.md) for complete integration guide.
+
+## Documentation
+
+**Getting Started:**
+- [Quick Start](docs/QUICK_START.md) - 5-minute tutorial
+- [FAQ](docs/FAQ.md) - Common questions
+
+**Reference:**
+- [CLI Reference](docs/CLI.md) - All commands
+- [Lint Rules](docs/LINT_RULES.md) - WAG rule reference
+
+**Advanced:**
+- [Internals](docs/INTERNALS.md) - Architecture and extension points
+- [Adoption Guide](docs/ADOPTION.md) - Team migration strategies
+- [Import Workflow](docs/IMPORT_WORKFLOW.md) - Migrate existing configs
 
 ## Status
 

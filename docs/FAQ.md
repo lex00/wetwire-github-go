@@ -8,9 +8,7 @@ This FAQ covers questions specific to the Go implementation of wetwire for GitHu
 
 ### How do I install wetwire-github?
 
-```bash
-go install github.com/lex00/wetwire-github-go/cmd/wetwire-github@latest
-```
+See [README.md](../README.md) for installation instructions.
 
 ### How do I create a new project?
 
