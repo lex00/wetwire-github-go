@@ -121,7 +121,7 @@ wetwire-github build .
 # Outputs .github/workflows/*.yml
 ```
 
-## Kiro/MCP Integration
+## MCP Integration
 
 wetwire-github provides MCP (Model Context Protocol) integration via the `wetwire-github mcp` subcommand:
 
@@ -136,7 +136,14 @@ This exposes four tools for AI assistants:
 - `wetwire_build` - Generate .github/workflows/*.yml from Go code
 - `wetwire_validate` - Validate YAML with actionlint
 
-See [docs/GITHUB-KIRO-CLI.md](docs/GITHUB-KIRO-CLI.md) for Kiro CLI integration guide.
+### AI-Assisted Design
+
+Use the design command for interactive workflow creation:
+
+```bash
+# No API key required - uses Claude CLI as default provider
+wetwire-github design "Create a CI workflow for Go with tests and linting"
+```
 
 ## Project Structure
 
