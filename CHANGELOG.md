@@ -70,6 +70,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Fixes provider cwd configuration in Kiro agent setup
   - Ensures MCP tools run in correct project directory
 
+
+## [1.7.0] - 2026-01-19
+
+### Changed
+
+- **Claude CLI as default provider for design command**
+  - No API key required - uses existing Claude authentication
+  - Falls back to Anthropic API if Claude CLI not installed
+  - Updated wetwire-core-go to v1.17.1
+
 ## [1.0.2] - 2026-01-11
 
 ### Added
