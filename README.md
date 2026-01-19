@@ -152,26 +152,22 @@ All nested structs become flat variables.
 | **Issue Templates** | `.github/ISSUE_TEMPLATE/*.yml` | issue-forms |
 | **Discussion Templates** | `.github/DISCUSSION_TEMPLATE/*.yml` | discussion-forms |
 
-## AI-Assisted Design with Kiro
+## AI-Assisted Design
 
-wetwire-github integrates with [Kiro CLI](https://kiro.dev) for AI-assisted workflow design:
+Use the `design` command for interactive, AI-assisted workflow creation:
 
 ```bash
-# Install and authenticate with Kiro
-curl -fsSL https://cli.kiro.dev/install | bash
-kiro-cli login
-
-# Start AI-assisted design session
-wetwire-github design --provider kiro "Create a CI workflow for a Go project"
+# No API key required - uses Claude CLI
+wetwire-github design "Create a CI workflow for a Go project"
 ```
 
-The MCP server (`wetwire-github mcp`) exposes tools for AI assistants:
+Uses [Claude CLI](https://claude.ai/download) by default (no API key required). Falls back to Anthropic API if Claude CLI is not installed.
+
+The MCP server (`wetwire-github mcp`) exposes tools for Claude Code:
 - `wetwire_init` - Initialize new workflow projects
 - `wetwire_lint` - Validate code against lint rules
 - `wetwire_build` - Generate .github/workflows/*.yml from Go code
 - `wetwire_validate` - Validate YAML with actionlint
-
-See [docs/GITHUB-KIRO-CLI.md](docs/GITHUB-KIRO-CLI.md) for complete integration guide.
 
 ## Documentation
 

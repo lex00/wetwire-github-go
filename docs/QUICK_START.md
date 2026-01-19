@@ -253,6 +253,17 @@ var BuildSteps = []any{
 }
 ```
 
+## AI-Assisted Design
+
+Let AI help create your GitHub workflows:
+
+```bash
+# No API key required - uses Claude CLI
+wetwire-github design "Create a CI workflow that builds and tests a Go project"
+```
+
+The design command creates Go code following wetwire patterns, runs linting, and builds the final workflow YAML.
+
 ## Next Steps
 
 - See [CLI Reference](CLI.md) for all commands
