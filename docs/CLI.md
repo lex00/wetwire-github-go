@@ -4,9 +4,7 @@ Complete reference for the `wetwire-github` command-line interface.
 
 ## Installation
 
-```bash
-go install github.com/lex00/wetwire-github-go/cmd/wetwire-github@latest
-```
+See [README.md](../README.md#installation) for installation instructions.
 
 ## Commands
 

@@ -20,9 +20,7 @@ A practical guide for teams adopting wetwire-github-go for GitHub Actions workfl
 
 ### Installation
 
-```bash
-go install github.com/lex00/wetwire-github-go/cmd/wetwire-github@latest
-```
+See [README.md](../README.md#installation) for installation instructions.
 
 ## Migration Strategies
 
