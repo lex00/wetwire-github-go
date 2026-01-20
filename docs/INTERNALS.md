@@ -425,15 +425,15 @@ The agent has access to these tools:
 
 ### Persona Testing
 
-Five standard personas for testing:
+Three built-in personas for testing:
 
 | Persona | Behavior |
 |---------|----------|
 | beginner | Uncertain, asks many questions |
 | intermediate | Some knowledge, specifies requirements |
 | expert | Deep knowledge, precise requirements |
-| terse | Minimal information, expects inference |
-| verbose | Over-explains, buries requirements |
+
+Custom personas can be registered for domain-specific testing.
 
 ### Scoring System
 

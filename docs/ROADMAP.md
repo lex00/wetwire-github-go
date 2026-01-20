@@ -71,7 +71,7 @@ Feature matrix and implementation status for wetwire-github-go.
 | Streaming support | ✅ | `--stream` flag for token streaming |
 | Lint enforcement | ✅ | Automatic lint after file writes |
 | ConsoleDeveloper | ✅ | Interactive question/answer |
-| Persona testing | ✅ | 5 standard personas (beginner, intermediate, expert, terse, verbose) |
+| Persona testing | ✅ | 3 built-in personas (beginner, intermediate, expert) + custom |
 | 5-dimension scoring | ✅ | Completeness, Lint, Code, Output, Questions |
 
 ---

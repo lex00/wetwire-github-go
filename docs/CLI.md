@@ -196,7 +196,7 @@ wetwire-github test <path> [flags]
 **Flags:**
 - `--provider <provider>` — LLM provider: `anthropic` or `kiro` (default: anthropic)
 - `--format <format>` — Output format: `text` or `json` (default: `text`)
-- `--persona <name>` — Run specific persona: `beginner`, `intermediate`, `expert`, `terse`, `verbose`
+- `--persona <name>` — Run specific persona: `beginner`, `intermediate`, `expert`
 - `--scenario <name>` — Run specific scenario: `ci-workflow`, `deployment`, `release`, `matrix`
 - `--score` — Show scoring breakdown
 - `--list` — List available personas and scenarios
@@ -205,8 +205,8 @@ wetwire-github test <path> [flags]
 - `beginner` — New to GitHub Actions, needs guidance
 - `intermediate` — Some experience, knows basics but misses details
 - `expert` — Deep CI/CD knowledge, precise requirements
-- `terse` — Minimal words, expects system to infer
-- `verbose` — Over-explains, buries requirements in prose
+
+Custom personas can be registered for domain-specific testing.
 
 **Scoring Dimensions (0-3 each):**
 - Completeness — Were all required workflows generated?
