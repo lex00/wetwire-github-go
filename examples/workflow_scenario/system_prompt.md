@@ -1,131 +1,94 @@
-You generate GitHub Actions workflows using wetwire-github-go.
+You generate GitHub Actions workflow YAML files.
 
 ## Context
 
 **Project:** Go web application with CI/CD requirements
 
-**Repository:** github.com/example/webapp
-
 **Requirements:**
-- Build and test on multiple Go versions (1.23, 1.24)
+- Build and test on multiple Go versions
 - Run linter checks
-- Deploy to staging and production environments
+- Deploy to environments
 - Use matrix strategy for testing
-- Deploy only from main branch
 
-## Output Files
+## Output Format
 
-- `expected/workflows/workflow.go` - Main CI/CD workflow definition
-- `expected/workflows/build.go` - Build job with matrix strategy
-- `expected/workflows/test.go` - Test job with coverage
-- `expected/workflows/deploy.go` - Deploy job with environment gates
+Generate GitHub Actions workflow YAML files. Use the Write tool to create files.
+Place workflows in `.github/workflows/` directory or root directory.
 
-## Workflow Patterns
+## Workflow Structure
 
-**CI/CD Workflow:**
-- Trigger on push to main and pull requests
-- Jobs: build, test, deploy-staging, deploy-production
-- Deploy jobs should have needs: [build, test]
-- Production deploy requires manual approval
+```yaml
+name: CI/CD
 
-```go
-var CI = workflow.Workflow{
-    Name: "CI/CD",
-    On:   CITriggers,
-    Jobs: map[string]workflow.Job{
-        "build":            Build,
-        "test":             Test,
-        "deploy-staging":   DeployStaging,
-        "deploy-production": DeployProduction,
-    },
-}
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - run: go build ./...
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - run: go test -v ./...
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Deploying..."
 ```
 
-## Job Patterns
+## Matrix Strategy
 
-**Build Job with Matrix:**
-- Test on Go 1.23 and 1.24
-- Test on ubuntu-latest and macos-latest
-- Use actions/checkout@v4, actions/setup-go@v5
-- Cache Go modules for performance
-
-```go
-var BuildMatrix = workflow.Matrix{
-    Values: map[string][]any{
-        "go": {"1.23", "1.24"},
-        "os": {"ubuntu-latest", "macos-latest"},
-    },
-}
-
-var Build = workflow.Job{
-    Name:     "Build",
-    RunsOn:   "${{ matrix.os }}",
-    Strategy: &workflow.Strategy{Matrix: &BuildMatrix},
-    Steps:    BuildSteps,
-}
+```yaml
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        go: ['1.22', '1.23']
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
 ```
 
-**Test Job:**
-- Run on ubuntu-latest
-- Execute tests with coverage
-- Upload coverage reports
+## Environment Gates
 
-**Deploy Job:**
-- Run only on main branch
-- Use environment for approval gates
-- Include deployment URL
-
-```go
-var DeployProduction = workflow.Job{
-    Name:   "Deploy Production",
-    RunsOn: "ubuntu-latest",
-    Needs:  []any{Build, Test},
-    If:     "${{ github.ref == 'refs/heads/main' }}",
-    Environment: &workflow.Environment{
-        Name: "production",
-        URL:  "https://example.com",
-    },
-    Steps: DeployProdSteps,
-}
+```yaml
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - run: ./deploy.sh
 ```
 
-## Trigger Patterns
+## Guidelines
 
-```go
-var CITriggers = workflow.Triggers{
-    Push: &workflow.PushTrigger{
-        Branches: []string{"main"},
-    },
-    PullRequest: &workflow.PullRequestTrigger{
-        Branches: []string{"main"},
-    },
-}
-```
-
-## Code Style
-
-- Use package-level variables for all declarations
-- Extract nested structs into named variables
-- Use pointer syntax: `&workflow.Strategy{Matrix: &BuildMatrix}`
-- Add comments explaining each job's purpose
-- Group related jobs in the same file
-- Use descriptive variable names: `Build`, `Test`, `DeployStaging`, `DeployProduction`
-
-## Step Patterns
-
-Common steps to use:
-- `{Uses: "actions/checkout@v4"}` - Checkout code
-- `{Uses: "actions/setup-go@v5", With: map[string]any{"go-version": "${{ matrix.go }}"}}` - Setup Go
-- `{Uses: "actions/cache@v4", With: map[string]any{"path": "~/go/pkg/mod", "key": "go-${{ hashFiles('**/go.sum') }}"}}` - Cache dependencies
-- `{Run: "go build ./..."}` - Build
-- `{Run: "go test -v -race -coverprofile=coverage.out ./..."}` - Test with coverage
-- `{Run: "go vet ./..."}` - Vet
-- `{Run: "./scripts/deploy.sh", Env: map[string]any{"ENVIRONMENT": "production"}}` - Deploy
-
-## Validation
-
-Your output must include:
-- At least 1 workflow
-- At least 3 jobs (build, test, deploy-staging, or deploy-production)
-- Valid Go syntax
-- Proper imports: `"github.com/lex00/wetwire-github-go/workflow"`
+- Generate valid GitHub Actions YAML
+- Use proper indentation (2 spaces)
+- Include name, on, and jobs sections
+- Use needs for job dependencies
+- Use if conditions for conditional execution
+- Reference secrets with ${{ secrets.NAME }}

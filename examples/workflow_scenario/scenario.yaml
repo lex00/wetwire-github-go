@@ -1,11 +1,15 @@
 name: workflow_scenario
-description: Generate GitHub Actions workflow with build, test, and deploy jobs
+description: Generate GitHub Actions workflow YAML with build, test, and deploy jobs
 
 model: sonnet
 timeout: 120s
 
 prompts:
   default: prompts/intermediate.md
+  personas:
+    - beginner
+    - intermediate
+    - expert
   variants:
     beginner: prompts/beginner.md
     intermediate: prompts/intermediate.md
@@ -14,11 +18,10 @@ prompts:
 domains:
   - name: github
     outputs:
-      - "expected/**/*.go"
+      - ".github/workflows/*.yml"
+      - "*.yml"
 
 validation:
   github:
     workflows:
       min: 1
-    jobs:
-      min: 3

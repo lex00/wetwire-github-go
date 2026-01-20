@@ -1,17 +1,23 @@
-Repo: github.com/example/webapp. Create these files:
+Generate workflow: .github/workflows/ci.yml
 
-**expected/workflows/workflow.go:**
-- CI workflow, triggers: push+PR to main
-- Jobs: build, test, deploy-staging, deploy-production
+- name: CI/CD
+- triggers: push+PR to main
+- jobs: build, test, deploy-staging, deploy-production
 
-**expected/workflows/build.go:**
-- Matrix: go=[1.23,1.24], os=[ubuntu-latest,macos-latest]
-- Steps: checkout@v4, setup-go@v5, cache modules, build
+build job:
+- matrix: go=[1.23,1.24], os=[ubuntu-latest,macos-latest]
+- steps: checkout@v4, setup-go@v5, cache modules, go build ./...
 
-**expected/workflows/test.go:**
-- Ubuntu-latest, coverage report
-- Steps: checkout, setup-go, test with -race -coverprofile
+test job:
+- runs-on: ubuntu-latest
+- steps: checkout, setup-go, go test -race -coverprofile=coverage.out ./...
 
-**expected/workflows/deploy.go:**
-- DeployStaging: needs=[build,test], if=main, env=staging
-- DeployProduction: needs=[build,test], if=main, env=production (with URL), manual approval
+deploy-staging job:
+- needs: [build, test], if: github.ref == 'refs/heads/main'
+- environment: staging
+- run: echo "Deploying to staging"
+
+deploy-production job:
+- needs: [build, test], if: github.ref == 'refs/heads/main'
+- environment: production (with URL: https://example.com)
+- run: echo "Deploying to production"
