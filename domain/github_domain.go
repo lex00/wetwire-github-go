@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	coredomain "github.com/lex00/wetwire-core-go/domain"
+	"github.com/lex00/wetwire-github-go/internal/differ"
 	"github.com/lex00/wetwire-github-go/internal/discover"
 	"github.com/lex00/wetwire-github-go/internal/lint"
 	"github.com/lex00/wetwire-github-go/internal/runner"
@@ -48,6 +49,7 @@ var (
 	_ coredomain.Domain        = (*GitHubDomain)(nil)
 	_ coredomain.ListerDomain  = (*GitHubDomain)(nil)
 	_ coredomain.GrapherDomain = (*GitHubDomain)(nil)
+	_ coredomain.DifferDomain  = (*GitHubDomain)(nil)
 )
 
 // Name returns "github"
@@ -88,6 +90,11 @@ func (d *GitHubDomain) Lister() coredomain.Lister {
 // Grapher returns the GitHub grapher implementation
 func (d *GitHubDomain) Grapher() coredomain.Grapher {
 	return &githubGrapher{}
+}
+
+// Differ returns the GitHub differ implementation
+func (d *GitHubDomain) Differ() coredomain.Differ {
+	return differ.New()
 }
 
 // CreateRootCommand creates the root command using the domain interface.
