@@ -121,6 +121,29 @@ wetwire-github build .
 # Outputs .github/workflows/*.yml
 ```
 
+
+## Diff
+
+Compare GitHub Actions workflows semantically:
+
+```bash
+# Compare two files
+wetwire-github diff file1 file2
+
+# JSON output for CI/CD
+wetwire-github diff file1 file2 -f json
+
+# Ignore array ordering differences
+wetwire-github diff file1 file2 --ignore-order
+```
+
+The diff command performs semantic comparison by resource name, detecting:
+- Added resources
+- Removed resources
+- Modified resources (with property-level change details)
+
+Exit code is 1 if differences are found, enabling CI pipeline validation.
+
 ## MCP Integration
 
 wetwire-github provides MCP (Model Context Protocol) integration via the `wetwire-github mcp` subcommand:
