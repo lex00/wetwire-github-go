@@ -34,3 +34,5 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 )
+
+replace github.com/lex00/wetwire-core-go => ../wetwire-core-go
