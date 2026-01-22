@@ -1,0 +1,20 @@
+jobs:
+  Auto Label Issues:
+    if: ${{ github.event_name == 'issues' && github.event.action == 'opened' }}
+    name: Auto Label Issues
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+  Enforce Review Policy:
+    if: ${{ github.event_name == 'pull_request_review' && github.event.action == 'submitted' }}
+    name: Enforce Review Policy
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+  Respond to Comment:
+    if: ${{ github.event_name == 'issue_comment' && github.event.action == 'created' }}
+    name: Respond to Comment
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+name: Issue Automation

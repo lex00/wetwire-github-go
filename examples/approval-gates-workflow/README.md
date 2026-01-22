@@ -1,4 +1,7 @@
-# Approval Gates Workflow Example
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../../docs/wetwire-dark.svg">
+  <img src="../../docs/wetwire-light.svg" width="100" height="67">
+</picture>
 
 A complete example demonstrating how to implement manual approval gates between staging and production deployments using wetwire-github-go.
 

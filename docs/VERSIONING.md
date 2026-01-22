@@ -1,4 +1,7 @@
-# Versioning
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./wetwire-dark.svg">
+  <img src="./wetwire-light.svg" width="100" height="67">
+</picture>
 
 This document describes the versioning strategy for wetwire-github-go and its action wrappers.
 

@@ -1,0 +1,44 @@
+jobs:
+  Deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show Workflow Run Info
+        run: |-
+          echo "Triggered by workflow: ${{ github.event.workflow_run.name }}"
+          echo "Workflow run ID: ${{ github.event.workflow_run.id }}"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "Head SHA: ${{ github.event.workflow_run.head_sha }}"
+          echo "Head branch: ${{ github.event.workflow_run.head_branch }}"
+      - {}
+      - name: build-artifacts
+      - name: List Artifacts
+        run: ls -la ./artifacts 2>/dev/null || echo 'No artifacts found'
+      - name: Deploy to Production
+        run: |-
+          echo "Deploying commit ${{ github.event.workflow_run.head_sha }}"
+          echo "From branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Deployment successful!"
+  Notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    steps:
+      - id: prepare
+        name: Prepare Notification
+        run: |-
+          if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+            echo "status=passed" >> $GITHUB_OUTPUT
+            echo "emoji=:white_check_mark:" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "emoji=:x:" >> $GITHUB_OUTPUT
+          fi
+      - name: Send Notification
+        run: |-
+          echo "Sending notification..."
+          echo "Workflow: ${{ github.event.workflow_run.name }}"
+          echo "Status: ${{ steps.prepare.outputs.status }}"
+          echo "Actor: ${{ github.event.workflow_run.actor.login }}"
+          echo "URL: ${{ github.event.workflow_run.html_url }}"
+name: Deploy After CI

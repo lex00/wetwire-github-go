@@ -1,0 +1,105 @@
+jobs:
+  Build API:
+    if: ${{ (needs.detect-changes.outputs.api) || (needs.detect-changes.outputs.shared) }}
+    name: Build API
+    needs:
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Detect Changes Needs:<nil> Outputs:map[api:${{ steps.changes.outputs.api }} shared:${{ steps.changes.outputs.shared }} web:${{ steps.changes.outputs.web }}] Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[ContinueOnError:false Env:<nil> ID:changes If:<nil> Name:Detect changed paths Run: Shell: TimeoutMinutes:0 Uses:dorny/paths-filter@v3 With:map[filters:
+        api:
+          - 'services/api/**'
+        web:
+          - 'services/web/**'
+        shared:
+          - 'shared/**'
+        ] WorkingDirectory:]] Strategy:<nil> TimeoutMinutes:0]
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - name: Build API
+        run: go build ./...
+        working-directory: services/api
+      - name: Test API
+        run: go test -v ./...
+        working-directory: services/api
+  Build Shared:
+    if: ${{ needs.detect-changes.outputs.shared }}
+    name: Build Shared
+    needs:
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Detect Changes Needs:<nil> Outputs:map[api:${{ steps.changes.outputs.api }} shared:${{ steps.changes.outputs.shared }} web:${{ steps.changes.outputs.web }}] Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[ContinueOnError:false Env:<nil> ID:changes If:<nil> Name:Detect changed paths Run: Shell: TimeoutMinutes:0 Uses:dorny/paths-filter@v3 With:map[filters:
+        api:
+          - 'services/api/**'
+        web:
+          - 'services/web/**'
+        shared:
+          - 'shared/**'
+        ] WorkingDirectory:]] Strategy:<nil> TimeoutMinutes:0]
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - name: Build Shared
+        run: go build ./...
+        working-directory: shared
+      - name: Test Shared
+        run: go test -v ./...
+        working-directory: shared
+  Build Web:
+    if: ${{ (needs.detect-changes.outputs.web) || (needs.detect-changes.outputs.shared) }}
+    name: Build Web
+    needs:
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Detect Changes Needs:<nil> Outputs:map[api:${{ steps.changes.outputs.api }} shared:${{ steps.changes.outputs.shared }} web:${{ steps.changes.outputs.web }}] Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[ContinueOnError:false Env:<nil> ID:changes If:<nil> Name:Detect changed paths Run: Shell: TimeoutMinutes:0 Uses:dorny/paths-filter@v3 With:map[filters:
+        api:
+          - 'services/api/**'
+        web:
+          - 'services/web/**'
+        shared:
+          - 'shared/**'
+        ] WorkingDirectory:]] Strategy:<nil> TimeoutMinutes:0]
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - name: Install dependencies
+        run: npm ci
+        working-directory: services/web
+      - name: Build Web
+        run: npm run build
+        working-directory: services/web
+      - name: Test Web
+        run: npm test
+        working-directory: services/web
+  Detect Changes:
+    name: Detect Changes
+    outputs:
+      api: ${{ steps.changes.outputs.api }}
+      shared: ${{ steps.changes.outputs.shared }}
+      web: ${{ steps.changes.outputs.web }}
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - id: changes
+        name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |2
+            api:
+              - 'services/api/**'
+            web:
+              - 'services/web/**'
+            shared:
+              - 'shared/**'
+name: Monorepo CI
+"on":
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    paths:
+      - services/api/**
+      - services/web/**
+      - shared/**

@@ -1,0 +1,24 @@
+jobs:
+  Build:
+    name: Build
+    outputs:
+      artifact: ${{ steps.build.outputs.artifact }}
+      version: ${{ steps.build.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - id: build
+        name: Build binary
+        run: |-
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          GOOS=${{ inputs.build_target }} go build -ldflags="-X main.version=$VERSION" -o app ./...
+          echo "artifact=app-${{ inputs.build_target }}-$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - if: ${{ inputs.run_tests }}
+        name: Run tests
+        run: go test -v ./...
+      - name: ${{ steps.build.outputs.artifact }}
+name: Reusable Build Workflow
+"on":
+  workflow_call: {}

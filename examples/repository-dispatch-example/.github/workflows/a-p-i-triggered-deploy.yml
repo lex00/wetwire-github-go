@@ -1,0 +1,129 @@
+jobs:
+  Deploy:
+    if: ${{ github.event.action == 'deploy' }}
+    name: Deploy
+    needs:
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Validate Dispatch Needs:<nil> Outputs:map[environment:${{ steps.validate.outputs.environment }} ref:${{ steps.validate.outputs.ref }} version:${{ steps.validate.outputs.version }}] Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Show Event Info Run:echo "Event type: ${{ github.event.action }}"
+        echo "Client payload: ${{ toJSON(github.event.client_payload) }}" Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:<nil> ID:validate If:<nil> Name:Validate Payload Run:# Extract payload fields
+        environment="${{ github.event.client_payload.environment }}"
+        version="${{ github.event.client_payload.version }}"
+        ref="${{ github.event.client_payload.ref }}"
+
+        # Validate required fields
+        if [ -z "$environment" ]; then
+          echo "::error::Missing required field: environment"
+          exit 1
+        fi
+
+        if [ -z "$version" ]; then
+          echo "::warning::No version specified, using 'latest'"
+          version="latest"
+        fi
+
+        if [ -z "$ref" ]; then
+          ref="main"
+        fi
+
+        # Set outputs
+        echo "environment=$environment" >> $GITHUB_OUTPUT
+        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "ref=$ref" >> $GITHUB_OUTPUT
+        echo "Validation successful!" Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:]] Strategy:<nil> TimeoutMinutes:0]
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - name: Show Deployment Config
+        run: |-
+          echo "Deploying version: ${{ needs.validate.outputs.version }}"
+          echo "Target environment: ${{ needs.validate.outputs.environment }}"
+          echo "Git ref: ${{ needs.validate.outputs.ref }}"
+          echo "Triggered by: ${{ github.event.sender.login }}"
+      - env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          ENVIRONMENT: ${{ needs.validate.outputs.environment }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        name: Deploy Application
+        run: |-
+          echo "Starting deployment to $ENVIRONMENT..."
+          echo "Version: $VERSION"
+          # In a real workflow, this would call deployment scripts
+          echo "Deployment complete!"
+  Deploy Production:
+    if: ${{ github.event.action == 'deploy-production' }}
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - name: Verify Production Deployment
+        run: |-
+          echo "Verifying production deployment prerequisites..."
+          echo "Version: ${{ github.event.client_payload.version }}"
+          echo "Approver: ${{ github.event.client_payload.approved_by }}"
+
+          # Require explicit approval for production
+          if [ -z "${{ github.event.client_payload.approved_by }}" ]; then
+            echo "::error::Production deployments require approval"
+            exit 1
+          fi
+
+          echo "Production deployment approved!"
+      - name: Deploy to Production
+        run: |-
+          echo "Deploying to PRODUCTION environment"
+          echo "Version: ${{ github.event.client_payload.version }}"
+          echo "Approved by: ${{ github.event.client_payload.approved_by }}"
+          echo "Production deployment complete!"
+  Deploy Staging:
+    if: ${{ github.event.action == 'deploy-staging' }}
+    name: Deploy Staging
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - name: Deploy to Staging
+        run: |-
+          echo "Deploying to STAGING environment"
+          echo "Version: ${{ github.event.client_payload.version || 'latest' }}"
+          echo "Features: ${{ github.event.client_payload.features || 'all' }}"
+          echo "Staging deployment complete!"
+  Validate Dispatch:
+    name: Validate Dispatch
+    outputs:
+      environment: ${{ steps.validate.outputs.environment }}
+      ref: ${{ steps.validate.outputs.ref }}
+      version: ${{ steps.validate.outputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show Event Info
+        run: |-
+          echo "Event type: ${{ github.event.action }}"
+          echo "Client payload: ${{ toJSON(github.event.client_payload) }}"
+      - id: validate
+        name: Validate Payload
+        run: |-
+          # Extract payload fields
+          environment="${{ github.event.client_payload.environment }}"
+          version="${{ github.event.client_payload.version }}"
+          ref="${{ github.event.client_payload.ref }}"
+
+          # Validate required fields
+          if [ -z "$environment" ]; then
+            echo "::error::Missing required field: environment"
+            exit 1
+          fi
+
+          if [ -z "$version" ]; then
+            echo "::warning::No version specified, using 'latest'"
+            version="latest"
+          fi
+
+          if [ -z "$ref" ]; then
+            ref="main"
+          fi
+
+          # Set outputs
+          echo "environment=$environment" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "ref=$ref" >> $GITHUB_OUTPUT
+          echo "Validation successful!"
+name: API Triggered Deploy

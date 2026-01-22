@@ -47,4 +47,4 @@ specs/*
 
 # SVG recordings (allow mascot)
 *.svg
-!docs/wetwire.svg
+!docs/wetwire*.svg

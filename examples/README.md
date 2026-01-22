@@ -1,4 +1,7 @@
-# wetwire-github-go Examples
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/wetwire-dark.svg">
+  <img src="../docs/wetwire-light.svg" width="100" height="67">
+</picture>
 
 This directory contains example wetwire-github-go projects demonstrating various GitHub Actions workflow patterns.
 

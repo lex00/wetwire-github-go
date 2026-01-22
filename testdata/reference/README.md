@@ -1,4 +1,7 @@
-# Reference GitHub Workflows
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../../docs/wetwire-dark.svg">
+  <img src="../../docs/wetwire-light.svg" width="100" height="67">
+</picture>
 
 This directory contains reference GitHub Actions workflow files used for testing the import/export functionality of wetwire-github-go.
 

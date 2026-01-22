@@ -1,0 +1,50 @@
+jobs:
+  Integration Tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - name: Wait for PostgreSQL
+        run: |-
+          until pg_isready -h postgres -p 5432 -U testuser; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+      - name: Wait for Redis
+        run: |-
+          until redis-cli -h redis -p 6379 ping; do
+            echo "Waiting for Redis..."
+            sleep 2
+          done
+      - env:
+          DATABASE_URL: postgres://testuser:testpass@postgres:5432/testdb?sslmode=disable
+        name: Run database migrations
+        run: go run ./cmd/migrate up
+      - env:
+          DATABASE_URL: postgres://testuser:testpass@postgres:5432/testdb?sslmode=disable
+          REDIS_URL: redis://redis:6379
+          TEST_ENV: ci
+        name: Run integration tests
+        run: go test -v -tags=integration ./...
+      - env:
+          DATABASE_URL: postgres://testuser:testpass@postgres:5432/testdb?sslmode=disable
+          REDIS_URL: redis://redis:6379
+        name: Generate coverage report
+        run: go test -coverprofile=coverage.out -tags=integration ./... && go tool cover -html=coverage.out -o coverage.html
+  Unit Tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - name: Run unit tests
+        run: go test -v -short ./...
+      - name: Run race detector
+        run: go test -race -short ./...
+name: Container Services
+"on":
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main

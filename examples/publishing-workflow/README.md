@@ -1,4 +1,7 @@
-# Publishing Workflow Example
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../../docs/wetwire-dark.svg">
+  <img src="../../docs/wetwire-light.svg" width="100" height="67">
+</picture>
 
 A comprehensive example demonstrating how to define publishing workflows with wetwire-github-go for Docker images, GitHub releases, and multi-platform artifact distribution.
 

@@ -1,4 +1,7 @@
-# Roadmap
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./wetwire-dark.svg">
+  <img src="./wetwire-light.svg" width="100" height="67">
+</picture>
 
 Feature matrix and implementation status for wetwire-github-go.
 

@@ -1,0 +1,19 @@
+jobs:
+  Use Output:
+    name: Use Output
+    needs:
+      - call-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display build info
+        run: |-
+          echo "Artifact: ${{ needs.call-build.outputs.artifact_name }}"
+          echo "Version: ${{ needs.call-build.outputs.build_version }}"
+name: CI Caller
+"on":
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main

@@ -1,4 +1,7 @@
-# Environment Promotion Workflow Example
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../../docs/wetwire-dark.svg">
+  <img src="../../docs/wetwire-light.svg" width="100" height="67">
+</picture>
 
 A complete example demonstrating how to implement environment promotion (dev -> staging -> production) using wetwire-github-go.
 

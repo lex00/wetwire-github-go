@@ -1,0 +1,39 @@
+jobs:
+  Build Artifacts:
+    name: Build Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - env:
+          CGO_ENABLED: "0"
+          GOARCH: ${{ matrix.goarch }}
+          GOOS: ${{ matrix.goos }}
+        id: build
+        name: Build Binary
+        run: go build -ldflags="-s -w -X main.version=${{ github.event.release.tag_name }}" -o dist/app-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.exe' || '' }} ./cmd/app
+      - name: app-${{ matrix.goos }}-${{ matrix.goarch }}
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+  Notify:
+    name: Notify
+    needs:
+      - 'map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Build Artifacts Needs:<nil> Outputs:<nil> Permissions:map[Actions: Checks: Contents:write Deployments: Discussions: IDToken: Issues: Packages: Pages: PullRequests: RepositoryProjects: SecurityEvents: Statuses:] RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[Architecture: Cache:false CacheDependencyPath: CheckLatest:false GoVersion:1.23 GoVersionFile: Token:] map[ContinueOnError:false Env:map[CGO_ENABLED:0 GOARCH:${{ matrix.goarch }} GOOS:${{ matrix.goos }}] ID:build If:<nil> Name:Build Binary Run:go build -ldflags="-s -w -X main.version=${{ github.event.release.tag_name }}" -o dist/app-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == ''windows'' && ''.exe'' || '''' }} ./cmd/app Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[CompressionLevel:0 IfNoFilesFound: IncludeHiddenFiles:false Name:app-${{ matrix.goos }}-${{ matrix.goarch }} Overwrite:false Path:dist/ RetentionDays:0] map[ContinueOnError:false Env:map[GITHUB_TOKEN:${{ secrets.GITHUB_TOKEN }}] ID: If:<nil> Name:Upload to Release Run: Shell: TimeoutMinutes:0 Uses:softprops/action-gh-release@v2 With:map[files:dist/*] WorkingDirectory:]] Strategy:map[FailFast:<nil> Matrix:map[Exclude:[map[goarch:arm64 goos:windows]] Include:<nil> Values:map[goarch:[amd64 arm64] goos:[linux darwin windows]]] MaxParallel:0] TimeoutMinutes:0]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Release Info
+        run: |-
+          echo "Release ${{ github.event.release.tag_name }} published!"
+          echo "Release URL: ${{ github.event.release.html_url }}"
+          echo "Artifacts have been uploaded to the release."
+      - if: ${{ secrets.SLACK_WEBHOOK_URL }} != ''
+        name: Send Slack Notification
+        run: |-
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{"text":"Release ${{ github.event.release.tag_name }} is now available!\n${{ github.event.release.html_url }}"}' \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+name: Release

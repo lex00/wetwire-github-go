@@ -1,0 +1,67 @@
+jobs:
+  Build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - name: Build binaries
+        run: |-
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 go build -o dist/myapp-linux-amd64 ./cmd/myapp
+          GOOS=darwin GOARCH=amd64 go build -o dist/myapp-darwin-amd64 ./cmd/myapp
+          GOOS=darwin GOARCH=arm64 go build -o dist/myapp-darwin-arm64 ./cmd/myapp
+          GOOS=windows GOARCH=amd64 go build -o dist/myapp-windows-amd64.exe ./cmd/myapp
+      - name: binaries
+  Release:
+    if: startsWith(${{ github.ref }}, ${{ 'refs/tags/v' }})
+    name: Release
+    needs:
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Build Needs:<nil> Outputs:<nil> Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[Architecture: Cache:false CacheDependencyPath: CheckLatest:false GoVersion:1.24 GoVersionFile: Token:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Build binaries Run:mkdir -p dist
+        GOOS=linux GOARCH=amd64 go build -o dist/myapp-linux-amd64 ./cmd/myapp
+        GOOS=darwin GOARCH=amd64 go build -o dist/myapp-darwin-amd64 ./cmd/myapp
+        GOOS=darwin GOARCH=arm64 go build -o dist/myapp-darwin-arm64 ./cmd/myapp
+        GOOS=windows GOARCH=amd64 go build -o dist/myapp-windows-amd64.exe ./cmd/myapp Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[CompressionLevel:0 IfNoFilesFound: IncludeHiddenFiles:false Name:binaries Overwrite:false Path:dist/* RetentionDays:7]] Strategy:<nil> TimeoutMinutes:0]
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Test Needs:[map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Build Needs:<nil> Outputs:<nil> Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[Architecture: Cache:false CacheDependencyPath: CheckLatest:false GoVersion:1.24 GoVersionFile: Token:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Build binaries Run:mkdir -p dist
+        GOOS=linux GOARCH=amd64 go build -o dist/myapp-linux-amd64 ./cmd/myapp
+        GOOS=darwin GOARCH=amd64 go build -o dist/myapp-darwin-amd64 ./cmd/myapp
+        GOOS=darwin GOARCH=arm64 go build -o dist/myapp-darwin-arm64 ./cmd/myapp
+        GOOS=windows GOARCH=amd64 go build -o dist/myapp-windows-amd64.exe ./cmd/myapp Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[CompressionLevel:0 IfNoFilesFound: IncludeHiddenFiles:false Name:binaries Overwrite:false Path:dist/* RetentionDays:7]] Strategy:<nil> TimeoutMinutes:0]] Outputs:<nil> Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[Architecture: Cache:false CacheDependencyPath: CheckLatest:false GoVersion:1.24 GoVersionFile: Token:] map[GithubToken: MergeMultiple:false Name:binaries Path:dist Pattern: Repository: RunID:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Verify binaries Run:ls -la dist/
+        chmod +x dist/myapp-linux-amd64
+        ./dist/myapp-linux-amd64 --version || echo "Binary verification complete" Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Run tests Run:go test -v -race -coverprofile=coverage.out ./... Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[CompressionLevel:0 IfNoFilesFound: IncludeHiddenFiles:false Name:coverage Overwrite:false Path:coverage.out RetentionDays:7]] Strategy:<nil> TimeoutMinutes:0]
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - name: binaries
+      - {}
+  Test:
+    name: Test
+    needs:
+      - |-
+        map[Concurrency:<nil> Container:<nil> ContinueOnError:false Defaults:<nil> Env:<nil> Environment:<nil> If:<nil> Name:Build Needs:<nil> Outputs:<nil> Permissions:<nil> RunsOn:ubuntu-latest Services:<nil> Steps:[map[Clean:false FetchDepth:0 FetchTags:false Filter: GithubServerURL: LFS:false Path: PersistCredentials:false Ref: Repository: SSHKey: SSHKnownHosts: SSHStrict:false SetSafeDirectory:false ShowProgress:false SparseCheckout: SparseCheckoutConeMode:false Submodules: Token:] map[Architecture: Cache:false CacheDependencyPath: CheckLatest:false GoVersion:1.24 GoVersionFile: Token:] map[ContinueOnError:false Env:<nil> ID: If:<nil> Name:Build binaries Run:mkdir -p dist
+        GOOS=linux GOARCH=amd64 go build -o dist/myapp-linux-amd64 ./cmd/myapp
+        GOOS=darwin GOARCH=amd64 go build -o dist/myapp-darwin-amd64 ./cmd/myapp
+        GOOS=darwin GOARCH=arm64 go build -o dist/myapp-darwin-arm64 ./cmd/myapp
+        GOOS=windows GOARCH=amd64 go build -o dist/myapp-windows-amd64.exe ./cmd/myapp Shell: TimeoutMinutes:0 Uses: With:<nil> WorkingDirectory:] map[CompressionLevel:0 IfNoFilesFound: IncludeHiddenFiles:false Name:binaries Overwrite:false Path:dist/* RetentionDays:7]] Strategy:<nil> TimeoutMinutes:0]
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - name: binaries
+      - name: Verify binaries
+        run: |-
+          ls -la dist/
+          chmod +x dist/myapp-linux-amd64
+          ./dist/myapp-linux-amd64 --version || echo "Binary verification complete"
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+      - name: coverage
+name: Artifact Pipeline
+"on":
+  push:
+    branches:
+      - main
+    tags:
+      - v*

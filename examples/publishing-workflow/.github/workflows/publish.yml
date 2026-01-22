@@ -1,0 +1,60 @@
+jobs:
+  Create Release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - id: changelog
+        name: Generate Changelog
+        run: |-
+          echo "## Changes" > CHANGELOG.md
+          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s" >> CHANGELOG.md 2>/dev/null || echo "- Initial release" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+      - if: contains(github.ref_name, '-')
+        name: Create Prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG.md
+          generate_release_notes: true
+          prerelease: true
+      - if: '!contains(github.ref_name, ''-'')'
+        name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG.md
+          generate_release_notes: true
+  Publish Docker Image:
+    name: Publish Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - {}
+      - {}
+      - {}
+      - if: '!contains(github.ref_name, ''-'')'
+        name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |-
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:latest
+      - if: contains(github.ref_name, '-')
+        name: Build and Push Docker Image (Prerelease)
+        uses: docker/build-push-action@v6
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+name: Publish
+"on":
+  push:
+    tags:
+      - v*

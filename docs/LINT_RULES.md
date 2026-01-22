@@ -1,4 +1,7 @@
-# Lint Rules
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./wetwire-dark.svg">
+  <img src="./wetwire-light.svg" width="100" height="67">
+</picture>
 
 wetwire-github-go includes 20 lint rules to enforce best practices for GitHub Actions workflow declarations.
 
