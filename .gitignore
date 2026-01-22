@@ -44,3 +44,7 @@ specs/*
 # Generated workflow files
 *.workflow.yml
 *.workflow.yaml
+
+# SVG recordings (allow mascot)
+*.svg
+!docs/wetwire.svg
