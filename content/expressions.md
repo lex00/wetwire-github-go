@@ -1,10 +1,6 @@
 ---
 title: "Expressions"
 ---
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./wetwire-dark.svg">
-  <img src="./wetwire-light.svg" width="100" height="67">
-</picture>
 
 This guide covers GitHub Actions expression contexts in wetwire-github-go. Expression contexts provide type-safe access to runtime values like secrets, matrix dimensions, and job outputs.
 

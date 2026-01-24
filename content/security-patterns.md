@@ -1,10 +1,6 @@
 ---
 title: "Security Patterns"
 ---
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./wetwire-dark.svg">
-  <img src="./wetwire-light.svg" width="100" height="67">
-</picture>
 
 This guide covers security best practices for GitHub Actions workflows using wetwire-github-go. It explains how to configure minimal permissions, handle secrets safely, avoid dangerous trigger patterns, and integrate security scanning tools.
 

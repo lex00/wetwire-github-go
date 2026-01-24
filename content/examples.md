@@ -1,10 +1,6 @@
 ---
 title: "Examples"
 ---
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./wetwire-dark.svg">
-  <img src="./wetwire-light.svg" width="100" height="67">
-</picture>
 
 Real-world workflow patterns and examples for wetwire-github-go.
 
