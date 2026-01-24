@@ -1,40 +1,69 @@
 ---
 title: "FAQ"
 ---
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./wetwire-dark.svg">
-  <img src="./wetwire-light.svg" width="100" height="67">
-</picture>
 
-This FAQ covers questions specific to the Go implementation of wetwire for GitHub Actions. For general wetwire questions, see the [central FAQ](https://github.com/lex00/wetwire/blob/main/docs/FAQ.md).
+Frequently asked questions about wetwire-github-go.
 
 ---
 
 ## Getting Started
 
-### How do I install wetwire-github?
+<details>
+<summary>How do I install wetwire-github?</summary>
 
-See [README.md](../README.md) for installation instructions.
+```bash
+go install github.com/lex00/wetwire-github-go/cmd/wetwire-github@latest
+```
 
-### How do I create a new project?
+See [Quick Start]({{< relref "/quick-start" >}}) for complete installation instructions.
+</details>
+
+<details>
+<summary>How do I create a new project?</summary>
 
 ```bash
 wetwire-github init my-workflows
 cd my-workflows
 ```
+</details>
 
-### How do I generate workflow YAML?
+<details>
+<summary>How do I generate workflow YAML?</summary>
 
 ```bash
 wetwire-github build ./my-workflows
 # Outputs to .github/workflows/
 ```
+</details>
+
+<details>
+<summary>What's the recommended project structure?</summary>
+
+Organize workflow code by concern:
+
+```
+workflows/
+├── ci.go           # CI workflow
+├── release.go      # Release workflow
+├── triggers.go     # Shared trigger configurations
+├── jobs/
+│   ├── build.go    # Build job definitions
+│   ├── test.go     # Test job definitions
+│   └── deploy.go   # Deploy job definitions
+└── shared/
+    ├── matrix.go   # Shared matrix strategies
+    └── env.go      # Environment configurations
+```
+
+Keep related workflows together and extract shared patterns into dedicated files.
+</details>
 
 ---
 
 ## Syntax
 
-### How do I declare a workflow?
+<details>
+<summary>How do I declare a workflow?</summary>
 
 ```go
 import "github.com/lex00/wetwire-github-go/workflow"
@@ -44,8 +73,10 @@ var CI = workflow.Workflow{
     On:   CITriggers,
 }
 ```
+</details>
 
-### How do I reference another job?
+<details>
+<summary>How do I reference another job?</summary>
 
 Use direct variable references in the `Needs` field:
 
@@ -54,8 +85,10 @@ var Deploy = workflow.Job{
     Needs: []any{Build, Test},  // Direct variable references
 }
 ```
+</details>
 
-### How do I use action wrappers?
+<details>
+<summary>How do I use action wrappers?</summary>
 
 Import typed action wrappers and use them directly in `[]any{}` slices:
 
@@ -67,8 +100,10 @@ var CheckoutStep = checkout.Checkout{
     Submodules: "recursive",
 }
 ```
+</details>
 
-### How do I access secrets and matrix values?
+<details>
+<summary>How do I access secrets and matrix values?</summary>
 
 Use expression contexts:
 
@@ -82,12 +117,44 @@ var DeployStep = workflow.Step{
     If: workflow.Branch("main"),
 }
 ```
+</details>
+
+<details>
+<summary>How do I manage workflow secrets?</summary>
+
+Always use the `workflow.Secrets` context instead of hardcoding values:
+
+```go
+var DeployStep = workflow.Step{
+    Name: "Deploy",
+    Run:  "deploy.sh",
+    Env: workflow.Env{
+        "DEPLOY_TOKEN": workflow.Secrets.Get("DEPLOY_TOKEN"),
+        "GH_TOKEN":     workflow.Secrets.GITHUB_TOKEN(),
+    },
+}
+```
+
+For sensitive deployments, use GitHub Environments to scope secrets:
+
+```go
+var ProductionDeploy = workflow.Job{
+    Name:        "Deploy to Production",
+    RunsOn:      "ubuntu-latest",
+    Environment: "production",
+    Steps:       DeploySteps,
+}
+```
+
+See [Security Patterns]({{< relref "/security-patterns" >}}) for more details.
+</details>
 
 ---
 
 ## Lint Rules
 
-### What do WAG rules check?
+<details>
+<summary>What do WAG rules check?</summary>
 
 WAG (Wetwire Action GitHub) lint rules enforce best practices:
 
@@ -102,35 +169,132 @@ WAG (Wetwire Action GitHub) lint rules enforce best practices:
 | WAG007 | Flag oversized files (>N jobs) |
 | WAG008 | Avoid hardcoded expression strings |
 
-### How do I auto-fix lint issues?
+See [Lint Rules]({{< relref "/lint-rules" >}}) for the complete reference.
+</details>
+
+<details>
+<summary>How do I auto-fix lint issues?</summary>
 
 ```bash
 wetwire-github lint --fix ./my-workflows
 ```
+</details>
+
+<details>
+<summary>How does the linter help catch errors?</summary>
+
+The linter runs static analysis on your Go code to detect:
+
+- **Security issues**: Hardcoded secrets (WAG003, WAG020), dangerous trigger patterns (WAG018)
+- **Type safety**: Raw action strings that should use typed wrappers (WAG001)
+- **Best practices**: Missing timeouts (WAG014), missing permissions (WAG017)
+- **Logic errors**: Circular dependencies (WAG019), unreachable jobs (WAG011)
+
+Run the linter as part of your CI workflow:
+
+```bash
+wetwire-github lint .
+wetwire-github build .
+wetwire-github validate .github/workflows/*.yml
+```
+</details>
 
 ---
 
 ## Import
 
-### How do I convert an existing workflow?
+<details>
+<summary>How do I convert an existing workflow?</summary>
 
 ```bash
 wetwire-github import .github/workflows/ci.yml -o my-workflows/
 ```
+</details>
 
-### Import produced code with errors?
+<details>
+<summary>Can I import existing workflow YAML files?</summary>
+
+Yes! The `import` command converts YAML workflows to typed Go code:
+
+```bash
+# Import a single workflow
+wetwire-github import .github/workflows/ci.yml -o my-workflows/
+
+# Import with single-file output
+wetwire-github import ci.yml --single-file -o my-workflows/
+
+# Import to existing project (skip go.mod, README)
+wetwire-github import ci.yml --no-scaffold -o existing-project/
+```
+
+The importer:
+1. Parses the YAML into an intermediate representation
+2. Flattens nested structures to named variables
+3. Maps known actions to typed wrappers
+4. Converts expressions to type-safe builders
+
+See [Import Workflow]({{< relref "/import-workflow" >}}) for detailed documentation.
+</details>
+
+<details>
+<summary>Import produced code with errors?</summary>
 
 Import is best-effort. Complex workflows may need manual cleanup:
 
 1. Run `wetwire-github lint --fix` to apply automatic fixes
 2. Review and manually fix remaining issues
 3. Check import logs for unsupported features
+</details>
+
+---
+
+## Reusable Workflows
+
+<details>
+<summary>How do I handle reusable workflows?</summary>
+
+Create reusable workflows with `workflow_call` triggers:
+
+```go
+var ReusableDeploy = workflow.Workflow{
+    Name: "Reusable Deploy",
+    On: workflow.Triggers{
+        WorkflowCall: &workflow.WorkflowCallTrigger{
+            Inputs: map[string]workflow.WorkflowInput{
+                "environment": {
+                    Type:        "string",
+                    Required:    true,
+                    Description: "Deployment environment",
+                },
+            },
+            Secrets: map[string]workflow.WorkflowSecret{
+                "deploy-token": {Required: true},
+            },
+        },
+    },
+    Jobs: map[string]workflow.Job{"deploy": DeployJob},
+}
+```
+
+Call the reusable workflow from another workflow:
+
+```go
+var CallDeploy = workflow.Job{
+    Uses: "./.github/workflows/deploy.yml",
+    With: workflow.With{
+        "environment": "production",
+    },
+    Secrets: "inherit",
+}
+```
+</details>
 
 ---
 
 ## Config Types
 
-### What config types are supported?
+<details>
+<summary>What config types are supported?</summary>
 
 | Config Type | Output Location | Status |
 |-------------|-----------------|--------|
@@ -138,18 +302,22 @@ Import is best-effort. Complex workflows may need manual cleanup:
 | Dependabot | `.github/dependabot.yml` | Implemented |
 | Issue Templates | `.github/ISSUE_TEMPLATE/*.yml` | Implemented |
 | Discussion Templates | `.github/DISCUSSION_TEMPLATE/*.yml` | Implemented |
+</details>
 
-### How do I generate Dependabot config?
+<details>
+<summary>How do I generate Dependabot config?</summary>
 
 ```bash
 wetwire-github build --type dependabot ./my-config
 ```
+</details>
 
 ---
 
 ## Matrix Configuration
 
-### How do I define a build matrix?
+<details>
+<summary>How do I define a build matrix?</summary>
 
 ```go
 var BuildMatrix = workflow.Matrix{
@@ -168,27 +336,33 @@ var MatrixJob = workflow.Job{
     Strategy: BuildStrategy,
 }
 ```
+</details>
 
 ---
 
 ## Troubleshooting
 
-### ModuleNotFoundError
+<details>
+<summary>ModuleNotFoundError</summary>
 
 Ensure the CLI is installed:
 
 ```bash
 go install github.com/lex00/wetwire-github-go/cmd/wetwire-github@latest
 ```
+</details>
 
-### Build produces empty output
+<details>
+<summary>Build produces empty output</summary>
 
 Check that:
 1. Workflows are declared as package-level `var` with struct literals
 2. The package path is correct in the build command
 3. Variables use `workflow.Workflow` or `workflow.Job` types
+</details>
 
-### actionlint validation errors
+<details>
+<summary>actionlint validation errors</summary>
 
 The `validate` command uses actionlint to check generated YAML:
 
@@ -197,11 +371,13 @@ wetwire-github validate .github/workflows/ci.yml
 ```
 
 Fix issues based on actionlint messages, then rebuild.
+</details>
 
 ---
 
 ## Resources
 
-- [Wetwire Specification](https://github.com/lex00/wetwire/blob/main/docs/WETWIRE_SPEC.md)
-- [CLI Documentation](CLI.md)
-- [Quick Start](QUICK_START.md)
+- [CLI Reference]({{< relref "/cli" >}})
+- [Quick Start]({{< relref "/quick-start" >}})
+- [Examples]({{< relref "/examples" >}})
+- [Lint Rules]({{< relref "/lint-rules" >}})

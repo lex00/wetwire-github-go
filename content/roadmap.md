@@ -23,7 +23,7 @@ Feature matrix and implementation status for wetwire-github-go.
 | `list` | Complete | Lists workflows, jobs, triggers |
 | `init` | Complete | Scaffolds new projects |
 | `graph` | Complete | Mermaid and DOT output |
-| `design` | Complete | AI-assisted workflow generation via wetwire-core-go |
+| `design` | Complete | AI-assisted workflow generation |
 | `test` | Complete | Structural tests + 5 personas + 5-dimension scoring |
 | `mcp` | Complete | MCP server via `design --mcp-server` for IDE integration |
 
@@ -67,7 +67,7 @@ Feature matrix and implementation status for wetwire-github-go.
 
 ---
 
-## Agent Integration (wetwire-core-go)
+## Agent Integration
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -177,8 +177,3 @@ Type-safe wrappers for popular GitHub Actions:
 
 ---
 
-## References
-
-- [Wetwire Specification](https://github.com/lex00/wetwire/blob/main/docs/WETWIRE_SPEC.md)
-- [Feature Matrix](https://github.com/lex00/wetwire/blob/main/docs/FEATURE_MATRIX.md)
-- [Domain Guide](https://github.com/lex00/wetwire/blob/main/docs/DOMAIN_GUIDE.md)

@@ -376,7 +376,6 @@ test: add tests for WAG012
 | `github.com/spf13/cobra` | CLI framework |
 | `gopkg.in/yaml.v3` | YAML parsing/generation |
 | `github.com/rhysd/actionlint` | GitHub Actions validation |
-| `github.com/lex00/wetwire-core-go` | AI orchestration (design/test) |
 | `github.com/modelcontextprotocol/go-sdk` | MCP server for IDE integration |
 | `github.com/anthropics/anthropic-sdk-go` | Claude API for design command |
 

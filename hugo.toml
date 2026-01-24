@@ -40,11 +40,3 @@ theme = "wetwire"
     name = "FAQ"
     pageRef = "/faq"
     weight = 40
-  [[menus.main]]
-    name = "Lint Rules"
-    pageRef = "/lint-rules"
-    weight = 50
-  [[menus.main]]
-    name = "Expressions"
-    pageRef = "/expressions"
-    weight = 60

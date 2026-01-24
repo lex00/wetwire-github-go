@@ -157,7 +157,7 @@ wetwire-github graph . --format dot -o workflow.dot
 
 ### `wetwire-github design`
 
-AI-assisted workflow design (requires wetwire-core-go).
+AI-assisted workflow design.
 
 ```bash
 wetwire-github design [prompt] [flags]
