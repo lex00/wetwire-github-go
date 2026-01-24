@@ -8,6 +8,7 @@
 
 [![CI](https://github.com/lex00/wetwire-github-go/actions/workflows/ci.yml/badge.svg)](https://github.com/lex00/wetwire-github-go/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/lex00/wetwire-github-go/branch/main/graph/badge.svg)](https://codecov.io/gh/lex00/wetwire-github-go)
+[![Go](https://img.shields.io/badge/Go-1.24-blue?logo=go)](https://golang.org/)
 [![Go Reference](https://pkg.go.dev/badge/github.com/lex00/wetwire-github-go.svg)](https://pkg.go.dev/github.com/lex00/wetwire-github-go)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lex00/wetwire-github-go)](https://goreportcard.com/report/github.com/lex00/wetwire-github-go)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
