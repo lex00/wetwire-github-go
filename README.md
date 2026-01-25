@@ -7,10 +7,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/lex00/wetwire-github-go)](https://goreportcard.com/report/github.com/lex00/wetwire-github-go)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Wetwire uses typed constraints to reduce the model capability required for accurate code generation.
-
-**Core hypothesis:** Typed input + smaller model ≈ Semantic input + larger model
-
-Generate GitHub Actions workflows from Go structs with AI-assisted design.
+Semantic linting for GitHub Actions.
 
 ## [Read the Documentation →](https://lex00.github.io/wetwire-github-go/)
